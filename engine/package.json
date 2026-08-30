@@ -5,6 +5,9 @@
   "type": "module",
   "description": "Pif Paf のルールエンジン（UI・通信に非依存の純粋ロジック）。将来はNode.jsサーバーからもそのまま利用する想定。",
   "main": "index.ts",
+  "exports": {
+    ".": "./index.ts"
+  },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",

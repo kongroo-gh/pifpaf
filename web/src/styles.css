@@ -1,0 +1,954 @@
+/* Pif Paf — マフィア酒場の奥の部屋、という設定の見た目。
+   演出はすべてこのファイルとcomponents/に閉じており、ルールには関与しない。 */
+
+:root {
+  --ink: #0a0908;
+  --ink-2: #131010;
+  --felt: #14352a;
+  --felt-2: #0d2419;
+  --gold: #c8a24a;
+  --gold-bright: #eccd83;
+  --blood: #8b1a14;
+  --blood-hot: #d24a34;
+  --cream: #ece3cf;
+  --smoke: #8f887c;
+  --smoke-dim: #5d574e;
+
+  --display: "Cinzel", "Noto Serif JP", Georgia, serif;
+  --body: "Noto Serif JP", "Hiragino Mincho ProN", Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--cream);
+  font-family: var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* ざらついた紙／フィルムの粒子感 */
+.grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.32;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
+/* ---------- イントロ ---------- */
+.intro {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(200, 162, 74, 0.09), transparent 55%),
+    radial-gradient(circle at 50% 100%, rgba(139, 26, 20, 0.14), transparent 60%),
+    var(--ink);
+}
+
+.intro__panel {
+  max-width: 620px;
+  text-align: center;
+  padding: 48px 40px 36px;
+  border: 1px solid rgba(200, 162, 74, 0.28);
+  outline: 1px solid rgba(200, 162, 74, 0.12);
+  outline-offset: 7px;
+  background: linear-gradient(180deg, rgba(24, 20, 18, 0.92), rgba(10, 9, 8, 0.96));
+  box-shadow: 0 40px 90px rgba(0, 0, 0, 0.8);
+}
+
+.intro__kicker {
+  font-family: var(--display);
+  letter-spacing: 0.42em;
+  font-size: 11px;
+  color: var(--gold);
+  margin: 0 0 18px;
+  text-indent: 0.42em;
+}
+
+.intro__title {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(48px, 11vw, 86px);
+  letter-spacing: 0.1em;
+  margin: 0;
+  color: var(--cream);
+  text-shadow: 0 2px 0 #000, 0 0 44px rgba(200, 162, 74, 0.28);
+}
+
+.intro__sub {
+  font-family: var(--display);
+  letter-spacing: 0.5em;
+  font-size: 13px;
+  color: var(--gold);
+  margin: 6px 0 0;
+  text-indent: 0.5em;
+}
+
+.intro__rule {
+  height: 1px;
+  margin: 26px auto;
+  width: 130px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+.intro__body {
+  font-size: 15px;
+  line-height: 2;
+  color: #c5bdaf;
+  margin: 0 0 18px;
+}
+
+.intro__body strong {
+  color: var(--gold-bright);
+  font-weight: 600;
+}
+
+.intro__warn {
+  font-family: var(--display);
+  color: var(--blood-hot);
+  letter-spacing: 0.16em;
+  font-size: 13px;
+  margin: 0 0 30px;
+}
+
+.intro__foot {
+  margin: 22px 0 0;
+  font-size: 11px;
+  color: var(--smoke-dim);
+  letter-spacing: 0.06em;
+}
+
+/* ---------- 盤面 ---------- */
+.app {
+  min-height: 100%;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 14px;
+  padding: 16px clamp(12px, 3vw, 32px) 20px;
+  background:
+    radial-gradient(circle at 50% 8%, rgba(200, 162, 74, 0.07), transparent 45%),
+    radial-gradient(ellipse at 50% 55%, rgba(20, 53, 42, 0.55), transparent 65%),
+    var(--ink);
+  transition: filter 700ms ease;
+}
+
+.app--dead {
+  filter: grayscale(0.85) brightness(0.55) contrast(1.15);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(200, 162, 74, 0.2);
+  flex-wrap: wrap;
+}
+
+.topbar__brand h1 {
+  font-family: var(--display);
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  font-size: 26px;
+  margin: 0;
+}
+
+.topbar__brand p {
+  margin: 3px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--smoke);
+}
+
+.topbar__wild {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border: 1px solid rgba(200, 162, 74, 0.35);
+  background: rgba(200, 162, 74, 0.07);
+}
+
+.topbar__wildLabel {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+}
+
+.topbar__wildRank {
+  font-family: var(--display);
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--gold-bright);
+  line-height: 1;
+  text-shadow: 0 0 22px rgba(236, 205, 131, 0.45);
+}
+
+.topbar__vira {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--smoke);
+}
+
+/* ---------- 相手の席 ---------- */
+.opponents {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.seat {
+  position: relative;
+  padding: 13px 15px;
+  border: 1px solid rgba(200, 162, 74, 0.16);
+  background: linear-gradient(180deg, rgba(28, 24, 21, 0.9), rgba(14, 12, 11, 0.9));
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "avatar info"
+    "cards cards"
+    "think think";
+  gap: 4px 12px;
+  transition: border-color 300ms, box-shadow 300ms, filter 700ms, opacity 700ms;
+  overflow: hidden;
+}
+
+.seat--active {
+  border-color: rgba(200, 162, 74, 0.65);
+  box-shadow: inset 0 0 40px rgba(200, 162, 74, 0.09), 0 0 22px rgba(200, 162, 74, 0.12);
+}
+
+.seat__avatar {
+  grid-area: avatar;
+  width: 40px;
+  height: 40px;
+  color: var(--smoke-dim);
+}
+
+.seat--active .seat__avatar {
+  color: var(--gold);
+}
+
+.seat__avatar svg {
+  width: 100%;
+  height: 100%;
+}
+
+.seat__info {
+  grid-area: info;
+  align-self: center;
+}
+
+.seat__name {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.seat__title {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--smoke-dim);
+  margin-top: 2px;
+}
+
+.seat__cards {
+  grid-area: cards;
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+  min-height: 46px;
+}
+
+.seat__cardSlot {
+  margin-left: -20px;
+}
+
+.seat__cardSlot:first-child {
+  margin-left: 0;
+}
+
+.seat__count {
+  margin-left: 12px;
+  font-family: var(--display);
+  font-size: 15px;
+  color: var(--gold);
+}
+
+.seat__thinking {
+  grid-area: think;
+  font-size: 11px;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+  margin-top: 6px;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+/* 撃たれた席 */
+.seat--eliminated {
+  filter: grayscale(1) brightness(0.45);
+  border-color: rgba(139, 26, 20, 0.5);
+}
+
+.seat--survived {
+  border-color: var(--gold);
+  box-shadow: 0 0 40px rgba(200, 162, 74, 0.25);
+}
+
+.seat--firing {
+  animation: shot 240ms steps(2, end) 2;
+}
+
+@keyframes shot {
+  0% { background: rgba(255, 236, 190, 0.9); transform: translateX(0); }
+  40% { transform: translateX(-6px) translateY(2px); }
+  100% { background: transparent; transform: translateX(0); }
+}
+
+.seat__stamp,
+.me__stamp {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-13deg);
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 25px;
+  letter-spacing: 0.14em;
+  color: var(--blood-hot);
+  border: 3px solid var(--blood-hot);
+  padding: 5px 16px;
+  opacity: 0.92;
+  pointer-events: none;
+  animation: stamp 340ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  z-index: 5;
+}
+
+.seat__stamp--gold {
+  color: var(--gold-bright);
+  border-color: var(--gold-bright);
+  font-size: 19px;
+}
+
+@keyframes stamp {
+  0% { transform: translate(-50%, -50%) rotate(-13deg) scale(2.6); opacity: 0; }
+  100% { transform: translate(-50%, -50%) rotate(-13deg) scale(1); opacity: 0.92; }
+}
+
+.bulletHole {
+  position: absolute;
+  pointer-events: none;
+  z-index: 4;
+  animation: hole 220ms ease-out both;
+}
+
+@keyframes hole {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ---------- テーブル中央 ---------- */
+.table {
+  display: grid;
+  place-items: center;
+}
+
+.table__felt {
+  width: min(100%, 760px);
+  padding: 22px clamp(16px, 5vw, 54px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  border-radius: 140px / 90px;
+  background:
+    radial-gradient(ellipse at 50% 40%, var(--felt), var(--felt-2) 78%);
+  border: 2px solid rgba(200, 162, 74, 0.32);
+  outline: 1px solid rgba(200, 162, 74, 0.14);
+  outline-offset: 6px;
+  box-shadow: inset 0 8px 60px rgba(0, 0, 0, 0.55), 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+
+.table__crest {
+  width: 96px;
+  height: 96px;
+  color: rgba(200, 162, 74, 0.3);
+  flex-shrink: 0;
+}
+
+.table__crest svg {
+  width: 100%;
+  height: 100%;
+}
+
+.crestText {
+  fill: rgba(200, 162, 74, 0.42);
+  font-size: 15px;
+  letter-spacing: 2px;
+}
+
+.pile {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.pile__label {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: rgba(236, 227, 207, 0.5);
+}
+
+.pile__stack {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pile__count {
+  font-family: var(--display);
+  font-size: 17px;
+  color: var(--gold);
+}
+
+.pile__empty {
+  width: 62px;
+  height: 88px;
+  border: 1px dashed rgba(236, 227, 207, 0.22);
+  border-radius: 6px;
+}
+
+/* ---------- 自分の席 ---------- */
+.me {
+  position: relative;
+  padding: 14px 16px 16px;
+  border: 1px solid rgba(200, 162, 74, 0.22);
+  background: linear-gradient(180deg, rgba(26, 22, 19, 0.85), rgba(12, 10, 9, 0.95));
+  overflow: hidden;
+  transition: filter 700ms ease;
+}
+
+.me--eliminated {
+  filter: grayscale(1) brightness(0.5);
+  border-color: rgba(139, 26, 20, 0.6);
+}
+
+.me--survived {
+  border-color: var(--gold);
+  box-shadow: 0 0 50px rgba(200, 162, 74, 0.2);
+}
+
+.me__header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.me__name {
+  font-family: var(--display);
+  font-size: 17px;
+  letter-spacing: 0.1em;
+  color: var(--gold-bright);
+}
+
+.me__title {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--smoke-dim);
+}
+
+.turnBanner {
+  margin-left: auto;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--smoke);
+  padding: 4px 12px;
+  border: 1px solid rgba(143, 136, 124, 0.25);
+}
+
+.turnBanner--mine {
+  color: var(--gold-bright);
+  border-color: rgba(200, 162, 74, 0.5);
+  background: rgba(200, 162, 74, 0.08);
+}
+
+.turnBanner--over {
+  color: var(--blood-hot);
+  border-color: rgba(210, 74, 52, 0.5);
+}
+
+.hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 100px;
+  align-items: flex-end;
+}
+
+/* ---------- カード ---------- */
+.card {
+  position: relative;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  background: linear-gradient(170deg, #f3ecda, var(--cream) 55%, #ddd2b8);
+  color: #17130f;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-family: Georgia, "Times New Roman", serif;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+  flex-shrink: 0;
+}
+
+.card--md {
+  width: 66px;
+  height: 94px;
+}
+
+.card--sm {
+  width: 40px;
+  height: 57px;
+}
+
+.card--red { color: #a4201a; }
+.card--black { color: #17130f; }
+
+.card__center {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.card--sm .card__center { font-size: 15px; }
+
+.card__corner {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+  line-height: 1;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.card--sm .card__corner { font-size: 8px; }
+
+.card__corner--tl { top: 5px; left: 6px; }
+.card__corner--br { bottom: 5px; right: 6px; transform: rotate(180deg); }
+
+.card__suit { font-size: 0.85em; }
+
+.card--clickable { cursor: pointer; }
+
+.card--clickable:hover {
+  transform: translateY(-9px);
+  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.6);
+}
+
+.card--selected {
+  transform: translateY(-14px);
+  box-shadow: 0 0 0 2px var(--gold-bright), 0 14px 26px rgba(0, 0, 0, 0.65);
+}
+
+.card--wild {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold), 0 0 18px rgba(200, 162, 74, 0.4);
+  background: linear-gradient(170deg, #fbf3dc, #f0e4c2 60%, #dcc899);
+}
+
+.card__wildTag {
+  position: absolute;
+  bottom: 20px;
+  font-size: 6px;
+  letter-spacing: 0.14em;
+  color: #8a6a1f;
+  border-top: 1px solid rgba(138, 106, 31, 0.4);
+  border-bottom: 1px solid rgba(138, 106, 31, 0.4);
+  padding: 1px 3px;
+}
+
+.card:disabled { cursor: default; }
+
+.card--back {
+  background:
+    repeating-linear-gradient(45deg, #5c1512 0 5px, #470f0d 5px 10px),
+    #4a100e;
+  border: 1px solid rgba(200, 162, 74, 0.4);
+  box-shadow: inset 0 0 0 3px rgba(200, 162, 74, 0.22), 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- ボタン ---------- */
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  font-family: var(--display);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  font-size: 13px;
+  padding: 11px 20px;
+  color: var(--cream);
+  background: linear-gradient(180deg, rgba(52, 45, 40, 0.95), rgba(26, 22, 19, 0.95));
+  border: 1px solid rgba(200, 162, 74, 0.38);
+  cursor: pointer;
+  display: grid;
+  gap: 3px;
+  justify-items: center;
+  transition: all 180ms ease;
+}
+
+.btn small {
+  font-family: var(--body);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--smoke);
+  font-weight: 400;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, rgba(72, 62, 52, 0.95), rgba(36, 30, 25, 0.95));
+  transform: translateY(-1px);
+}
+
+.btn:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+.btn--bater.btn--armed {
+  border-color: var(--blood-hot);
+  color: #ffe9e2;
+  background: linear-gradient(180deg, #a8261c, #6f150f);
+  box-shadow: 0 0 24px rgba(210, 74, 52, 0.45);
+  animation: armed 1.3s ease-in-out infinite;
+}
+
+.btn--bater.btn--armed small { color: rgba(255, 233, 226, 0.75); }
+
+@keyframes armed {
+  0%, 100% { box-shadow: 0 0 20px rgba(210, 74, 52, 0.35); }
+  50% { box-shadow: 0 0 34px rgba(210, 74, 52, 0.7); }
+}
+
+.btn--start,
+.btn--again {
+  font-size: 15px;
+  padding: 15px 34px;
+  border-color: var(--gold);
+  color: var(--gold-bright);
+}
+
+/* ---------- 発砲フラッシュ ---------- */
+.muzzleFlash {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 45%, rgba(255, 240, 205, 0.75), rgba(255, 170, 80, 0.2) 35%, transparent 65%);
+  animation: flash 240ms steps(3, end) forwards;
+}
+
+@keyframes flash {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ---------- 判定 ---------- */
+.verdict {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(5, 4, 4, 0.88);
+  animation: fadeIn 600ms ease both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.verdict__panel {
+  max-width: 560px;
+  text-align: center;
+  padding: 44px 40px 36px;
+  border: 1px solid rgba(200, 162, 74, 0.45);
+  outline: 1px solid rgba(200, 162, 74, 0.16);
+  outline-offset: 7px;
+  background: linear-gradient(180deg, #1c1613, #0a0908);
+  box-shadow: 0 40px 110px rgba(0, 0, 0, 0.9);
+  animation: verdictIn 520ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+@keyframes verdictIn {
+  from { transform: translateY(14px) scale(0.97); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+.verdict h2 {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(30px, 7vw, 52px);
+  letter-spacing: 0.09em;
+  margin: 0 0 18px;
+}
+
+.verdict--win h2 {
+  color: var(--gold-bright);
+  text-shadow: 0 0 40px rgba(236, 205, 131, 0.5);
+}
+
+.verdict--lose h2 {
+  color: var(--blood-hot);
+  text-shadow: 0 0 40px rgba(210, 74, 52, 0.45);
+}
+
+.verdict--draw h2 { color: var(--smoke); }
+
+.verdict__lead {
+  font-size: 16px;
+  margin: 0 0 10px;
+  color: var(--cream);
+}
+
+.verdict__sub {
+  font-size: 13px;
+  line-height: 1.95;
+  color: var(--smoke);
+  margin: 0 0 28px;
+}
+
+/* ---------- スマートフォン（iPhone想定） ----------
+   縦に積むと相手3人だけで画面の半分以上を食い、自分の手札が画面外に出てしまう。
+   狭い幅では「相手は3列の要約」「場は小さく」「手札とボタンは常に見える」に組み替える。
+
+   幅だけで判定すると横向き（844x390など）が漏れてデスクトップ配置のまま
+   高さが溢れるので、「狭い」か「低い」かのどちらかで効かせる。 */
+@media (max-width: 700px), (max-height: 560px) {
+  .app {
+    /* iOS Safari はツールバーの伸縮で 100vh がずれるので dvh を使う */
+    min-height: 100dvh;
+    gap: 9px;
+    padding: calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right))
+      calc(12px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));
+  }
+
+  .topbar {
+    padding-bottom: 8px;
+    gap: 10px;
+  }
+
+  .topbar__brand h1 { font-size: 18px; }
+  .topbar__brand p { font-size: 9px; }
+
+  .topbar__wild { padding: 5px 10px; gap: 8px; }
+  .topbar__wildLabel { font-size: 8px; letter-spacing: 0.12em; }
+  .topbar__wildRank { font-size: 21px; }
+  .topbar__vira { font-size: 8px; gap: 5px; }
+  .topbar__vira .card--sm { width: 27px; height: 39px; }
+  .topbar__vira .card__corner { font-size: 6px; }
+  .topbar__vira .card__center { font-size: 11px; }
+
+  /* 相手は常に3列。肩書きと扇状の手札は落とし、名前と枚数だけ残す */
+  .opponents {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .seat {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "avatar"
+      "info"
+      "cards"
+      "think";
+    justify-items: center;
+    text-align: center;
+    padding: 8px 5px;
+    gap: 2px;
+  }
+
+  .seat__avatar { width: 26px; height: 26px; }
+  .seat__name { font-size: 11px; letter-spacing: 0; }
+  .seat__title { display: none; }
+
+  .seat__cards { margin-top: 5px; min-height: 0; gap: 5px; }
+  /* 扇状に重ねた裏面は狭すぎて潰れるため、1枚だけ残して枚数を添える */
+  .seat__cardSlot:not(:first-child) { display: none; }
+  .seat__cardSlot .card--sm { width: 24px; height: 34px; }
+  .seat__count { margin-left: 6px; font-size: 14px; }
+  .seat__thinking { font-size: 9px; margin-top: 3px; }
+
+  .seat__stamp { font-size: 12px; border-width: 2px; padding: 2px 7px; letter-spacing: 0.06em; }
+  .seat__stamp--gold { font-size: 10px; }
+
+  .table__felt {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 70px / 52px;
+    gap: 10px;
+  }
+
+  .table__crest { width: 50px; height: 50px; }
+  .pile__label { font-size: 8px; letter-spacing: 0.1em; }
+  .pile__count { font-size: 14px; }
+  .pile__stack { gap: 7px; }
+  .pile__empty { width: 46px; height: 65px; }
+  .table__felt .card--md { width: 46px; height: 65px; }
+  .table__felt .card--md .card__center { font-size: 18px; }
+  .table__felt .card--md .card__corner { font-size: 9px; }
+
+  .me { padding: 10px 10px 12px; }
+  .me__header { margin-bottom: 8px; gap: 8px; }
+  .me__name { font-size: 14px; }
+  .me__title { display: none; }
+  .turnBanner { font-size: 10px; padding: 3px 8px; }
+
+  /* 手札は2段に折り返す前提で1枚を小さく。タップ領域は44px以上を確保する */
+  .hand { gap: 6px; min-height: 0; }
+  .hand .card--md { width: 52px; height: 74px; }
+  .hand .card--md .card__center { font-size: 20px; }
+  .hand .card--md .card__corner { font-size: 10px; }
+  /* 右下の角表示は左上の繰り返しなので、狭い画面では落として
+     CORINGA の表示と重ならないようにする */
+  .hand .card__corner--br { display: none; }
+  .hand .card__wildTag { bottom: 7px; font-size: 5px; }
+
+  .actions { gap: 7px; margin-top: 10px; }
+  .btn { flex: 1; padding: 9px 6px; font-size: 11px; letter-spacing: 0.08em; }
+  .btn small { font-size: 8px; }
+
+  .me__stamp { font-size: 20px; }
+
+  .verdict__panel { padding: 30px 22px 26px; }
+  .verdict h2 { font-size: 30px; }
+  .verdict__lead { font-size: 14px; }
+  .verdict__sub { font-size: 12px; margin-bottom: 22px; }
+
+  .intro { min-height: 100dvh; }
+  .intro__panel { padding: 34px 22px 28px; }
+  .intro__body { font-size: 13px; line-height: 1.9; }
+}
+
+/* ---------- 横向き（高さが足りない） ----------
+   横幅は余るので、手札を折り返さず1行に収めて縦を稼ぐ。 */
+@media (max-height: 560px) and (orientation: landscape) {
+  .app { gap: 6px; padding-top: calc(6px + env(safe-area-inset-top)); }
+
+  .topbar { padding-bottom: 5px; }
+  .topbar__brand h1 { font-size: 15px; }
+  .topbar__brand p { display: none; }
+  .topbar__wild { padding: 3px 8px; gap: 6px; }
+  .topbar__wildRank { font-size: 17px; }
+  .topbar__vira .card--sm { width: 21px; height: 30px; }
+  .topbar__vira .card__center { font-size: 8px; }
+
+  /* 相手は1行に収める */
+  .seat {
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "avatar info"
+      "cards cards";
+    justify-items: start;
+    text-align: left;
+    padding: 6px 8px;
+  }
+  .seat__avatar { width: 20px; height: 20px; }
+  .seat__name { font-size: 10px; }
+  .seat__cards { margin-top: 3px; }
+  .seat__cardSlot .card--sm { width: 18px; height: 26px; }
+  .seat__count { font-size: 12px; }
+  .seat__thinking { display: none; }
+
+  .table__felt { padding: 5px 14px; border-radius: 60px / 38px; }
+  .table__crest { width: 32px; height: 32px; }
+  .table__felt .card--md,
+  .pile__empty { width: 34px; height: 48px; }
+  .table__felt .card--md .card__center { font-size: 13px; }
+  .pile { gap: 4px; }
+  .pile__label { font-size: 7px; }
+
+  .me { padding: 7px 9px 8px; }
+  .me__header { margin-bottom: 5px; }
+  .me__name { font-size: 12px; }
+
+  /* 折り返さず1行。10枚 x 46px でも横幅には十分収まる */
+  .hand { flex-wrap: nowrap; overflow-x: auto; gap: 5px; padding-bottom: 2px; }
+  .hand .card--md { width: 46px; height: 65px; }
+  .hand .card--md .card__center { font-size: 17px; }
+  .hand .card__wildTag { display: none; }
+
+  .actions { margin-top: 7px; }
+  .btn { padding: 7px 6px; font-size: 10px; }
+  .btn small { display: none; }
+
+  .verdict__panel { padding: 20px 22px 18px; }
+  .verdict h2 { font-size: 24px; margin-bottom: 10px; }
+  .verdict__lead { font-size: 13px; }
+  .verdict__sub { font-size: 11px; margin-bottom: 14px; line-height: 1.6; }
+  .btn--again { padding: 10px 22px; font-size: 13px; }
+
+  .intro__panel { padding: 20px 24px 18px; }
+  .intro__title { font-size: 34px; }
+  .intro__body { font-size: 11px; line-height: 1.7; margin-bottom: 10px; }
+  .intro__rule { margin: 12px auto; }
+  .intro__warn { margin-bottom: 14px; font-size: 11px; }
+  .intro__foot { display: none; }
+}
+
+/* タッチ端末では hover の持ち上げが誤作動するので、選択時だけ動かす */
+@media (hover: none) {
+  .card--clickable:hover { transform: none; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); }
+  .card--selected,
+  .card--clickable.card--selected:hover {
+    transform: translateY(-12px);
+    box-shadow: 0 0 0 2px var(--gold-bright), 0 14px 26px rgba(0, 0, 0, 0.65);
+  }
+  .btn:hover:not(:disabled) { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

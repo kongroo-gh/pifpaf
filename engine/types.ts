@@ -25,5 +25,6 @@ export function rankIndex(rank: Rank): number {
 /** ランクの循環上の「次」。K の次は A、A の次は 2。ヴィラ→ワイルド決定に使用。 */
 export function nextRank(rank: Rank): Rank {
   const i = rankIndex(rank);
-  return RANK_ORDER[(i + 1) % RANK_ORDER.length];
+  // 剰余で必ず範囲内に収まるため undefined にはならない
+  return RANK_ORDER[(i + 1) % RANK_ORDER.length]!;
 }

@@ -27,7 +27,9 @@ export function shuffle<T>(arr: T[], rng: () => number = Math.random): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+    const tmp = a[i]!;
+    a[i] = a[j]!;
+    a[j] = tmp;
   }
   return a;
 }
@@ -57,11 +59,11 @@ export function dealGame(playerCount: number, rng: () => number = Math.random): 
   let cursor = 0;
   for (let round = 0; round < CARDS_PER_PLAYER; round++) {
     for (let p = 0; p < playerCount; p++) {
-      hands[p].push(deck[cursor++]);
+      hands[p]!.push(deck[cursor++]!);
     }
   }
 
-  const vira = deck[cursor++];
+  const vira = deck[cursor++]!;
   const wildRank = nextRank(vira.rank);
   const stock = deck.slice(cursor);
 

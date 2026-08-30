@@ -26,15 +26,48 @@ pifpaf/                  npm workspaces のルート
 ├── rules.md             ルール仕様書（仮定・要調整点も明記）
 ├── CLAUDE.md             このファイル
 ├── engine/               純粋なゲームロジック（React/DOM/通信に一切依存しない）
+│   ├── index.ts          公開窓口（バレル）。web/ はここ経由でのみ参照する
 │   ├── types.ts          Card / Suit / Rank
 │   ├── deck.ts           デッキ生成・シャッフル・配札・ヴィラ決定
 │   ├── melds.ts          トリンカ／シーケンス判定、手札の役分類（ワイルド対応）
-│   ├── melds.test.ts     Vitestテスト（未実行、要 npm install）
+│   ├── gameEngine.ts     ターンの状態遷移（reducer）。DRAW / DISCARD / BATER
+│   ├── ai.ts             CPU用の簡易AI（貪欲法）
+│   ├── *.test.ts         Vitestテスト（48件・全て通過）
 │   ├── sanity-check.ts   npm installなしで `node --experimental-strip-types` で動作確認できるスクリプト
 │   └── package.json / tsconfig.json
-└── web/                  【未着手】React + Vite のUI。engineを呼び出すだけで、
-                          ゲームルール自体は一切持たない想定
+└── web/                  React + Vite のUI。engineを呼び出すだけで、
+    ├── src/game/         ゲームルール自体は一切持たない
+    │   ├── useGame.ts    状態保持とCPUのタイマー駆動（副作用はここに閉じ込める）
+    │   ├── useExecution.ts 決着後の演出タイミング
+    │   └── players.ts    席の設定（演出のみ。engineは席番号しか知らない）
+    ├── src/components/   カード・座席・銃痕
+    └── src/App.tsx / styles.css
 ```
+
+## 画面サイズ対応（踏んだ落とし穴）
+- **幅だけのメディアクエリでは横向きが漏れる。** `@media (max-width: 700px)` だけだと
+  844x390 のような横向きが素通りしてデスクトップ配置のままになり、高さが300px以上
+  溢れてボタンが画面外に出た。`(max-width: 700px), (max-height: 560px)` の
+  **OR** で「狭い」か「低い」かの両方を拾うこと。
+- 縦向きは相手3人を**3列の要約**（肩書きと扇状の裏面を落として名前＋枚数だけ）に
+  組み替える。縦積みのままだと相手だけで453px＝画面の56%を食う。
+- 横向きは幅が余るので手札を**1行**（`flex-wrap: nowrap`）にして縦を稼ぐ。
+- iOS Safari はツールバーの伸縮で `100vh` がずれるため `100dvh` を使う。
+  ノッチとホームインジケータのぶんは `env(safe-area-inset-*)` で確保
+  （`index.html` の `viewport-fit=cover` とセット）。
+- 小さいカードでは右下の角表示を消す。左上の繰り返しなうえ、CORINGA の表示と重なる。
+- タッチ端末では hover の持ち上げが誤作動するので `@media (hover: none)` で止め、
+  選択時だけ動かす。
+
+確認済み: 375x667 / 360x780 / 390x844（縦）、667x375 / 844x390（横）で
+スクロールなし・横溢れなし・ボタン可視。
+
+## 見た目の方針（ユーザー指定）
+マフィアの酒場の奥の部屋、という設定。ノワール調（黒・生成り・金・血の赤、
+明朝／Cinzel）。**負けた3人は撃たれて脱落する** という演出を入れてある
+（ELIMINADOのスタンプ・銃痕・マズルフラッシュ・画面の暗転）。
+あくまで記号的な表現にとどめ、生々しい描写はしない。イントロに
+「※演出です」の注記を置いている。
 
 将来オンライン化する際は `server/` パッケージを追加し、`engine/` をそのまま
 Node.js側（WebSocket想定）に載せる。`web/` はUIとネットワーク送受信のみを担当し、
@@ -48,11 +81,20 @@ Node.js側（WebSocket想定）に載せる。`web/` はUIとネットワーク�
   - `isValidTrinca`：同ランク異スート3〜4枚、ワイルド代用可
   - `isValidSequence`：同スート連番3枚以上、Q-K-A・K-A-2のまたぎ対応、ワイルド代用可
   - `classifyAsMelds`：手札全体を役に分類できるか全探索で判定（9〜10枚程度なら実用速度）
-- `engine/melds.test.ts`：Vitest形式で書いたが、ネットワーク制限のある環境で作業していたため
-  `npm install` はまだ実行できていない。Claude Code環境で `npm install && npm test` を実行し、
-  グリーンになることを確認してほしい。
-- `engine/sanity-check.ts` で手動実行した限りでは全ケース想定通りに動作済み
-  （`node --experimental-strip-types engine/sanity-check.ts`）。
+- `engine/gameEngine.ts`：完成。reducerスタイルの `applyAction(state, action)`。
+  不正な操作は例外を投げず `{ ok: false, error }` で返す。
+- `engine/ai.ts`：完成。`cardAffinity` で「役への絡み具合」を点数化し、最も孤立した札を
+  捨てる。`findBaterAction` は人間側の「BATER」ボタンの活性判定にも使っている
+  （ルール判定をweb側に持たせないため）。
+- **テストは48件すべて通過**（`npm test --workspace=engine`）。
+  CPU4人による通しプレイの統合テストを10シード分含む（決着すること・カードが増減しないこと）。
+- `engine` / `web` とも `tsc --noEmit` がクリーン。
+  以前は `noUncheckedIndexedAccess` 由来のエラーが deck/melds/types に残っていたが解消済み。
+- `web/`：ワンゲームマッチ（1ラウンドで決着、ポイント制なし）として動作確認済み。
+
+### 300局まわしたときの様子（AI同士）
+引き分け0件、勝者は席ごとにほぼ均等（80/83/64/73）、
+1局あたり中央値34アクション＝テーブル4周ほど。ワンゲームマッチとして手頃な長さ。
 
 ## rules.md に明記した「実装上の仮定」（要ユーザー確認・後で切り替え可能に）
 - 捨て札からのドローは不可（山札からのみ）
@@ -62,17 +104,24 @@ Node.js側（WebSocket想定）に載せる。`web/` はUIとネットワーク�
 これらはゲームロジック内に決め打ちで実装されているため、後で設定可能にする場合は
 `engine/melds.ts` と `engine/deck.ts` を要修正。
 
+## 動かし方
+```
+npm install                        # ルートで1回
+npm test --workspace=engine        # 48件
+npm run dev --workspace=web        # http://localhost:5173
+```
+
 ## 次のタスク（優先順）
-1. **`engine/gameEngine.ts`**：ターンの状態遷移をreducerスタイルで実装
-   - 状態：各プレイヤーの手札、山札、捨て札、現在の手番、ヴィラ／ワイルドランク
-   - アクション：`DRAW`（山札から引く）、`DISCARD`（1枚捨てる）、`BATER`（上がり宣言。
-     9枚成立時は1枚捨てて上がり、10枚成立時は何も捨てずに上がり）
-   - 副作用なし・フレームワーク非依存を維持すること（`deck.ts`/`melds.ts`と同じ方針）
-2. **`engine/ai.ts`**：CPU用の簡易AI（貪欲法：役になりそうな組み合わせを優先して残し、
-   最も孤立したカードを捨てる、程度でよい。強さの調整は後回し）
-3. **`web/`**：React + Vite セットアップ。`engine`をそのまま呼び出し、人間1人+CPU3人で
-   ローカル完結のゲームを動かす
-4. ポイント制度の設計（ユーザーと別途相談してから着手すること。まだ要件確定していない）
+1. **上がり時に役を見せる**：現状は勝者の手札が伏せられたまま決着する。
+   `classifyAsMelds` の戻り値（Meld[]）を使って、どう組めていたのかを開示したい。
+2. **AIの強化**：今は自分の手札しか見ていない。捨て札の履歴を見て危険牌を避ける、
+   ワイルドの温存判断を入れる、など。`cardAffinity` の重み調整でかなり変わるはず。
+3. **人間のBATER時の捨て札選択**：`findBaterAction` は「上がれる組み合わせ」を
+   1つ見つけて返すだけなので、余り札が複数あり得る場合に選ばせていない。
+4. **捨て札からのドロー**（rules.md の仮定を解除）。UIの導線も要検討。
+5. ポイント制度の設計（ユーザーと別途相談してから着手すること。まだ要件確定していない）
+6. オンライン化：`server/` を足し、`engine` をNode側に載せる。
+   `web/` に手札マスク済みの状態だけを配信する。
 
 ## コーディング規約（このプロジェクト内で守ってきたこと）
 - `engine/` 配下は副作用ゼロの純粋関数のみ。DOM・React・fetch・WebSocketへの依存禁止

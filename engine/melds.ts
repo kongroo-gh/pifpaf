@@ -28,7 +28,7 @@ export function isValidTrinca(cards: Card[], wildRank: Rank): boolean {
   // 仮定：全部ワイルドのトリンカは許容する（rules.md参照）
   if (naturals.length === 0) return cards.length <= 4;
 
-  const rank = naturals[0].rank;
+  const rank = naturals[0]!.rank;
   if (!naturals.every((c) => c.rank === rank)) return false;
 
   const suits = new Set(naturals.map((c) => c.suit));
@@ -52,7 +52,7 @@ export function isValidSequence(cards: Card[], wildRank: Rank): boolean {
   // 仮定：全部ワイルドのシーケンスは不許可（rules.md参照）
   if (naturals.length === 0) return false;
 
-  const suit = naturals[0].suit;
+  const suit = naturals[0]!.suit;
   if (!naturals.every((c) => c.suit === suit)) return false;
 
   const rankSet = new Set(naturals.map((c) => c.rank));
@@ -120,7 +120,8 @@ export function classifyAsMelds(cards: Card[], wildRank: Rank): Meld[] | null {
 function combinations<T>(arr: T[], size: number): T[][] {
   if (size === 0) return [[]];
   if (arr.length < size) return [];
-  const [first, ...rest] = arr;
+  const first = arr[0]!;
+  const rest = arr.slice(1);
   const withFirst = combinations(rest, size - 1).map((c) => [first, ...c]);
   const withoutFirst = combinations(rest, size);
   return [...withFirst, ...withoutFirst];
