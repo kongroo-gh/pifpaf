@@ -1,0 +1,13 @@
+{
+  "name": "pifpaf",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Pif Paf（ブラジルのトランプゲーム）のWeb版。engine=純粋ロジック、web=React UI、将来server=オンライン対戦用の構成。",
+  "workspaces": [
+    "engine",
+    "web"
+  ],
+  "scripts": {
+    "test:engine": "npm run test --workspace=engine"
+  }
+}
