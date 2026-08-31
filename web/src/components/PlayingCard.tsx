@@ -11,6 +11,8 @@ export interface PlayingCardProps {
   wildRank: Rank;
   selected?: boolean;
   disabled?: boolean;
+  /** いま捨て札から拾ったばかりで、この手番では捨てられない札 */
+  locked?: boolean;
   size?: "sm" | "md";
   onClick?: (card: Card) => void;
 }
@@ -20,6 +22,7 @@ export function PlayingCard({
   wildRank,
   selected = false,
   disabled = false,
+  locked = false,
   size = "md",
   onClick,
 }: PlayingCardProps) {
@@ -33,7 +36,8 @@ export function PlayingCard({
     isRed ? "card--red" : "card--black",
     isWild ? "card--wild" : "",
     selected ? "card--selected" : "",
-    onClick && !disabled ? "card--clickable" : "",
+    locked ? "card--locked" : "",
+    onClick && !disabled && !locked ? "card--clickable" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -42,9 +46,13 @@ export function PlayingCard({
     <button
       type="button"
       className={classes}
-      disabled={disabled || !onClick}
-      onClick={onClick ? () => onClick(card) : undefined}
-      aria-label={`${card.rank} ${glyph}${isWild ? " コリンガ" : ""}`}
+      disabled={disabled || locked || !onClick}
+      onClick={onClick && !locked ? () => onClick(card) : undefined}
+      aria-label={
+        `${card.rank} ${glyph}` +
+        (isWild ? " コリンガ" : "") +
+        (locked ? " 拾ったばかりで捨てられない" : "")
+      }
     >
       <span className="card__corner card__corner--tl">
         <span className="card__rank">{card.rank}</span>
@@ -56,6 +64,7 @@ export function PlayingCard({
         <span className="card__suit">{glyph}</span>
       </span>
       {isWild && <span className="card__wildTag">CORINGA</span>}
+      {locked && <span className="card__lockTag" aria-hidden="true">拾</span>}
     </button>
   );
 }

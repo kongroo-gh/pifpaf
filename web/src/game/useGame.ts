@@ -65,7 +65,10 @@ export function useGame() {
     []
   );
 
-  const drawCard = useCallback(() => dispatch({ type: "DRAW" }), [dispatch]);
+  const drawCard = useCallback(() => dispatch({ type: "DRAW", from: "STOCK" }), [dispatch]);
+
+  /** 前のプレイヤーが捨てた札（捨て札の一番上）を拾う */
+  const takeDiscard = useCallback(() => dispatch({ type: "DRAW", from: "DISCARD" }), [dispatch]);
 
   const discardSelected = useCallback(() => {
     if (selectedCardId === null) return;
@@ -74,6 +77,11 @@ export function useGame() {
 
   const humanHand = state.hands[HUMAN] ?? [];
   const isHumanTurn = state.currentPlayer === HUMAN && state.phase !== "ROUND_OVER";
+
+  const topDiscard = state.discard[state.discard.length - 1];
+  /** 捨て札を拾えるか。拾えるのは一番上の1枚だけ。 */
+  const canTakeDiscard =
+    isHumanTurn && state.phase === "AWAITING_DRAW" && topDiscard !== undefined;
 
   /** 人間が今バテル（上がり）できるか。判定はengineに任せる。 */
   const humanBater =
@@ -120,11 +128,14 @@ export function useGame() {
     humanHand,
     isHumanTurn,
     humanBater,
+    topDiscard,
+    canTakeDiscard,
     selectedCardId,
     setSelectedCardId,
     pushLog,
     startGame,
     drawCard,
+    takeDiscard,
     discardSelected,
     callBater,
   };

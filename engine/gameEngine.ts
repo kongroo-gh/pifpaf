@@ -21,15 +21,33 @@ export interface GameState {
   phase: Phase;
   /**
    * 上がったプレイヤー番号。
-   * ラウンド進行中はnull。phase==="ROUND_OVER"かつnullなら山札切れの引き分け。
+   * ラウンド進行中はnull。phase==="ROUND_OVER"かつnullなら決着なしの引き分け。
    */
   winner: number | null;
+  /**
+   * この手番で捨て札から拾ったカードのid（拾っていなければnull）。
+   * そのまま捨て直すと手番が無為に流れて千日手になり得るため、DISCARDでは弾く。
+   * 手番が移るときにクリアする。
+   */
+  takenFromDiscard: string | null;
+  /** 捨て札から山札を組み直した回数。無限に続かないための安全弁に使う。 */
+  recycles: number;
 }
 
+/** ドロー元。捨て札から取れるのは一番上の1枚だけ（表向きなのはその1枚だけのため）。 */
+export type DrawSource = "STOCK" | "DISCARD";
+
 export type GameAction =
-  | { type: "DRAW" }
+  | { type: "DRAW"; from?: DrawSource }
   | { type: "DISCARD"; cardId: string }
   | { type: "BATER"; cardId?: string };
+
+/**
+ * 捨て札を山札に組み直せる回数の上限。
+ * 実際のルールに上限は無いが、engineが必ず停止することを保証したいので安全弁を置く。
+ * CPU同士で回した範囲では山札切れ自体が起きないため、通常は到達しない。
+ */
+const MAX_RECYCLES = 3;
 
 export type GameActionResult =
   | { ok: true; state: GameState }
@@ -45,6 +63,8 @@ export function createInitialState(deal: DealResult, firstPlayer = 0): GameState
     wildRank: deal.wildRank,
     phase: "AWAITING_DRAW",
     winner: null,
+    takenFromDiscard: null,
+    recycles: 0,
   };
 }
 
@@ -55,7 +75,7 @@ export function createInitialState(deal: DealResult, firstPlayer = 0): GameState
 export function applyAction(state: GameState, action: GameAction): GameActionResult {
   switch (action.type) {
     case "DRAW":
-      return applyDraw(state);
+      return applyDraw(state, action.from ?? "STOCK");
     case "DISCARD":
       return applyDiscard(state, action.cardId);
     case "BATER":
@@ -63,32 +83,78 @@ export function applyAction(state: GameState, action: GameAction): GameActionRes
   }
 }
 
-function applyDraw(state: GameState): GameActionResult {
+function applyDraw(state: GameState, from: DrawSource): GameActionResult {
   if (state.phase === "ROUND_OVER") {
     return { ok: false, error: "ラウンドは終了しています" };
   }
   if (state.phase !== "AWAITING_DRAW") {
     return { ok: false, error: "今はドローできません（先に捨て札が必要です）" };
   }
-  // 仮定：山札が尽きたらラウンドは勝者なしで終了する（rules.md参照）。
-  // 捨て札を切り直して続行する流用ルールもあるが、シャッフルには乱数が要り
-  // applyActionの純粋性が崩れるため、まずは引き分けとして扱う。
-  if (state.stock.length === 0) {
-    return {
-      ok: true,
-      state: { ...state, phase: "ROUND_OVER", winner: null },
-    };
+
+  return from === "DISCARD" ? drawFromDiscard(state) : drawFromStock(state);
+}
+
+/** 捨て札の一番上を拾う。表向きなのは最後の1枚だけなので、取れるのもその1枚だけ。 */
+function drawFromDiscard(state: GameState): GameActionResult {
+  if (state.discard.length === 0) {
+    return { ok: false, error: "捨て札がありません" };
   }
 
-  const stock = [...state.stock];
-  const drawn = stock.pop()!;
+  const discard = [...state.discard];
+  const drawn = discard.pop()!;
   const hands = state.hands.map((hand, i) =>
     i === state.currentPlayer ? [...hand, drawn] : hand
   );
 
   return {
     ok: true,
-    state: { ...state, hands, stock, phase: "AWAITING_DISCARD" },
+    state: {
+      ...state,
+      hands,
+      discard,
+      phase: "AWAITING_DISCARD",
+      takenFromDiscard: drawn.id,
+    },
+  };
+}
+
+function drawFromStock(state: GameState): GameActionResult {
+  let { stock, discard, recycles } = {
+    stock: state.stock,
+    discard: state.discard,
+    recycles: state.recycles,
+  };
+
+  // 山札が尽きたら捨て札をそのままの順で山札にする（シャッフルしない）。
+  // 順序を保つので乱数が要らず、applyActionの純粋性を保ったまま実装できる。
+  if (stock.length === 0) {
+    if (discard.length === 0 || recycles >= MAX_RECYCLES) {
+      return { ok: true, state: { ...state, phase: "ROUND_OVER", winner: null } };
+    }
+    // stockは末尾が「一番上」。最後に捨てた札を新しい山札の最後（＝最後に引かれる）に
+    // したいので、捨て札を逆順にして積む。
+    stock = [...discard].reverse();
+    discard = [];
+    recycles += 1;
+  }
+
+  const nextStock = [...stock];
+  const drawn = nextStock.pop()!;
+  const hands = state.hands.map((hand, i) =>
+    i === state.currentPlayer ? [...hand, drawn] : hand
+  );
+
+  return {
+    ok: true,
+    state: {
+      ...state,
+      hands,
+      stock: nextStock,
+      discard,
+      recycles,
+      phase: "AWAITING_DISCARD",
+      takenFromDiscard: null,
+    },
   };
 }
 
@@ -105,6 +171,11 @@ function applyDiscard(state: GameState, cardId: string): GameActionResult {
   if (cardIndex === -1) {
     return { ok: false, error: "指定したカードは手札にありません" };
   }
+  // 拾った札をそのまま戻すと、場が変わらないまま手番だけが流れる。
+  // 出典に明記が無いため実装上の仮定として禁じている（rules.md参照）。
+  if (cardId === state.takenFromDiscard) {
+    return { ok: false, error: "いま拾った札は、この手番では捨てられません" };
+  }
 
   const discardedCard = hand[cardIndex]!;
   const nextHand = [...hand.slice(0, cardIndex), ...hand.slice(cardIndex + 1)];
@@ -114,7 +185,14 @@ function applyDiscard(state: GameState, cardId: string): GameActionResult {
 
   return {
     ok: true,
-    state: { ...state, hands, discard, currentPlayer, phase: "AWAITING_DRAW" },
+    state: {
+      ...state,
+      hands,
+      discard,
+      currentPlayer,
+      phase: "AWAITING_DRAW",
+      takenFromDiscard: null,
+    },
   };
 }
 
@@ -144,6 +222,10 @@ function applyBater(state: GameState, cardId: string | undefined): GameActionRes
     return { ok: false, error: "指定したカードは手札にありません" };
   }
 
+  // ここでは takenFromDiscard を弾かない。
+  // DISCARDで禁じているのは「場が変わらないまま手番だけ流れる」のを防ぐためであって、
+  // 上がりは手番を流す行為ではない。元の9枚が既に役として揃っていて、拾った札が
+  // そのまま余る、という正当な上がり方を塞いでしまうので許可する。
   const remaining = [...hand.slice(0, cardIndex), ...hand.slice(cardIndex + 1)];
   if (classifyAsMelds(remaining, state.wildRank) === null) {
     return { ok: false, error: "残り9枚が役として成立していません" };

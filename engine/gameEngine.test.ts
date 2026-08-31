@@ -15,6 +15,8 @@ function makeState(overrides: Partial<GameState> & { hands: Card[][] }): GameSta
     wildRank: overrides.wildRank ?? wildRank,
     phase: overrides.phase ?? "AWAITING_DRAW",
     winner: overrides.winner ?? null,
+    takenFromDiscard: overrides.takenFromDiscard ?? null,
+    recycles: overrides.recycles ?? 0,
   };
 }
 
@@ -58,13 +60,117 @@ describe("DRAW", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("山札が尽きていたら勝者なしでラウンド終了する", () => {
-    const state = makeState({ hands: [[], [], [], []], stock: [], phase: "AWAITING_DRAW" });
+  it("山札も捨て札も尽きていたら勝者なしでラウンド終了する", () => {
+    const state = makeState({
+      hands: [[], [], [], []],
+      stock: [],
+      discard: [],
+      phase: "AWAITING_DRAW",
+    });
     const result = applyAction(state, { type: "DRAW" });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.state.phase).toBe("ROUND_OVER");
     expect(result.state.winner).toBeNull();
+  });
+
+  it("山札が尽きたら捨て札をそのままの順で山札に組み直す", () => {
+    const oldest = c("old", "S", "2");
+    const middle = c("mid", "H", "3");
+    const newest = c("new", "D", "4");
+    const state = makeState({
+      hands: [[], [], [], []],
+      stock: [],
+      // 末尾が最新の捨て札
+      discard: [oldest, middle, newest],
+      phase: "AWAITING_DRAW",
+    });
+
+    const result = applyAction(state, { type: "DRAW" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // 最初に引かれるのは一番古い捨て札
+    expect(result.state.hands[0]).toEqual([oldest]);
+    // 最後に捨てられた札が新しい山札の最後（＝最後に引かれる）に来る
+    expect(result.state.stock).toEqual([newest, middle]);
+    expect(result.state.discard).toEqual([]);
+    expect(result.state.recycles).toBe(1);
+  });
+
+  it("組み直しの上限に達したら勝者なしで終了する（無限に続かないための安全弁）", () => {
+    const state = makeState({
+      hands: [[], [], [], []],
+      stock: [],
+      discard: [c("a", "S", "2"), c("b", "H", "3")],
+      recycles: 3,
+      phase: "AWAITING_DRAW",
+    });
+    const result = applyAction(state, { type: "DRAW" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.phase).toBe("ROUND_OVER");
+    expect(result.state.winner).toBeNull();
+  });
+});
+
+describe("DRAW（捨て札から拾う）", () => {
+  it("捨て札の一番上を手札に加え、拾った札として記録する", () => {
+    const buried = c("buried", "S", "2");
+    const top = c("top", "H", "9");
+    const state = makeState({
+      hands: [[c("mine", "S", "5")], [], [], []],
+      discard: [buried, top],
+      phase: "AWAITING_DRAW",
+    });
+
+    const result = applyAction(state, { type: "DRAW", from: "DISCARD" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.hands[0]).toEqual([c("mine", "S", "5"), top]);
+    // 拾えるのは一番上の1枚だけ。下は残る
+    expect(result.state.discard).toEqual([buried]);
+    expect(result.state.takenFromDiscard).toBe("top");
+    expect(result.state.phase).toBe("AWAITING_DISCARD");
+    // 山札には手を付けない
+    expect(result.state.stock).toEqual(state.stock);
+  });
+
+  it("捨て札が空なら拒否される", () => {
+    const state = makeState({ hands: [[], [], [], []], discard: [], phase: "AWAITING_DRAW" });
+    const result = applyAction(state, { type: "DRAW", from: "DISCARD" });
+    expect(result.ok).toBe(false);
+  });
+
+  it("拾った札をその手番で捨て直すことはできない", () => {
+    const taken = c("taken", "H", "9");
+    const state = makeState({
+      hands: [[c("other", "S", "5"), taken], [], [], []],
+      phase: "AWAITING_DISCARD",
+      takenFromDiscard: "taken",
+    });
+    const result = applyAction(state, { type: "DISCARD", cardId: "taken" });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toContain("拾った札");
+  });
+
+  it("拾った札以外なら捨てられ、手番が移るときに記録はクリアされる", () => {
+    const taken = c("taken", "H", "9");
+    const other = c("other", "S", "5");
+    const state = makeState({
+      hands: [[other, taken], [], [], []],
+      phase: "AWAITING_DISCARD",
+      takenFromDiscard: "taken",
+    });
+
+    const result = applyAction(state, { type: "DISCARD", cardId: "other" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.takenFromDiscard).toBeNull();
+    expect(result.state.currentPlayer).toBe(1);
   });
 
   it("ROUND_OVER後のDRAWは拒否される", () => {
@@ -194,6 +300,23 @@ describe("BATER", () => {
 
     const result = applyAction(state, { type: "BATER", cardId: "10" });
     expect(result.ok).toBe(false);
+  });
+
+  it("拾った札を余らせての上がりは許される（捨て直しの禁止は上がりには及ばない）", () => {
+    const taken = c("taken", "D", "2");
+    const state = makeState({
+      hands: [[...meldedNine, taken], [], [], []],
+      currentPlayer: 0,
+      phase: "AWAITING_DISCARD",
+      takenFromDiscard: "taken",
+    });
+
+    const result = applyAction(state, { type: "BATER", cardId: "taken" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.winner).toBe(0);
+    expect(result.state.hands[0]).toEqual(meldedNine);
   });
 
   it("AWAITING_DRAW中（9枚保持時）のBATERは拒否される", () => {

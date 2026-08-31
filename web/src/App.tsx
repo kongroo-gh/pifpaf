@@ -27,10 +27,13 @@ export default function App() {
     humanHand,
     isHumanTurn,
     humanBater,
+    topDiscard,
+    canTakeDiscard,
     selectedCardId,
     setSelectedCardId,
     startGame,
     drawCard,
+    takeDiscard,
     discardSelected,
     callBater,
   } = game;
@@ -44,7 +47,6 @@ export default function App() {
 
   const humanEliminated = execution.eliminated.has(HUMAN);
   const humanSurvived = execution.verdictReady && state.winner === HUMAN;
-  const topDiscard = state.discard[state.discard.length - 1];
 
   return (
     // 注意：.app--dead の filter は包含ブロックを作るため、その内側に置いた
@@ -86,10 +88,18 @@ export default function App() {
 
       <section className="table">
         <div className="table__felt">
-          <div className="pile">
+          <div className={`pile ${isHumanTurn && state.phase === "AWAITING_DRAW" ? "pile--live" : ""}`}>
             <span className="pile__label">MONTE / 山札</span>
             <div className="pile__stack">
-              <CardBack size="md" />
+              <button
+                type="button"
+                className="pile__button"
+                disabled={!isHumanTurn || state.phase !== "AWAITING_DRAW"}
+                onClick={drawCard}
+                aria-label="山札から1枚引く"
+              >
+                <CardBack size="md" />
+              </button>
               <span className="pile__count">{state.stock.length}</span>
             </div>
           </div>
@@ -103,16 +113,25 @@ export default function App() {
             </svg>
           </div>
 
-          <div className="pile">
+          <div className={`pile ${canTakeDiscard ? "pile--live" : ""}`}>
             <span className="pile__label">DESCARTE / 捨て札</span>
             <div className="pile__stack">
               {topDiscard ? (
-                <PlayingCard card={topDiscard} wildRank={state.wildRank} size="md" />
+                <button
+                  type="button"
+                  className="pile__button"
+                  disabled={!canTakeDiscard}
+                  onClick={takeDiscard}
+                  aria-label={`捨て札の ${topDiscard.rank} を拾う`}
+                >
+                  <PlayingCard card={topDiscard} wildRank={state.wildRank} size="md" />
+                </button>
               ) : (
                 <div className="pile__empty" />
               )}
               <span className="pile__count">{state.discard.length}</span>
             </div>
+            {canTakeDiscard && <span className="pile__hint">タップで拾う</span>}
           </div>
         </div>
       </section>
@@ -136,6 +155,8 @@ export default function App() {
               wildRank={state.wildRank}
               selected={selectedCardId === card.id}
               disabled={!isHumanTurn || state.phase !== "AWAITING_DISCARD"}
+              // 拾ったばかりの札はこの手番では捨てられない
+              locked={card.id === state.takenFromDiscard}
               onClick={
                 isHumanTurn && state.phase === "AWAITING_DISCARD"
                   ? (c) => setSelectedCardId(c.id === selectedCardId ? null : c.id)
@@ -202,7 +223,7 @@ function TurnBanner({
   }
   return (
     <span className="turnBanner turnBanner--mine">
-      {phase === "AWAITING_DRAW" ? "あんたの番だ。引きな。" : "1枚捨てろ。"}
+      {phase === "AWAITING_DRAW" ? "山札か、捨て札から1枚。" : "1枚捨てろ。"}
     </span>
   );
 }

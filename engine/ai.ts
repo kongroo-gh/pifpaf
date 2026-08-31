@@ -46,12 +46,20 @@ export function cardAffinity(card: Card, hand: Card[], wildRank: Rank): number {
 /**
  * 捨てるべき1枚を選ぶ。最も孤立した（affinityが最小の）カードを返す。
  * 同点の場合は手札の並び順で先に来たものを選び、挙動を決定的に保つ。
+ *
+ * excludeId には「この手番で捨て札から拾った札」を渡す。engineがその札の
+ * 捨て直しを弾くため、AIが選んでしまうと手が詰まる。
  */
-export function chooseDiscard(hand: Card[], wildRank: Rank): Card | null {
+export function chooseDiscard(
+  hand: Card[],
+  wildRank: Rank,
+  excludeId: string | null = null
+): Card | null {
   let best: Card | null = null;
   let bestScore = Number.POSITIVE_INFINITY;
 
   for (const card of hand) {
+    if (card.id === excludeId) continue;
     const score = cardAffinity(card, hand, wildRank);
     if (score < bestScore) {
       bestScore = score;
@@ -59,6 +67,34 @@ export function chooseDiscard(hand: Card[], wildRank: Rank): Card | null {
     }
   }
   return best;
+}
+
+/**
+ * 捨て札の一番上を拾うべきか。拾わないなら山札から引く。
+ *
+ * 見えている1枚と山札の未知の1枚を比べることになるので、
+ * 「確実に役に絡む」と言えるときだけ拾う、という消極的な判断にしている。
+ */
+export function shouldTakeDiscard(
+  hand: Card[],
+  topDiscard: Card | undefined,
+  wildRank: Rank
+): boolean {
+  if (topDiscard === undefined) return false;
+
+  // 拾えばそのまま上がれるなら迷う必要がない
+  if (findBaterAction([...hand, topDiscard], wildRank) !== null) return true;
+
+  // ワイルドは何にでも化けるので常に拾う
+  if (topDiscard.rank === wildRank) return true;
+
+  const prospective = [...hand, topDiscard];
+  const gain = cardAffinity(topDiscard, prospective, wildRank);
+
+  // 手札で最も孤立している札より明確に良く、かつ単独で役に絡んでいること。
+  // 8 = 同スートの隣接1枚ぶん。これ未満なら山札を引いたほうがまし。
+  const worst = Math.min(...hand.map((c) => cardAffinity(c, hand, wildRank)));
+  return gain >= 8 && gain > worst;
 }
 
 /**
@@ -89,15 +125,22 @@ export function findBaterAction(hand: Card[], wildRank: Rank): GameAction | null
  */
 export function decideAction(state: GameState): GameAction | null {
   if (state.phase === "ROUND_OVER") return null;
-  if (state.phase === "AWAITING_DRAW") return { type: "DRAW" };
 
   const hand = state.hands[state.currentPlayer];
-  if (hand === undefined || hand.length === 0) return null;
+  if (hand === undefined) return null;
+
+  if (state.phase === "AWAITING_DRAW") {
+    const top = state.discard[state.discard.length - 1];
+    const from = shouldTakeDiscard(hand, top, state.wildRank) ? "DISCARD" : "STOCK";
+    return { type: "DRAW", from };
+  }
+
+  if (hand.length === 0) return null;
 
   const bater = findBaterAction(hand, state.wildRank);
   if (bater !== null) return bater;
 
-  const discard = chooseDiscard(hand, state.wildRank);
+  const discard = chooseDiscard(hand, state.wildRank, state.takenFromDiscard);
   if (discard === null) return null;
   return { type: "DISCARD", cardId: discard.id };
 }

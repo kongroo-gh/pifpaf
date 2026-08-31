@@ -2,7 +2,13 @@ import { describe, it, expect } from "vitest";
 import { Card, Rank } from "./types";
 import { GameState, createInitialState, applyAction } from "./gameEngine";
 import { dealGame } from "./deck";
-import { cardAffinity, chooseDiscard, findBaterAction, decideAction } from "./ai";
+import {
+  cardAffinity,
+  chooseDiscard,
+  shouldTakeDiscard,
+  findBaterAction,
+  decideAction,
+} from "./ai";
 
 /** 再現性のある擬似乱数（mulberry32）。シードを変えて多数の局を回すために使う。 */
 function seededRng(seed: number): () => number {
@@ -28,6 +34,8 @@ function makeState(overrides: Partial<GameState> & { hands: Card[][] }): GameSta
     wildRank: overrides.wildRank ?? wildRank,
     phase: overrides.phase ?? "AWAITING_DRAW",
     winner: overrides.winner ?? null,
+    takenFromDiscard: overrides.takenFromDiscard ?? null,
+    recycles: overrides.recycles ?? 0,
   };
 }
 
@@ -77,6 +85,46 @@ describe("chooseDiscard", () => {
   });
 });
 
+describe("shouldTakeDiscard", () => {
+  // 実戦どおり9枚。5-6-7♠ と 9のトリンカで6枚ぶんは揃っているが、
+  // J♥Q♥ は2枚で役にならず 3♣ が浮いているので、まだ上がれない手。
+  // 枚数の少ない手札で試すと「何を拾っても上がれる」状態になり、
+  // 拾うかどうかの判断そのものを検証できなくなる。
+  const nine: Card[] = [
+    c("1", "S", "5"), c("2", "S", "6"), c("3", "S", "7"),
+    c("4", "H", "9"), c("5", "D", "9"), c("6", "C", "9"),
+    c("7", "H", "J"), c("8", "H", "Q"), c("9", "C", "3"),
+  ];
+
+  it("捨て札が無ければ拾わない", () => {
+    expect(shouldTakeDiscard(nine, undefined, wildRank)).toBe(false);
+  });
+
+  it("ワイルドは必ず拾う", () => {
+    expect(shouldTakeDiscard(nine, c("t", "C", "8"), wildRank)).toBe(true);
+  });
+
+  it("シーケンスが伸びる札は拾う", () => {
+    // 4♠ は 5-6-7♠ にくっつく
+    expect(shouldTakeDiscard(nine, c("t", "S", "4"), wildRank)).toBe(true);
+  });
+
+  it("どこにも絡まない札は拾わない（山札を引いたほうがまし）", () => {
+    // K♦ は同ランクの相方も同スートの近隣もいない
+    expect(shouldTakeDiscard(nine, c("t", "D", "K"), wildRank)).toBe(false);
+  });
+
+  it("拾えばそのまま上がれる札は拾う", () => {
+    const meldedNine = [
+      c("1", "S", "5"), c("2", "S", "6"), c("3", "S", "7"),
+      c("4", "H", "9"), c("5", "D", "9"), c("6", "C", "9"),
+      c("7", "H", "J"), c("8", "H", "Q"), c("9", "H", "K"),
+    ];
+    // 9枚が既に揃っているので、何を拾っても余らせて上がれる
+    expect(shouldTakeDiscard(meldedNine, c("t", "D", "2"), wildRank)).toBe(true);
+  });
+});
+
 describe("findBaterAction", () => {
   const meldedNine: Card[] = [
     c("1", "S", "5"), c("2", "S", "6"), c("3", "S", "7"),
@@ -111,9 +159,39 @@ describe("findBaterAction", () => {
 });
 
 describe("decideAction", () => {
-  it("AWAITING_DRAWではDRAWを返す", () => {
-    const state = makeState({ hands: [[], [], [], []], phase: "AWAITING_DRAW" });
-    expect(decideAction(state)).toEqual({ type: "DRAW" });
+  it("捨て札が無ければ山札から引く", () => {
+    const state = makeState({ hands: [[], [], [], []], discard: [], phase: "AWAITING_DRAW" });
+    expect(decideAction(state)).toEqual({ type: "DRAW", from: "STOCK" });
+  });
+
+  it("役に絡む捨て札があれば拾いにいく", () => {
+    const hand = [c("a", "S", "5"), c("b", "S", "6"), c("lonely", "D", "K")];
+    const state = makeState({
+      hands: [hand, [], [], []],
+      discard: [c("top", "S", "7")], // 5-6-7 が揃う
+      phase: "AWAITING_DRAW",
+    });
+    expect(decideAction(state)).toEqual({ type: "DRAW", from: "DISCARD" });
+  });
+
+  it("拾った札は捨て札に選ばない（engineが弾くので手が詰まる）", () => {
+    // 上がれない10枚。捨てる番になっても拾った札は選べない
+    const taken = c("taken", "D", "2");
+    const hand = [
+      c("1", "S", "5"), c("2", "S", "6"), c("3", "S", "7"),
+      c("4", "H", "9"), c("5", "D", "9"), c("6", "C", "9"),
+      c("7", "H", "J"), c("8", "H", "Q"), c("9", "C", "3"),
+      taken,
+    ];
+    const state = makeState({
+      hands: [hand, [], [], []],
+      phase: "AWAITING_DISCARD",
+      takenFromDiscard: "taken",
+    });
+    const action = decideAction(state);
+    expect(action?.type).toBe("DISCARD");
+    if (action?.type !== "DISCARD") return;
+    expect(action.cardId).not.toBe("taken");
   });
 
   it("上がれる手ならDISCARDよりBATERを優先する", () => {

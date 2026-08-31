@@ -11,7 +11,13 @@ export { createDoubleDeck, shuffle, dealGame } from "./deck";
 export type { Meld, MeldType } from "./melds";
 export { isValidTrinca, isValidSequence, classifyAsMelds } from "./melds";
 
-export type { GameState, GameAction, GameActionResult, Phase } from "./gameEngine";
+export type { GameState, GameAction, GameActionResult, Phase, DrawSource } from "./gameEngine";
 export { createInitialState, applyAction } from "./gameEngine";
 
-export { cardAffinity, chooseDiscard, findBaterAction, decideAction } from "./ai";
+export {
+  cardAffinity,
+  chooseDiscard,
+  shouldTakeDiscard,
+  findBaterAction,
+  decideAction,
+} from "./ai";

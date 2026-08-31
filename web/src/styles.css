@@ -446,6 +446,77 @@ button {
   border-radius: 6px;
 }
 
+/* 山札・捨て札はどちらもドロー元。押せるときだけ光らせる。 */
+.pile__button {
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 7px;
+  line-height: 0;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.pile__button:disabled {
+  cursor: default;
+}
+
+.pile--live .pile__button:not(:disabled) {
+  box-shadow: 0 0 0 2px var(--gold-bright), 0 0 22px rgba(236, 205, 131, 0.4);
+  animation: pileLive 1.6s ease-in-out infinite;
+}
+
+.pile--live .pile__button:not(:disabled):hover {
+  transform: translateY(-5px);
+}
+
+@keyframes pileLive {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(236, 205, 131, 0.55), 0 0 14px rgba(236, 205, 131, 0.25); }
+  50% { box-shadow: 0 0 0 2px var(--gold-bright), 0 0 26px rgba(236, 205, 131, 0.5); }
+}
+
+.pile__hint {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--gold-bright);
+}
+
+/* 拾ったばかりで、この手番では捨てられない札 */
+.card--locked {
+  cursor: not-allowed;
+  filter: saturate(0.7);
+}
+
+.card--locked::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(20, 14, 12, 0.42) 0 5px,
+    rgba(20, 14, 12, 0.16) 5px 10px
+  );
+  pointer-events: none;
+}
+
+.card__lockTag {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  z-index: 2;
+  width: 15px;
+  height: 15px;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-family: var(--body);
+  color: var(--cream);
+  background: var(--blood);
+  border-radius: 50%;
+  line-height: 1;
+}
+
 /* ---------- 自分の席 ---------- */
 .me {
   position: relative;
