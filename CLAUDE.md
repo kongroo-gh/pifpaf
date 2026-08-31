@@ -6,7 +6,7 @@
 ## プロジェクトの目的
 ブラジルで人気のトランプゲーム「Pif Paf（Pife / Cacheta とも呼ばれるラミー系ゲーム）」の
 Webゲーム化。まずは人間1人 + CPU対戦から作り、将来的にオンラインのリアルタイム対戦へ拡張する。
-ポイント制（複数ラウンドでのスコア集計）は別フェーズで設計するため、現時点では実装しない。
+ポイント制（Cacheta方式のマッチ）は実装済み。掛け金として見せている。
 
 ## 確定済みの仕様判断（ユーザー確認済み）
 - **ヴィラ（vira）ワイルドルール：採用する**。配札後に山札から1枚公開し、
@@ -38,7 +38,8 @@ pifpaf/                  npm workspaces のルート
 │   ├── melds.ts          トリンカ／シーケンス判定、手札の役分類（ワイルド対応）
 │   ├── gameEngine.ts     ターンの状態遷移（reducer）。DRAW / DISCARD / BATER
 │   ├── ai.ts             CPU用の簡易AI（貪欲法）
-│   ├── *.test.ts         Vitestテスト（48件・全て通過）
+│   ├── match.ts          マッチ（チップ・失点・脱落・配当）
+│   ├── *.test.ts         Vitestテスト（100件・全て通過）
 │   ├── sanity-check.ts   npm installなしで `node --experimental-strip-types` で動作確認できるスクリプト
 │   └── package.json / tsconfig.json
 └── web/                  React + Vite のUI。engineを呼び出すだけで、
@@ -90,11 +91,10 @@ pifpaf/                  npm workspaces のルート
 
 ## 終了演出の確認方法
 終了演出は1局遊びきらないと見られず、勝敗も運任せなので、開発時だけ
-URLで直接呼べるようにしてある（`useGame.ts` の `devSceneWinner`）。
+URLで直接呼べるようにしてある（`useGame.ts` の `devScene`）。
 ```
 http://localhost:5173/?scene=win    金が降る
 http://localhost:5173/?scene=lose   銃で撃たれる
-http://localhost:5173/?scene=draw   引き分け
 ```
 `import.meta.env.DEV` で囲ってあるので本番ビルドからは消える。
 
@@ -105,15 +105,15 @@ http://localhost:5173/?scene=draw   引き分け
   反動アニメーションについてこない
 - **銃の位置は画面比率から逆算している**（`--gun-w` と `calc()`）。
   `right: -15vw` のような固定値だと、縦画面で銃口が画面外に出る
-- 判定パネル（z-index 80）は銃（72）より手前。銃を見せるのは判定が出る前
+- 精算パネルは銃より手前。銃はラウンド結果の中で見せきり、精算とは重ねない
 
 ## 見た目の方針（ユーザー指定）
 マフィアの酒場の奥の部屋、という設定。ノワール調（黒・生成り・金・血の赤、
-明朝／Cinzel）。**負けた3人は撃たれて脱落する** という演出を入れてある
+明朝／Cinzel）。**チップが尽きた者は撃たれて脱落する** という演出を入れてある
 （ELIMINADOのスタンプ・銃痕・マズルフラッシュ・画面の暗転）。
 
 決着後の流れ:
-1. 敗者を1人ずつ撃つ。CPUを先に片付け、自分が敗者なら最後に回して溜めを作る
+1. そのラウンドで破産した者を1人ずつ撃つ。自分が含まれるなら最後に回して溜めを作る
 2. 自分が撃たれる番になると、**リボルバーが画面外から入ってきて銃口をこちらへ向ける**
    （`GunShot`）。0.75秒構えてから発砲し、閃光と反動が入る
 3. 自分が勝っていれば、判定と一緒に**金貨と札束が降ってくる**（`MoneyRain`）
@@ -150,11 +150,11 @@ Node.js側（WebSocket想定）に載せる。`web/` はUIとネットワーク�
   役に確実に絡む、のいずれかのときだけ拾う消極的な判断）。
   `findBaterAction` は人間側の「BATER」ボタンの活性判定にも使っている
   （ルール判定をweb側に持たせないため）。
-- **テストは48件すべて通過**（`npm test --workspace=engine`）。
+- **テストは100件すべて通過**（`npm test --workspace=engine`）。
   CPU4人による通しプレイの統合テストを10シード分含む（決着すること・カードが増減しないこと）。
 - `engine` / `web` とも `tsc --noEmit` がクリーン。
   以前は `noUncheckedIndexedAccess` 由来のエラーが deck/melds/types に残っていたが解消済み。
-- `web/`：ワンゲームマッチ（1ラウンドで決着、ポイント制なし）として動作確認済み。
+- `web/`：マッチ制（7チップ・複数ラウンド・掛け金と配当）として動作確認済み。
 
 ### 300局まわしたときの様子（AI同士）
 | | 山札のみ | ＋捨て札ドロー | ＋ワイルドを同スートのみに |
@@ -201,7 +201,7 @@ engineはカードをIDでしか見ないので、並び順を変えてもルー
 ## 動かし方
 ```
 npm install                        # ルートで1回
-npm test --workspace=engine        # 48件
+npm test --workspace=engine        # 100件
 npm run dev --workspace=web        # http://localhost:5173
 ```
 
