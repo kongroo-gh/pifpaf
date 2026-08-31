@@ -586,6 +586,51 @@ button {
   align-items: flex-end;
 }
 
+/* 手札の1枚ぶんの枠。ドラッグ受けとタップ受けを兼ねる。
+   touch-action:none を入れないと、スマホでドラッグがページのスクロールに取られる。 */
+.hand__slot {
+  padding: 0;
+  border: none;
+  background: none;
+  line-height: 0;
+  cursor: grab;
+  touch-action: none;
+  border-radius: 6px;
+}
+
+.hand__slot:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 3px;
+}
+
+.hand__slot--dragging {
+  cursor: grabbing;
+  z-index: 3;
+}
+
+.hand__slot--dragging .card {
+  transform: translateY(-10px) scale(1.04) rotate(-2deg);
+  box-shadow: 0 18px 30px rgba(0, 0, 0, 0.7);
+  transition: none;
+}
+
+.me__sort {
+  font-family: var(--body);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  padding: 3px 10px;
+  color: var(--smoke);
+  background: none;
+  border: 1px solid rgba(143, 136, 124, 0.3);
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.me__sort:hover {
+  color: var(--gold-bright);
+  border-color: rgba(200, 162, 74, 0.5);
+}
+
 /* ---------- カード ---------- */
 .card {
   position: relative;
@@ -638,9 +683,8 @@ button {
 
 .card__suit { font-size: 0.85em; }
 
-.card--clickable { cursor: pointer; }
-
-.card--clickable:hover {
+/* 持ち上がるのは手札の中だけ（捨て札の山などは動かさない） */
+.hand__slot:hover .card {
   transform: translateY(-9px);
   box-shadow: 0 12px 22px rgba(0, 0, 0, 0.6);
 }
@@ -666,8 +710,6 @@ button {
   border-bottom: 1px solid rgba(138, 106, 31, 0.4);
   padding: 1px 3px;
 }
-
-.card:disabled { cursor: default; }
 
 .card--back {
   background:
@@ -1003,15 +1045,24 @@ button {
   .intro__foot { display: none; }
 }
 
-/* タッチ端末では hover の持ち上げが誤作動するので、選択時だけ動かす */
+/* タッチ端末では hover の持ち上げが誤作動するので、選択時とドラッグ中だけ動かす */
 @media (hover: none) {
-  .card--clickable:hover { transform: none; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); }
+  .hand__slot:hover .card {
+    transform: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  }
   .card--selected,
-  .card--clickable.card--selected:hover {
+  .hand__slot:hover .card--selected {
     transform: translateY(-12px);
     box-shadow: 0 0 0 2px var(--gold-bright), 0 14px 26px rgba(0, 0, 0, 0.65);
   }
+  .hand__slot--dragging .card,
+  .hand__slot--dragging:hover .card {
+    transform: translateY(-10px) scale(1.04) rotate(-2deg);
+    box-shadow: 0 18px 30px rgba(0, 0, 0, 0.7);
+  }
   .btn:hover:not(:disabled) { transform: none; }
+  .pile--live .pile__button:not(:disabled):hover { transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { Card, Rank } from "./types";
+import type { Card, Rank, Wild } from "./types";
 import { createInitialState, applyAction, GameState } from "./gameEngine";
 
 const c = (id: string, suit: Card["suit"], rank: Rank): Card => ({ id, suit, rank });
-const wildRank: Rank = "8"; // ヴィラが7のとき
+const wild: Wild = { rank: "8", suit: "S" }; // ヴィラが 7♠ のとき。8♠ だけがワイルド
 
 /** テスト用に手札・山札・捨て札を直接指定して状態を組み立てるヘルパー */
 function makeState(overrides: Partial<GameState> & { hands: Card[][] }): GameState {
@@ -12,7 +12,7 @@ function makeState(overrides: Partial<GameState> & { hands: Card[][] }): GameSta
     stock: overrides.stock ?? [],
     discard: overrides.discard ?? [],
     currentPlayer: overrides.currentPlayer ?? 0,
-    wildRank: overrides.wildRank ?? wildRank,
+    wild: overrides.wild ?? wild,
     phase: overrides.phase ?? "AWAITING_DRAW",
     winner: overrides.winner ?? null,
     takenFromDiscard: overrides.takenFromDiscard ?? null,
@@ -25,7 +25,7 @@ describe("createInitialState", () => {
     const deal = {
       hands: [[c("1", "S", "5")], [c("2", "H", "6")], [c("3", "D", "7")], [c("4", "C", "8")]],
       vira: c("v", "S", "7"),
-      wildRank,
+      wild,
       stock: [c("5", "S", "9")],
     };
     const state = createInitialState(deal);
@@ -265,7 +265,7 @@ describe("BATER", () => {
   it("10枚全てが役成立する場合、cardIdなしで何も捨てずに上がれる（bater com 10）", () => {
     // meldedNineの5-6-7シーケンスを5-6-7-8(ワイルド)に伸ばして10枚全部役にする
     const tenCardHand: Card[] = [
-      c("1", "S", "5"), c("2", "S", "6"), c("3", "S", "7"), c("w", "D", "8"),
+      c("1", "S", "5"), c("2", "S", "6"), c("3", "S", "7"), c("w", "S", "8"),
       c("4", "H", "9"), c("5", "D", "9"), c("6", "C", "9"),
       c("7", "H", "J"), c("8", "H", "Q"), c("9", "H", "K"),
     ];

@@ -32,6 +32,8 @@ export function useGame() {
   const [state, setState] = useState<GameState>(() => createInitialState(dealGame(PLAYER_COUNT)));
   const [vira, setVira] = useState<Card | null>(null);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  /** 配り直すたびに増える。手札の表示順をリセットする合図に使う。 */
+  const [gameId, setGameId] = useState(0);
   const [logs, setLogs] = useState<GameLog[]>([]);
   const logId = useRef(0);
 
@@ -49,6 +51,7 @@ export function useGame() {
     setSelectedCardId(null);
     setLogs([]);
     logId.current = 0;
+    setGameId((n) => n + 1);
     setScreen("PLAYING");
   }, []);
 
@@ -86,7 +89,7 @@ export function useGame() {
   /** 人間が今バテル（上がり）できるか。判定はengineに任せる。 */
   const humanBater =
     isHumanTurn && state.phase === "AWAITING_DISCARD"
-      ? findBaterAction(humanHand, state.wildRank)
+      ? findBaterAction(humanHand, state.wild)
       : null;
 
   const callBater = useCallback(() => {
@@ -124,6 +127,7 @@ export function useGame() {
     screen,
     state,
     vira,
+    gameId,
     logs,
     humanHand,
     isHumanTurn,

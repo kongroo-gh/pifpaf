@@ -1,22 +1,11 @@
-import { useMemo } from "react";
-import { rankIndex, type Card } from "@pifpaf/engine";
 import { useGame, HUMAN } from "./game/useGame";
 import { useExecution } from "./game/useExecution";
+import { useHandOrder } from "./game/useHandOrder";
 import { PERSONAS, personaOf } from "./game/players";
-import { PlayingCard, CardBack } from "./components/PlayingCard";
+import { PlayingCard, CardBack, SUIT_GLYPH, describeCard } from "./components/PlayingCard";
+import { PlayerHand } from "./components/PlayerHand";
 import { OpponentSeat } from "./components/OpponentSeat";
 import { BulletHoleCluster } from "./components/BulletHole";
-
-const SUIT_ORDER = ["S", "H", "D", "C"];
-
-/** 表示用に手札を並べ替える。engineはカードIDしか見ないので並びを変えても影響しない。 */
-function sortForDisplay(cards: Card[]): Card[] {
-  return [...cards].sort((a, b) => {
-    const suitDiff = SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit);
-    if (suitDiff !== 0) return suitDiff;
-    return rankIndex(a.rank) - rankIndex(b.rank);
-  });
-}
 
 export default function App() {
   const game = useGame();
@@ -24,6 +13,7 @@ export default function App() {
     screen,
     state,
     vira,
+    gameId,
     humanHand,
     isHumanTurn,
     humanBater,
@@ -39,7 +29,8 @@ export default function App() {
   } = game;
 
   const execution = useExecution(state.winner, screen === "EXECUTION");
-  const sortedHand = useMemo(() => sortForDisplay(humanHand), [humanHand]);
+  // 並び順は見た目だけの話なので web 側で持つ（engineはIDでしか見ない）
+  const { ordered: orderedHand, reorder, sort } = useHandOrder(humanHand, gameId);
 
   if (screen === "INTRO") {
     return <Intro onStart={startGame} />;
@@ -63,10 +54,10 @@ export default function App() {
         </div>
         <div className="topbar__wild">
           <span className="topbar__wildLabel">CORINGA / ワイルド</span>
-          <span className="topbar__wildRank">{state.wildRank}</span>
+          <span className="topbar__wildRank">{state.wild.rank}{SUIT_GLYPH[state.wild.suit]}</span>
           {vira && (
             <span className="topbar__vira">
-              ヴィラ <PlayingCard card={vira} wildRank={state.wildRank} size="sm" />
+              ヴィラ <PlayingCard card={vira} wild={state.wild} size="sm" />
             </span>
           )}
         </div>
@@ -122,9 +113,9 @@ export default function App() {
                   className="pile__button"
                   disabled={!canTakeDiscard}
                   onClick={takeDiscard}
-                  aria-label={`捨て札の ${topDiscard.rank} を拾う`}
+                  aria-label={`捨て札の ${describeCard(topDiscard, state.wild)} を拾う`}
                 >
-                  <PlayingCard card={topDiscard} wildRank={state.wildRank} size="md" />
+                  <PlayingCard card={topDiscard} wild={state.wild} size="md" />
                 </button>
               ) : (
                 <div className="pile__empty" />
@@ -140,6 +131,9 @@ export default function App() {
         <div className="me__header">
           <span className="me__name">{personaOf(HUMAN).name}</span>
           <span className="me__title">{personaOf(HUMAN).title}</span>
+          <button type="button" className="me__sort" onClick={sort}>
+            整列
+          </button>
           <TurnBanner
             isHumanTurn={isHumanTurn}
             phase={state.phase}
@@ -147,24 +141,16 @@ export default function App() {
           />
         </div>
 
-        <div className="hand">
-          {sortedHand.map((card) => (
-            <PlayingCard
-              key={card.id}
-              card={card}
-              wildRank={state.wildRank}
-              selected={selectedCardId === card.id}
-              disabled={!isHumanTurn || state.phase !== "AWAITING_DISCARD"}
-              // 拾ったばかりの札はこの手番では捨てられない
-              locked={card.id === state.takenFromDiscard}
-              onClick={
-                isHumanTurn && state.phase === "AWAITING_DISCARD"
-                  ? (c) => setSelectedCardId(c.id === selectedCardId ? null : c.id)
-                  : undefined
-              }
-            />
-          ))}
-        </div>
+        <PlayerHand
+          cards={orderedHand}
+          wild={state.wild}
+          selectedCardId={selectedCardId}
+          // 拾ったばかりの札はこの手番では捨てられない
+          lockedCardId={state.takenFromDiscard}
+          selectable={isHumanTurn && state.phase === "AWAITING_DISCARD"}
+          onSelect={setSelectedCardId}
+          onReorder={reorder}
+        />
 
         <div className="actions">
           <button

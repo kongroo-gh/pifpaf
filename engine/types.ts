@@ -14,6 +14,24 @@ export interface Card {
   rank: Rank;
 }
 
+/**
+ * そのゲームのワイルド札。
+ * ヴィラの「次のランク」かつ「ヴィラと同じスート」の1種類だけがワイルドになる。
+ * 例：ヴィラが 7♠ なら 8♠ だけがワイルドで、8♥8♦8♣ は普通の札。
+ *
+ * ランクとスートを別々の引数で持ち回るとどちらも文字列型で取り違えやすいので、
+ * 1つの型にまとめて渡す。
+ */
+export interface Wild {
+  rank: Rank;
+  suit: Suit;
+}
+
+/** そのカードがワイルドか。ランクとスートの両方が一致したときだけ真。 */
+export function isWildCard(card: Card, wild: Wild): boolean {
+  return card.rank === wild.rank && card.suit === wild.suit;
+}
+
 export const RANK_ORDER: Rank[] = [
   "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K",
 ];

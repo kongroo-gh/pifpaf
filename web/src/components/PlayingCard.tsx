@@ -1,32 +1,38 @@
-// 1枚のカードの見た目。ルール判定は一切持たず、渡された情報を描くだけ。
+// 1枚のカードの見た目。ルール判定も操作も持たず、渡された情報を描くだけ。
+//
+// クリックやドラッグは呼び出し側（捨て札の山・手札）が外側の要素で受ける。
+// ここを button にしてしまうと、無効化したときにポインタイベントが届かなくなり
+// 「捨てられないが並べ替えはしたい」札が扱えなくなる。
 
-import type { Card, Rank, Suit } from "@pifpaf/engine";
+import type { Card, Suit, Wild } from "@pifpaf/engine";
+import { isWildCard } from "@pifpaf/engine";
 
-const SUIT_GLYPH: Record<Suit, string> = { S: "♠", H: "♥", D: "♦", C: "♣" };
+export const SUIT_GLYPH: Record<Suit, string> = { S: "♠", H: "♥", D: "♦", C: "♣" };
 const RED_SUITS: Suit[] = ["H", "D"];
 
 export interface PlayingCardProps {
   card: Card;
-  /** このゲームのワイルドランク。一致するカードは金色で強調する。 */
-  wildRank: Rank;
+  /** このゲームのワイルド。一致するカードだけ金色で強調する（ランクとスートの両方が一致）。 */
+  wild: Wild;
   selected?: boolean;
-  disabled?: boolean;
   /** いま捨て札から拾ったばかりで、この手番では捨てられない札 */
   locked?: boolean;
   size?: "sm" | "md";
-  onClick?: (card: Card) => void;
+}
+
+/** スクリーンリーダー向けの読み上げ文。外側の操作要素の aria-label にも使う。 */
+export function describeCard(card: Card, wild: Wild): string {
+  return `${card.rank} ${SUIT_GLYPH[card.suit]}${isWildCard(card, wild) ? " コリンガ" : ""}`;
 }
 
 export function PlayingCard({
   card,
-  wildRank,
+  wild,
   selected = false,
-  disabled = false,
   locked = false,
   size = "md",
-  onClick,
 }: PlayingCardProps) {
-  const isWild = card.rank === wildRank;
+  const isWild = isWildCard(card, wild);
   const isRed = RED_SUITS.includes(card.suit);
   const glyph = SUIT_GLYPH[card.suit];
 
@@ -37,23 +43,12 @@ export function PlayingCard({
     isWild ? "card--wild" : "",
     selected ? "card--selected" : "",
     locked ? "card--locked" : "",
-    onClick && !disabled && !locked ? "card--clickable" : "",
   ]
     .filter(Boolean)
     .join(" ");
 
   return (
-    <button
-      type="button"
-      className={classes}
-      disabled={disabled || locked || !onClick}
-      onClick={onClick && !locked ? () => onClick(card) : undefined}
-      aria-label={
-        `${card.rank} ${glyph}` +
-        (isWild ? " コリンガ" : "") +
-        (locked ? " 拾ったばかりで捨てられない" : "")
-      }
-    >
+    <div className={classes} aria-hidden="true">
       <span className="card__corner card__corner--tl">
         <span className="card__rank">{card.rank}</span>
         <span className="card__suit">{glyph}</span>
@@ -64,8 +59,8 @@ export function PlayingCard({
         <span className="card__suit">{glyph}</span>
       </span>
       {isWild && <span className="card__wildTag">CORINGA</span>}
-      {locked && <span className="card__lockTag" aria-hidden="true">拾</span>}
-    </button>
+      {locked && <span className="card__lockTag">拾</span>}
+    </div>
   );
 }
 

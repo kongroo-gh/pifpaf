@@ -1,6 +1,7 @@
 // Pif Paf ルールエンジン - デッキ生成 / シャッフル / 配札
 
-import { Card, Rank, Suit, RANK_ORDER, nextRank } from "./types";
+import type { Card, Suit, Wild } from "./types";
+import { RANK_ORDER, nextRank } from "./types";
 
 const SUITS: Suit[] = ["S", "H", "D", "C"];
 const CARDS_PER_PLAYER = 9;
@@ -39,8 +40,8 @@ export interface DealResult {
   hands: Card[][];
   /** 場に表向きで置かれたヴィラカード */
   vira: Card;
-  /** ヴィラの次のランク = 全スート共通のワイルドランク */
-  wildRank: Rank;
+  /** ヴィラの次のランク かつ ヴィラと同じスート。この1種類だけがワイルド。 */
+  wild: Wild;
   /** 残りの伏せ山札 */
   stock: Card[];
 }
@@ -49,7 +50,8 @@ export interface DealResult {
  * 4人固定でのゲーム開始処理。
  * 1. シャッフル
  * 2. 時計回りに1枚ずつ、各プレイヤーに9枚配布
- * 3. 次の1枚をヴィラとして表向きに公開し、ワイルドランクを決定
+ * 3. 次の1枚をヴィラとして表向きに公開し、ワイルドを決定
+ *    （ヴィラの次のランク かつ ヴィラと同じスートの1種類だけ）
  * 4. 残りを山札とする
  */
 export function dealGame(playerCount: number, rng: () => number = Math.random): DealResult {
@@ -64,8 +66,8 @@ export function dealGame(playerCount: number, rng: () => number = Math.random): 
   }
 
   const vira = deck[cursor++]!;
-  const wildRank = nextRank(vira.rank);
+  const wild: Wild = { rank: nextRank(vira.rank), suit: vira.suit };
   const stock = deck.slice(cursor);
 
-  return { hands, vira, wildRank, stock };
+  return { hands, vira, wild, stock };
 }

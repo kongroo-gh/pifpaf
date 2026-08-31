@@ -1,7 +1,7 @@
 // Pif Paf ルールエンジン - ターンの状態遷移（reducerスタイル）
 // deck.ts / melds.ts と同じ方針で、副作用なし・DOM/React/通信に非依存の純粋関数のみで構成する。
 
-import type { Card, Rank } from "./types";
+import type { Card, Wild } from "./types";
 import type { DealResult } from "./deck";
 import { classifyAsMelds } from "./melds";
 
@@ -16,8 +16,8 @@ export interface GameState {
   discard: Card[];
   /** 現在手番のプレイヤー番号 */
   currentPlayer: number;
-  /** ヴィラの次のランク＝全スート共通のワイルドランク */
-  wildRank: Rank;
+  /** そのゲームのワイルド（ヴィラの次のランク かつ ヴィラと同じスート）。 */
+  wild: Wild;
   phase: Phase;
   /**
    * 上がったプレイヤー番号。
@@ -60,7 +60,7 @@ export function createInitialState(deal: DealResult, firstPlayer = 0): GameState
     stock: [...deal.stock],
     discard: [],
     currentPlayer: firstPlayer,
-    wildRank: deal.wildRank,
+    wild: deal.wild,
     phase: "AWAITING_DRAW",
     winner: null,
     takenFromDiscard: null,
@@ -208,7 +208,7 @@ function applyBater(state: GameState, cardId: string | undefined): GameActionRes
 
   if (cardId === undefined) {
     // 10枚すべてが役として成立する場合のみ、何も捨てずに上がれる（"bater com 10"）
-    if (classifyAsMelds(hand, state.wildRank) === null) {
+    if (classifyAsMelds(hand, state.wild) === null) {
       return { ok: false, error: "10枚全てが役として成立していません" };
     }
     return {
@@ -227,7 +227,7 @@ function applyBater(state: GameState, cardId: string | undefined): GameActionRes
   // 上がりは手番を流す行為ではない。元の9枚が既に役として揃っていて、拾った札が
   // そのまま余る、という正当な上がり方を塞いでしまうので許可する。
   const remaining = [...hand.slice(0, cardIndex), ...hand.slice(cardIndex + 1)];
-  if (classifyAsMelds(remaining, state.wildRank) === null) {
+  if (classifyAsMelds(remaining, state.wild) === null) {
     return { ok: false, error: "残り9枚が役として成立していません" };
   }
 

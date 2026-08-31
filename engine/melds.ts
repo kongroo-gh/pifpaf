@@ -2,7 +2,8 @@
 // トリンカ（組札）とシーケンス（階段）の判定を、ヴィラによるワイルドカードを
 // 考慮した上で行う。UIやゲーム進行から独立した純粋関数群。
 
-import { Card, Rank, RANK_ORDER } from "./types";
+import type { Card, Rank, Wild } from "./types";
+import { RANK_ORDER, isWildCard } from "./types";
 
 export type MeldType = "TRINCA" | "SEQUENCE";
 
@@ -11,21 +12,19 @@ export interface Meld {
   cards: Card[];
 }
 
-function isWild(card: Card, wildRank: Rank): boolean {
-  return card.rank === wildRank;
-}
-
 /**
  * トリンカ：同じランク3枚以上、異なるスート（同スート重複不可）。
  * 最大4枚（4スート）まで。ワイルドは任意のスート代わりとして使える。
  */
-export function isValidTrinca(cards: Card[], wildRank: Rank): boolean {
+export function isValidTrinca(cards: Card[], wild: Wild): boolean {
   if (cards.length < 3) return false;
 
-  const naturals = cards.filter((c) => !isWild(c, wildRank));
+  const naturals = cards.filter((c) => !isWildCard(c, wild));
   const wildCount = cards.length - naturals.length;
 
-  // 仮定：全部ワイルドのトリンカは許容する（rules.md参照）
+  // 仮定：全部ワイルドのトリンカは許容する（rules.md参照）。
+  // ただしワイルドはヴィラと同スートの1種類＝2組デッキで2枚しかないため、
+  // 3枚以上を全てワイルドで揃えることは実際には起こり得ない。
   if (naturals.length === 0) return cards.length <= 4;
 
   const rank = naturals[0]!.rank;
@@ -43,10 +42,10 @@ export function isValidTrinca(cards: Card[], wildRank: Rank): boolean {
  * シーケンス：同じスートの連続ランク3枚以上。ランク重複不可。
  * Q-K-A、K-A-2 のまたぎも許可。ワイルドは任意ランク代わりとして使える。
  */
-export function isValidSequence(cards: Card[], wildRank: Rank): boolean {
+export function isValidSequence(cards: Card[], wild: Wild): boolean {
   if (cards.length < 3) return false;
 
-  const naturals = cards.filter((c) => !isWild(c, wildRank));
+  const naturals = cards.filter((c) => !isWildCard(c, wild));
   const wildCount = cards.length - naturals.length;
 
   // 仮定：全部ワイルドのシーケンスは不許可（rules.md参照）
@@ -95,8 +94,8 @@ function buildRankWindows(len: number): Rank[][] {
   return windows;
 }
 
-/** 手札全体が指定のワイルドランクのもとで「全て役に分類できるか」を検証するヘルパー。 */
-export function classifyAsMelds(cards: Card[], wildRank: Rank): Meld[] | null {
+/** 手札全体が指定のワイルドのもとで「全て役に分類できるか」を検証するヘルパー。 */
+export function classifyAsMelds(cards: Card[], wild: Wild): Meld[] | null {
   // シンプルな全探索。9〜10枚程度の手札を想定しており、実用上十分な速度で動く。
   if (cards.length === 0) return [];
 
@@ -104,12 +103,12 @@ export function classifyAsMelds(cards: Card[], wildRank: Rank): Meld[] | null {
     const combos = combinations(cards, size);
     for (const combo of combos) {
       const rest = cards.filter((c) => !combo.includes(c));
-      if (isValidTrinca(combo, wildRank)) {
-        const restResult = classifyAsMelds(rest, wildRank);
+      if (isValidTrinca(combo, wild)) {
+        const restResult = classifyAsMelds(rest, wild);
         if (restResult !== null) return [{ type: "TRINCA", cards: combo }, ...restResult];
       }
-      if (isValidSequence(combo, wildRank)) {
-        const restResult = classifyAsMelds(rest, wildRank);
+      if (isValidSequence(combo, wild)) {
+        const restResult = classifyAsMelds(rest, wild);
         if (restResult !== null) return [{ type: "SEQUENCE", cards: combo }, ...restResult];
       }
     }

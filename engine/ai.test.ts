@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { Card, Rank } from "./types";
+import type { Card, Rank, Wild } from "./types";
 import { GameState, createInitialState, applyAction } from "./gameEngine";
 import { dealGame } from "./deck";
 import {
@@ -23,7 +23,7 @@ function seededRng(seed: number): () => number {
 }
 
 const c = (id: string, suit: Card["suit"], rank: Rank): Card => ({ id, suit, rank });
-const wildRank: Rank = "8"; // ヴィラが7のとき
+const wild: Wild = { rank: "8", suit: "S" }; // ヴィラが 7♠ のとき。8♠ だけがワイルド
 
 function makeState(overrides: Partial<GameState> & { hands: Card[][] }): GameState {
   return {
@@ -31,7 +31,7 @@ function makeState(overrides: Partial<GameState> & { hands: Card[][] }): GameSta
     stock: overrides.stock ?? [c("stock", "C", "2")],
     discard: overrides.discard ?? [],
     currentPlayer: overrides.currentPlayer ?? 0,
-    wildRank: overrides.wildRank ?? wildRank,
+    wild: overrides.wild ?? wild,
     phase: overrides.phase ?? "AWAITING_DRAW",
     winner: overrides.winner ?? null,
     takenFromDiscard: overrides.takenFromDiscard ?? null,
@@ -42,26 +42,26 @@ function makeState(overrides: Partial<GameState> & { hands: Card[][] }): GameSta
 describe("cardAffinity", () => {
   it("ワイルドは無限大の価値を持つ（絶対に捨てない）", () => {
     const hand = [c("w", "S", "8"), c("a", "H", "2")];
-    expect(cardAffinity(c("w", "S", "8"), hand, wildRank)).toBe(Number.POSITIVE_INFINITY);
+    expect(cardAffinity(c("w", "S", "8"), hand, wild)).toBe(Number.POSITIVE_INFINITY);
   });
 
   it("同ランクの相方がいる札は孤立札より高く評価される", () => {
     const hand = [c("a", "S", "9"), c("b", "H", "9"), c("lonely", "D", "3")];
-    const paired = cardAffinity(c("a", "S", "9"), hand, wildRank);
-    const lonely = cardAffinity(c("lonely", "D", "3"), hand, wildRank);
+    const paired = cardAffinity(c("a", "S", "9"), hand, wild);
+    const lonely = cardAffinity(c("lonely", "D", "3"), hand, wild);
     expect(paired).toBeGreaterThan(lonely);
   });
 
   it("同スートで隣接する札は孤立札より高く評価される", () => {
     const hand = [c("a", "S", "5"), c("b", "S", "6"), c("lonely", "D", "K")];
-    expect(cardAffinity(c("a", "S", "5"), hand, wildRank)).toBeGreaterThan(
-      cardAffinity(c("lonely", "D", "K"), hand, wildRank)
+    expect(cardAffinity(c("a", "S", "5"), hand, wild)).toBeGreaterThan(
+      cardAffinity(c("lonely", "D", "K"), hand, wild)
     );
   });
 
   it("K と A は循環上で隣接として扱われる（K-A-2のまたぎがあるため）", () => {
     const hand = [c("k", "S", "K"), c("a", "S", "A")];
-    expect(cardAffinity(c("k", "S", "K"), hand, wildRank)).toBeGreaterThan(0);
+    expect(cardAffinity(c("k", "S", "K"), hand, wild)).toBeGreaterThan(0);
   });
 });
 
@@ -72,16 +72,16 @@ describe("chooseDiscard", () => {
       c("4", "H", "9"), c("5", "D", "9"), c("6", "C", "9"),
       c("lonely", "D", "2"),
     ];
-    expect(chooseDiscard(hand, wildRank)?.id).toBe("lonely");
+    expect(chooseDiscard(hand, wild)?.id).toBe("lonely");
   });
 
   it("孤立札があってもワイルドは捨てない", () => {
     const hand = [c("w", "S", "8"), c("lonely", "D", "2"), c("lonely2", "H", "5")];
-    expect(chooseDiscard(hand, wildRank)?.id).not.toBe("w");
+    expect(chooseDiscard(hand, wild)?.id).not.toBe("w");
   });
 
   it("空の手札ではnullを返す", () => {
-    expect(chooseDiscard([], wildRank)).toBeNull();
+    expect(chooseDiscard([], wild)).toBeNull();
   });
 });
 
@@ -97,21 +97,21 @@ describe("shouldTakeDiscard", () => {
   ];
 
   it("捨て札が無ければ拾わない", () => {
-    expect(shouldTakeDiscard(nine, undefined, wildRank)).toBe(false);
+    expect(shouldTakeDiscard(nine, undefined, wild)).toBe(false);
   });
 
   it("ワイルドは必ず拾う", () => {
-    expect(shouldTakeDiscard(nine, c("t", "C", "8"), wildRank)).toBe(true);
+    expect(shouldTakeDiscard(nine, c("t", "S", "8"), wild)).toBe(true);
   });
 
   it("シーケンスが伸びる札は拾う", () => {
     // 4♠ は 5-6-7♠ にくっつく
-    expect(shouldTakeDiscard(nine, c("t", "S", "4"), wildRank)).toBe(true);
+    expect(shouldTakeDiscard(nine, c("t", "S", "4"), wild)).toBe(true);
   });
 
   it("どこにも絡まない札は拾わない（山札を引いたほうがまし）", () => {
     // K♦ は同ランクの相方も同スートの近隣もいない
-    expect(shouldTakeDiscard(nine, c("t", "D", "K"), wildRank)).toBe(false);
+    expect(shouldTakeDiscard(nine, c("t", "D", "K"), wild)).toBe(false);
   });
 
   it("拾えばそのまま上がれる札は拾う", () => {
@@ -121,7 +121,7 @@ describe("shouldTakeDiscard", () => {
       c("7", "H", "J"), c("8", "H", "Q"), c("9", "H", "K"),
     ];
     // 9枚が既に揃っているので、何を拾っても余らせて上がれる
-    expect(shouldTakeDiscard(meldedNine, c("t", "D", "2"), wildRank)).toBe(true);
+    expect(shouldTakeDiscard(meldedNine, c("t", "D", "2"), wild)).toBe(true);
   });
 });
 
@@ -134,16 +134,16 @@ describe("findBaterAction", () => {
 
   it("10枚全てが役なら捨てなしのBATERを返す", () => {
     const tenCardHand = [
-      c("1", "S", "5"), c("2", "S", "6"), c("3", "S", "7"), c("w", "D", "8"),
+      c("1", "S", "5"), c("2", "S", "6"), c("3", "S", "7"), c("w", "S", "8"),
       c("4", "H", "9"), c("5", "D", "9"), c("6", "C", "9"),
       c("7", "H", "J"), c("8", "H", "Q"), c("9", "H", "K"),
     ];
-    expect(findBaterAction(tenCardHand, wildRank)).toEqual({ type: "BATER" });
+    expect(findBaterAction(tenCardHand, wild)).toEqual({ type: "BATER" });
   });
 
   it("9枚が役なら余りを捨てるBATERを返す", () => {
     const extra = c("extra", "D", "2");
-    const action = findBaterAction([...meldedNine, extra], wildRank);
+    const action = findBaterAction([...meldedNine, extra], wild);
     expect(action).toEqual({ type: "BATER", cardId: "extra" });
   });
 
@@ -154,7 +154,7 @@ describe("findBaterAction", () => {
       c("7", "D", "J"), c("8", "C", "4"), c("9", "S", "9"),
       c("10", "H", "7"),
     ];
-    expect(findBaterAction(badHand, wildRank)).toBeNull();
+    expect(findBaterAction(badHand, wild)).toBeNull();
   });
 });
 
@@ -250,7 +250,7 @@ describe("CPU4人による通しプレイ（統合）", () => {
       if (state.winner !== null) {
         const hand = state.hands[state.winner]!;
         expect(hand.length === 9 || hand.length === 10).toBe(true);
-        expect(findBaterAction(hand, state.wildRank)).not.toBeNull();
+        expect(findBaterAction(hand, state.wild)).not.toBeNull();
       }
     });
   }

@@ -4,8 +4,8 @@
 // 方針は「役になりそうな札を残し、最も孤立した札を捨てる」だけの素朴なもの。
 // 強さの調整（相手の捨て札を読む、ワイルドの温存判断など）は後のフェーズで行う。
 
-import type { Card, Rank } from "./types";
-import { RANK_ORDER, rankIndex } from "./types";
+import type { Card, Rank, Wild } from "./types";
+import { RANK_ORDER, rankIndex, isWildCard } from "./types";
 import { classifyAsMelds } from "./melds";
 import type { GameState, GameAction } from "./gameEngine";
 
@@ -19,9 +19,9 @@ function circularRankDistance(a: Rank, b: Rank): number {
  * 1枚のカードが「手札の中でどれだけ役に絡んでいるか」を点数化する。
  * 値が小さいほど孤立していて、捨てる候補になる。
  */
-export function cardAffinity(card: Card, hand: Card[], wildRank: Rank): number {
+export function cardAffinity(card: Card, hand: Card[], wild: Wild): number {
   // ワイルドは何にでも化けるので絶対に捨てない
-  if (card.rank === wildRank) return Number.POSITIVE_INFINITY;
+  if (isWildCard(card, wild)) return Number.POSITIVE_INFINITY;
 
   const others = hand.filter((c) => c.id !== card.id);
   let score = 0;
@@ -52,7 +52,7 @@ export function cardAffinity(card: Card, hand: Card[], wildRank: Rank): number {
  */
 export function chooseDiscard(
   hand: Card[],
-  wildRank: Rank,
+  wild: Wild,
   excludeId: string | null = null
 ): Card | null {
   let best: Card | null = null;
@@ -60,7 +60,7 @@ export function chooseDiscard(
 
   for (const card of hand) {
     if (card.id === excludeId) continue;
-    const score = cardAffinity(card, hand, wildRank);
+    const score = cardAffinity(card, hand, wild);
     if (score < bestScore) {
       bestScore = score;
       best = card;
@@ -78,22 +78,22 @@ export function chooseDiscard(
 export function shouldTakeDiscard(
   hand: Card[],
   topDiscard: Card | undefined,
-  wildRank: Rank
+  wild: Wild
 ): boolean {
   if (topDiscard === undefined) return false;
 
   // 拾えばそのまま上がれるなら迷う必要がない
-  if (findBaterAction([...hand, topDiscard], wildRank) !== null) return true;
+  if (findBaterAction([...hand, topDiscard], wild) !== null) return true;
 
   // ワイルドは何にでも化けるので常に拾う
-  if (topDiscard.rank === wildRank) return true;
+  if (isWildCard(topDiscard, wild)) return true;
 
   const prospective = [...hand, topDiscard];
-  const gain = cardAffinity(topDiscard, prospective, wildRank);
+  const gain = cardAffinity(topDiscard, prospective, wild);
 
   // 手札で最も孤立している札より明確に良く、かつ単独で役に絡んでいること。
   // 8 = 同スートの隣接1枚ぶん。これ未満なら山札を引いたほうがまし。
-  const worst = Math.min(...hand.map((c) => cardAffinity(c, hand, wildRank)));
+  const worst = Math.min(...hand.map((c) => cardAffinity(c, hand, wild)));
   return gain >= 8 && gain > worst;
 }
 
@@ -104,15 +104,15 @@ export function shouldTakeDiscard(
  * CPUだけでなく、人間側UIの「バテル」ボタンの活性判定にも使う。
  * ルール判定をweb側に持たせないための入口。
  */
-export function findBaterAction(hand: Card[], wildRank: Rank): GameAction | null {
+export function findBaterAction(hand: Card[], wild: Wild): GameAction | null {
   // 捨てずに上がれるならそれが最良（bater com 10）
-  if (classifyAsMelds(hand, wildRank) !== null) {
+  if (classifyAsMelds(hand, wild) !== null) {
     return { type: "BATER" };
   }
   // 1枚捨てて9枚で上がれるか
   for (const card of hand) {
     const rest = hand.filter((c) => c.id !== card.id);
-    if (classifyAsMelds(rest, wildRank) !== null) {
+    if (classifyAsMelds(rest, wild) !== null) {
       return { type: "BATER", cardId: card.id };
     }
   }
@@ -131,16 +131,16 @@ export function decideAction(state: GameState): GameAction | null {
 
   if (state.phase === "AWAITING_DRAW") {
     const top = state.discard[state.discard.length - 1];
-    const from = shouldTakeDiscard(hand, top, state.wildRank) ? "DISCARD" : "STOCK";
+    const from = shouldTakeDiscard(hand, top, state.wild) ? "DISCARD" : "STOCK";
     return { type: "DRAW", from };
   }
 
   if (hand.length === 0) return null;
 
-  const bater = findBaterAction(hand, state.wildRank);
+  const bater = findBaterAction(hand, state.wild);
   if (bater !== null) return bater;
 
-  const discard = chooseDiscard(hand, state.wildRank, state.takenFromDiscard);
+  const discard = chooseDiscard(hand, state.wild, state.takenFromDiscard);
   if (discard === null) return null;
   return { type: "DISCARD", cardId: discard.id };
 }
