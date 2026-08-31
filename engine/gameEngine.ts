@@ -15,6 +15,11 @@ export type Phase =
   | "AWAITING_KEEP_DECISION"
   | "AWAITING_DRAW"
   | "AWAITING_DISCARD"
+  /**
+   * 誰かが捨てた直後、その札で上がれる者が「拾って上がるか」を決める局面。
+   * 手番に関係なく割り込める（本家の「捨て札で上がる」ルール）。
+   */
+  | "AWAITING_INTERCEPT"
   | "ROUND_OVER";
 
 export interface GameState {
@@ -57,6 +62,12 @@ export interface GameState {
    * 降りるかどうかはラウンド開始前に決まるので、engineは結果だけ受け取る。
    */
   folded: boolean[];
+  /**
+   * いま捨てられた札で上がれるプレイヤーを、優先順に並べたもの。
+   * 先頭がいま判断している人。空なら割り込みは起きていない。
+   * 優先順位は捨てた人の次の席から時計回り（同時に成立したら順番の早いほうが勝つ）。
+   */
+  interceptQueue: number[];
 }
 
 /** ドロー元。捨て札から取れるのは一番上の1枚だけ（表向きなのはその1枚だけのため）。 */
@@ -64,6 +75,10 @@ export type DrawSource = "STOCK" | "DISCARD";
 
 export type GameAction =
   | { type: "DRAW"; from?: DrawSource }
+  /** 捨てられた札を手番外で拾って上がる */
+  | { type: "INTERCEPT" }
+  /** 拾わずに見送る */
+  | { type: "PASS_INTERCEPT" }
   /** 一番手だけの特権。場のヴィラを手札に入れる。 */
   | { type: "TAKE_VIRA" }
   /** 見せられている札を手札に入れる */
@@ -110,7 +125,19 @@ export function createInitialState(
     vira: deal.vira,
     pendingCard: null,
     folded: [...folded],
+    interceptQueue: [],
   };
+}
+
+/**
+ * いま手を決めるべきプレイヤー。
+ * 割り込みの局面では手番の持ち主ではなく、割り込みを判断している人になる。
+ */
+export function currentActor(state: GameState): number {
+  if (state.phase === "AWAITING_INTERCEPT") {
+    return state.interceptQueue[0] ?? state.currentPlayer;
+  }
+  return state.currentPlayer;
 }
 
 /**
@@ -121,6 +148,10 @@ export function applyAction(state: GameState, action: GameAction): GameActionRes
   switch (action.type) {
     case "DRAW":
       return applyDraw(state, action.from ?? "STOCK");
+    case "INTERCEPT":
+      return applyIntercept(state);
+    case "PASS_INTERCEPT":
+      return applyPassIntercept(state);
     case "TAKE_VIRA":
       return applyTakeVira(state);
     case "KEEP":
@@ -339,6 +370,13 @@ function applyDiscard(state: GameState, cardId: string): GameActionResult {
   const discard = [...state.discard, discardedCard];
   const currentPlayer = nextPlayer(state.currentPlayer, state.folded);
 
+  // 捨てた札で上がれる者がいれば、手番を進める前に割り込みを訊く
+  const interceptQueue = findInterceptors(
+    { ...state, hands },
+    discardedCard,
+    state.currentPlayer
+  );
+
   return {
     ok: true,
     state: {
@@ -346,8 +384,132 @@ function applyDiscard(state: GameState, cardId: string): GameActionResult {
       hands,
       discard,
       currentPlayer,
-      phase: "AWAITING_DRAW",
+      phase: interceptQueue.length > 0 ? "AWAITING_INTERCEPT" : "AWAITING_DRAW",
       takenFromDiscard: null,
+      interceptQueue,
+    },
+  };
+}
+
+/**
+ * 捨てられた札を拾えば上がれるプレイヤーを、優先順に並べて返す。
+ *
+ * 優先順位は「捨てた人の次の席から時計回り」。同時に成立した場合は
+ * 順番の早いほうが取る、というユーザー指定をこの並びで表している。
+ * 降りた者・脱落した者（folded）と、捨てた本人は対象外。
+ */
+export function findInterceptors(
+  state: GameState,
+  discarded: Card,
+  discarder: number
+): number[] {
+  const count = state.hands.length;
+  const queue: number[] = [];
+
+  for (let step = 1; step < count; step++) {
+    const seat = (discarder + step) % count;
+    if (state.folded[seat]) continue;
+    const hand = state.hands[seat];
+    if (hand === undefined) continue;
+    // 手番の合間は全員9枚。拾って10枚にしてから上がる、という形しかない。
+    // 枚数を見ないと、空の手札が「0枚すべてが役」として通ってしまう。
+    if (hand.length !== HAND_SIZE) continue;
+    if (canGoOutWith(hand, discarded, state.wild)) queue.push(seat);
+  }
+  return queue;
+}
+
+/** 手番の合間に各プレイヤーが持つ枚数 */
+const HAND_SIZE = 9;
+
+/**
+ * 手札に1枚加えたとき、その札を役に使って上がれるか。
+ *
+ * 「拾った札をそのまま余らせて捨てる」形は割り込みとして認めない。
+ * それを許すと、既に9枚揃っている人が何を捨てられても割り込めてしまい、
+ * 「あと一枚揃えば」という条件から外れる（実測でラウンドの83%が割り込み決着になった）。
+ */
+function canGoOutWith(hand: Card[], card: Card, wild: Wild): boolean {
+  const combined = [...hand, card];
+  // 10枚すべてが役なら、拾った札も必ず役の一部
+  if (classifyAsMelds(combined, wild) !== null) return true;
+  // 1枚余らせて9枚が役。ただし余らせるのが拾った札そのものではだめ
+  return combined.some((c) => {
+    if (c.id === card.id) return false;
+    const rest = combined.filter((x) => x.id !== c.id);
+    return rest.length > 0 && classifyAsMelds(rest, wild) !== null;
+  });
+}
+
+/**
+ * 捨てられた札を手番外で拾って上がる。
+ * 拾った札を含めて10枚にし、9枚が役なら余りを捨てて、10枚すべて役ならそのまま上がる。
+ */
+function applyIntercept(state: GameState): GameActionResult {
+  if (state.phase !== "AWAITING_INTERCEPT") {
+    return { ok: false, error: "いま割り込める場面ではありません" };
+  }
+  const seat = state.interceptQueue[0];
+  if (seat === undefined) {
+    return { ok: false, error: "割り込める人がいません" };
+  }
+
+  const discard = [...state.discard];
+  const taken = discard.pop();
+  if (taken === undefined) {
+    return { ok: false, error: "拾える捨て札がありません" };
+  }
+
+  const hand = [...(state.hands[seat] ?? []), taken];
+
+  // まず10枚すべてが役かを見る。だめなら1枚余らせて上がる。
+  if (classifyAsMelds(hand, state.wild) !== null) {
+    const hands = state.hands.map((h, i) => (i === seat ? hand : h));
+    return {
+      ok: true,
+      state: { ...state, hands, discard, phase: "ROUND_OVER", winner: seat, interceptQueue: [] },
+    };
+  }
+
+  // 余らせるのは拾った札以外（拾った札は役に使われていなければならない）
+  const spare = hand.find(
+    (c) =>
+      c.id !== taken.id &&
+      classifyAsMelds(hand.filter((x) => x.id !== c.id), state.wild) !== null
+  );
+  if (spare === undefined) {
+    return { ok: false, error: "その札を拾っても上がれません" };
+  }
+
+  const remaining = hand.filter((c) => c.id !== spare.id);
+  const hands = state.hands.map((h, i) => (i === seat ? remaining : h));
+
+  return {
+    ok: true,
+    state: {
+      ...state,
+      hands,
+      discard: [...discard, spare],
+      phase: "ROUND_OVER",
+      winner: seat,
+      interceptQueue: [],
+    },
+  };
+}
+
+/** 割り込まずに見送る。次の候補へ回し、誰もいなくなれば通常の手番に戻る。 */
+function applyPassIntercept(state: GameState): GameActionResult {
+  if (state.phase !== "AWAITING_INTERCEPT") {
+    return { ok: false, error: "いま割り込める場面ではありません" };
+  }
+
+  const interceptQueue = state.interceptQueue.slice(1);
+  return {
+    ok: true,
+    state: {
+      ...state,
+      interceptQueue,
+      phase: interceptQueue.length > 0 ? "AWAITING_INTERCEPT" : "AWAITING_DRAW",
     },
   };
 }

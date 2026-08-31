@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Card, Rank, Wild } from "./types";
-import { createInitialState, applyAction, GameState } from "./gameEngine";
+import { createInitialState, applyAction, currentActor, GameState } from "./gameEngine";
 
 const c = (id: string, suit: Card["suit"], rank: Rank): Card => ({ id, suit, rank });
 const wild: Wild = { rank: "8", suit: "S" }; // ヴィラが 7♠ のとき。8♠ だけがワイルド
@@ -20,6 +20,7 @@ function makeState(overrides: Partial<GameState> & { hands: Card[][] }): GameSta
     vira: overrides.vira ?? null,
     pendingCard: overrides.pendingCard ?? null,
     folded: overrides.folded ?? overrides.hands.map(() => false),
+    interceptQueue: overrides.interceptQueue ?? [],
   };
 }
 
@@ -445,5 +446,126 @@ describe("BATER", () => {
     });
     const result = applyAction(state, { type: "BATER" });
     expect(result.ok).toBe(false);
+  });
+});
+
+// 手番外で捨て札を拾って上がるルール（本家の「捨て札で上がる」）
+describe("捨て札への割り込み", () => {
+  // 5-6-7♠ / 9のトリンカ / J-Q♥ + 余り。K♥ が来れば J-Q-K♥ が揃って上がれる
+  const oneAway = [
+    c("1", "S", "5"), c("2", "S", "6"), c("3", "S", "7"),
+    c("4", "H", "9"), c("5", "D", "9"), c("6", "C", "9"),
+    c("7", "H", "J"), c("8", "H", "Q"), c("9", "C", "2"),
+  ];
+  // 何を拾っても上がれないバラバラの9枚
+  const hopeless = [
+    c("h1", "S", "2"), c("h2", "H", "5"), c("h3", "D", "9"),
+    c("h4", "C", "Q"), c("h5", "S", "10"), c("h6", "H", "4"),
+    c("h7", "D", "A"), c("h8", "C", "7"), c("h9", "S", "K"),
+  ];
+  const discarder = [c("d1", "H", "K"), c("d2", "D", "3")];
+
+  function stateBeforeDiscard(hands: Card[][]) {
+    return makeState({ hands, currentPlayer: 0, phase: "AWAITING_DISCARD" });
+  }
+
+  it("上がれる札が捨てられたら割り込みの局面になる", () => {
+    const s = stateBeforeDiscard([discarder, oneAway, hopeless, hopeless]);
+    const r = applyAction(s, { type: "DISCARD", cardId: "d1" });
+
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.phase).toBe("AWAITING_INTERCEPT");
+    expect(r.state.interceptQueue).toEqual([1]);
+    expect(currentActor(r.state)).toBe(1);
+  });
+
+  it("誰も上がれなければ通常どおり次の手番へ進む", () => {
+    const s = stateBeforeDiscard([discarder, hopeless, hopeless, hopeless]);
+    const r = applyAction(s, { type: "DISCARD", cardId: "d1" });
+
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.phase).toBe("AWAITING_DRAW");
+    expect(r.state.interceptQueue).toEqual([]);
+  });
+
+  it("同時に成立したら、捨てた人の次の席から順に優先される", () => {
+    const s = stateBeforeDiscard([discarder, oneAway, hopeless, oneAway]);
+    const r = applyAction(s, { type: "DISCARD", cardId: "d1" });
+
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.interceptQueue).toEqual([1, 3]);
+  });
+
+  it("捨てた本人は自分の捨て札で割り込めない", () => {
+    const s = stateBeforeDiscard([[...oneAway, c("x", "H", "K")], hopeless, hopeless, hopeless]);
+    const r = applyAction(s, { type: "DISCARD", cardId: "x" });
+
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.interceptQueue).not.toContain(0);
+  });
+
+  it("降りている者は割り込めない", () => {
+    const s = makeState({
+      hands: [discarder, oneAway, hopeless, hopeless],
+      currentPlayer: 0,
+      phase: "AWAITING_DISCARD",
+      folded: [false, true, false, false],
+    });
+    const r = applyAction(s, { type: "DISCARD", cardId: "d1" });
+
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.interceptQueue).toEqual([]);
+  });
+
+  it("INTERCEPT で拾って上がる。余った1枚は捨て札へ戻る", () => {
+    const s = stateBeforeDiscard([discarder, oneAway, hopeless, hopeless]);
+    const afterDiscard = applyAction(s, { type: "DISCARD", cardId: "d1" });
+    expect(afterDiscard.ok).toBe(true);
+    if (!afterDiscard.ok) return;
+
+    const r = applyAction(afterDiscard.state, { type: "INTERCEPT" });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.phase).toBe("ROUND_OVER");
+    expect(r.state.winner).toBe(1);
+    expect(r.state.hands[1]).toHaveLength(9);
+    expect(r.state.hands[1]!.some((x) => x.id === "d1")).toBe(true);
+  });
+
+  it("PASS_INTERCEPT で見送ると次の候補に回る", () => {
+    const s = stateBeforeDiscard([discarder, oneAway, hopeless, oneAway]);
+    const afterDiscard = applyAction(s, { type: "DISCARD", cardId: "d1" });
+    expect(afterDiscard.ok).toBe(true);
+    if (!afterDiscard.ok) return;
+
+    const passed = applyAction(afterDiscard.state, { type: "PASS_INTERCEPT" });
+    expect(passed.ok).toBe(true);
+    if (!passed.ok) return;
+    expect(passed.state.phase).toBe("AWAITING_INTERCEPT");
+    expect(currentActor(passed.state)).toBe(3);
+  });
+
+  it("全員が見送ると通常の手番に戻る", () => {
+    const s = stateBeforeDiscard([discarder, oneAway, hopeless, hopeless]);
+    const afterDiscard = applyAction(s, { type: "DISCARD", cardId: "d1" });
+    expect(afterDiscard.ok).toBe(true);
+    if (!afterDiscard.ok) return;
+
+    const passed = applyAction(afterDiscard.state, { type: "PASS_INTERCEPT" });
+    expect(passed.ok).toBe(true);
+    if (!passed.ok) return;
+    expect(passed.state.phase).toBe("AWAITING_DRAW");
+    expect(passed.state.currentPlayer).toBe(1);
+  });
+
+  it("割り込みの場面でないのに INTERCEPT はできない", () => {
+    const s = makeState({ hands: [oneAway, [], [], []], phase: "AWAITING_DRAW" });
+    expect(applyAction(s, { type: "INTERCEPT" }).ok).toBe(false);
+    expect(applyAction(s, { type: "PASS_INTERCEPT" }).ok).toBe(false);
   });
 });

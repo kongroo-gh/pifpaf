@@ -41,6 +41,7 @@ function makeState(overrides: Partial<GameState> & { hands: Card[][] }): GameSta
     vira: overrides.vira ?? null,
     pendingCard: overrides.pendingCard ?? null,
     folded: overrides.folded ?? overrides.hands.map(() => false),
+    interceptQueue: overrides.interceptQueue ?? [],
   };
 }
 

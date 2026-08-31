@@ -155,6 +155,12 @@ export function findBaterAction(hand: Card[], wild: Wild): GameAction | null {
 export function decideAction(state: GameState): GameAction | null {
   if (state.phase === "ROUND_OVER") return null;
 
+  // 捨て札への割り込み。上がれるなら拾わない理由がないので必ず拾う。
+  // 判断するのは手番の持ち主ではなく、割り込みの順番が回ってきた人。
+  if (state.phase === "AWAITING_INTERCEPT") {
+    return { type: "INTERCEPT" };
+  }
+
   const hand = state.hands[state.currentPlayer];
   if (hand === undefined) return null;
 

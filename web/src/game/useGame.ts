@@ -13,6 +13,7 @@ import {
   decideAction,
   shouldFold,
   isWildCard,
+  currentActor,
   createMatch,
   settleRound,
   alivePlayers,
@@ -29,9 +30,24 @@ import {
 export const HUMAN = 0;
 const PLAYER_COUNT = 4;
 
-/** CPUの思考待ち時間（ミリ秒）。人間が盤面を追えるようにわざと間を置く。 */
+/**
+ * CPUの思考待ち。人間が盤面を追えるようにわざと間を置く。
+ * 「ふつう」で1手番（引く＋捨てる）がおよそ2秒になるように取ってある。
+ */
 const CPU_DRAW_DELAY = 900;
 const CPU_DISCARD_DELAY = 1100;
+/** 割り込みで拾って上がるまでの間。一瞬で終わると何が起きたか分からない。 */
+const CPU_INTERCEPT_DELAY = 1200;
+
+export type Speed = "FAST" | "NORMAL" | "SLOW";
+/** 待ち時間にかける倍率 */
+const SPEED_FACTOR: Record<Speed, number> = { FAST: 0.5, NORMAL: 1, SLOW: 2 };
+export const SPEED_LABEL: Record<Speed, string> = {
+  FAST: "はやい",
+  NORMAL: "ふつう",
+  SLOW: "じっくり",
+};
+const SPEED_KEY = "pifpaf.speed";
 
 /** 所持金まわり */
 const BANKROLL_KEY = "pifpaf.bankroll";
@@ -46,6 +62,15 @@ export type Screen =
   | "PLAYING"
   | "ROUND_RESULT"
   | "MATCH_OVER";
+
+function loadSpeed(): Speed {
+  try {
+    const raw = window.localStorage.getItem(SPEED_KEY);
+    return raw === "FAST" || raw === "SLOW" || raw === "NORMAL" ? raw : "NORMAL";
+  } catch {
+    return "NORMAL";
+  }
+}
 
 function loadBankroll(): number {
   try {
@@ -79,6 +104,7 @@ function devScene(): "win" | "lose" | null {
 export function useGame() {
   const [screen, setScreen] = useState<Screen>("INTRO");
   const [bankroll, setBankroll] = useState<number>(loadBankroll);
+  const [speed, setSpeedState] = useState<Speed>(loadSpeed);
   const [wager, setWager] = useState(0);
 
   const [match, setMatch] = useState<MatchState>(() => createMatch(PLAYER_COUNT, DEFAULT_CHIPS));
@@ -93,6 +119,20 @@ export function useGame() {
   const [gameId, setGameId] = useState(0);
   /** 配当倍率（マッチ制覇時のみ）。0 なら負け。 */
   const [payout, setPayout] = useState(0);
+
+  /** CPUの速度を切り替える（対局中でも変えられる） */
+  const cycleSpeed = useCallback(() => {
+    setSpeedState((prev) => {
+      const order: Speed[] = ["FAST", "NORMAL", "SLOW"];
+      const next = order[(order.indexOf(prev) + 1) % order.length]!;
+      try {
+        window.localStorage.setItem(SPEED_KEY, next);
+      } catch {
+        // 保存できなくても進行には影響しない
+      }
+      return next;
+    });
+  }, []);
 
   const persistBankroll = useCallback((v: number) => {
     setBankroll(v);
@@ -250,6 +290,11 @@ export function useGame() {
   const keepPending = useCallback(() => dispatch({ type: "KEEP" }), [dispatch]);
   const rejectPending = useCallback(() => dispatch({ type: "REJECT" }), [dispatch]);
 
+  /** 手番外で捨て札を拾って上がる */
+  const intercept = useCallback(() => dispatch({ type: "INTERCEPT" }), [dispatch]);
+  /** 割り込まずに見送る */
+  const passIntercept = useCallback(() => dispatch({ type: "PASS_INTERCEPT" }), [dispatch]);
+
   const discardSelected = useCallback(() => {
     if (selectedCardId === null) return;
     dispatch({ type: "DISCARD", cardId: selectedCardId });
@@ -257,8 +302,16 @@ export function useGame() {
 
   const humanHand = state.hands[HUMAN] ?? [];
   const humanFolded = foldedSeats[HUMAN] === true;
+  // 割り込みの局面では手番の持ち主ではなく、割り込みを判断している人が行動主体
+  const actor = currentActor(state);
   const isHumanTurn =
-    state.currentPlayer === HUMAN && state.phase !== "ROUND_OVER" && !humanFolded;
+    state.currentPlayer === HUMAN &&
+    state.phase !== "ROUND_OVER" &&
+    state.phase !== "AWAITING_INTERCEPT" &&
+    !humanFolded;
+  /** 自分に割り込みの順番が回ってきているか */
+  const canIntercept =
+    screen === "PLAYING" && state.phase === "AWAITING_INTERCEPT" && actor === HUMAN;
 
   const topDiscard = state.discard[state.discard.length - 1];
   const canTakeDiscard =
@@ -286,9 +339,17 @@ export function useGame() {
   useEffect(() => {
     if (screen !== "PLAYING") return;
     if (state.phase === "ROUND_OVER") return;
-    if (state.currentPlayer === HUMAN && !humanFolded) return;
+    // 割り込みの局面では判断者が、それ以外は手番の持ち主が行動する
+    const acting = currentActor(state);
+    if (acting === HUMAN && !humanFolded) return;
 
-    const delay = state.phase === "AWAITING_DISCARD" ? CPU_DISCARD_DELAY : CPU_DRAW_DELAY;
+    const base =
+      state.phase === "AWAITING_INTERCEPT"
+        ? CPU_INTERCEPT_DELAY
+        : state.phase === "AWAITING_DISCARD"
+          ? CPU_DISCARD_DELAY
+          : CPU_DRAW_DELAY;
+    const delay = base * SPEED_FACTOR[speed];
     const timer = setTimeout(() => {
       const action = decideAction(state);
       if (action === null) return;
@@ -298,7 +359,7 @@ export function useGame() {
     }, delay);
 
     return () => clearTimeout(timer);
-  }, [screen, state, humanFolded]);
+  }, [screen, state, humanFolded, speed]);
 
   // ラウンドが決着したら勘定する
   useEffect(() => {
@@ -335,7 +396,11 @@ export function useGame() {
     humanFolded,
     foldedSeats,
     isHumanTurn,
+    canIntercept,
     humanBater,
+    speed,
+    speedLabel: SPEED_LABEL[speed],
+    cycleSpeed,
     topDiscard,
     canTakeDiscard,
     canDrawStock,
@@ -358,5 +423,7 @@ export function useGame() {
     rejectPending,
     discardSelected,
     callBater,
+    intercept,
+    passIntercept,
   };
 }

@@ -12,7 +12,7 @@ export type { Meld, MeldType } from "./melds";
 export { isValidTrinca, isValidSequence, classifyAsMelds } from "./melds";
 
 export type { GameState, GameAction, GameActionResult, Phase, DrawSource } from "./gameEngine";
-export { createInitialState, applyAction } from "./gameEngine";
+export { createInitialState, applyAction, currentActor, findInterceptors } from "./gameEngine";
 
 export {
   cardAffinity,

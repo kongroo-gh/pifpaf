@@ -561,6 +561,52 @@ button {
 
 .keepBar__note strong { color: var(--gold-bright); font-weight: 600; }
 
+/* 割り込みは奪い取る場面なので、金ではなく血の色で出す */
+.keepBar--intercept {
+  border-color: var(--blood-hot);
+  background: linear-gradient(180deg, rgba(60, 24, 18, 0.96), rgba(24, 12, 10, 0.96));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 34px rgba(210, 74, 52, 0.25);
+  animation: keepBarIn 240ms cubic-bezier(0.2, 0.9, 0.3, 1) both,
+    interceptPulse 1.5s ease-in-out 240ms infinite;
+}
+
+@keyframes interceptPulse {
+  0%, 100% { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 26px rgba(210, 74, 52, 0.2); }
+  50% { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 46px rgba(210, 74, 52, 0.5); }
+}
+
+.keepBar--intercept .keepBar__kicker { color: var(--blood-hot); }
+.keepBar--intercept .keepBar__card .card {
+  box-shadow: 0 0 0 2px var(--blood-hot), 0 10px 24px rgba(0, 0, 0, 0.7);
+}
+
+/* ---------- CPUの速さ切り替え ---------- */
+.speedToggle {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  padding: 5px 12px;
+  border: 1px solid rgba(143, 136, 124, 0.3);
+  background: none;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease;
+}
+
+.speedToggle:hover { border-color: rgba(200, 162, 74, 0.5); }
+
+.speedToggle__label {
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  color: var(--smoke-dim);
+}
+
+.speedToggle__value {
+  font-family: var(--display);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+}
+
 .keepBar__actions {
   display: flex;
   gap: 10px;
@@ -1310,6 +1356,9 @@ button {
   .topbar__brand p { font-size: 9px; }
 
   .topbar__wild { padding: 5px 10px; gap: 8px; }
+  .speedToggle { padding: 3px 8px; }
+  .speedToggle__label { font-size: 7px; }
+  .speedToggle__value { font-size: 11px; }
   .topbar__wildLabel { font-size: 8px; letter-spacing: 0.12em; }
   .topbar__wildRank { font-size: 21px; }
   .topbar__vira { font-size: 8px; gap: 5px; }

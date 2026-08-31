@@ -29,7 +29,10 @@ export default function App() {
     humanFolded,
     foldedSeats,
     isHumanTurn,
+    canIntercept,
     humanBater,
+    speedLabel,
+    cycleSpeed,
     topDiscard,
     canTakeDiscard,
     canDrawStock,
@@ -50,6 +53,8 @@ export default function App() {
     rejectPending,
     discardSelected,
     callBater,
+    intercept,
+    passIntercept,
   } = game;
 
   const { ordered: orderedHand, reorder, sort } = useHandOrder(humanHand, gameId);
@@ -81,6 +86,16 @@ export default function App() {
               <strong>{wager}</strong>
             </p>
           </div>
+          <button
+            type="button"
+            className="speedToggle"
+            onClick={cycleSpeed}
+            aria-label={`CPUの速さ: ${speedLabel}。押すと切り替わる`}
+          >
+            <span className="speedToggle__label">CPUの速さ</span>
+            <span className="speedToggle__value">{speedLabel}</span>
+          </button>
+
           <div className="topbar__wild">
             <span className="topbar__wildLabel">CORINGA</span>
             <span className="topbar__wildRank">
@@ -200,6 +215,16 @@ export default function App() {
               currentPlayer={state.currentPlayer}
             />
           </div>
+
+          {/* 手番外で捨て札を拾って上がれる場面。採否バーと同じ位置に出す。 */}
+          {canIntercept && topDiscard && (
+            <InterceptBar
+              card={topDiscard}
+              wild={state.wild}
+              onTake={intercept}
+              onPass={passIntercept}
+            />
+          )}
 
           {/* 採否は手札のすぐ上で訊く。全画面のパネルにすると手札が隠れて
               「この札が要るか」を判断できない。 */}
@@ -566,6 +591,46 @@ function Betting({
  * 一番手が山札から引いた札を見せて、手札に入れるか訊く。
  * 断ると手札に入れずに捨てて、山札からもう1枚引く（引き直せるのは1回だけ）。
  */
+/**
+ * 手番を待たずに、捨てられた札を拾って上がれる場面。
+ * 同時に複数が成立した場合は、捨てた人の次の席から順に訊かれる（engine側で決まる）。
+ */
+function InterceptBar({
+  card,
+  wild,
+  onTake,
+  onPass,
+}: {
+  card: Card;
+  wild: Wild;
+  onTake: () => void;
+  onPass: () => void;
+}) {
+  return (
+    <div className="keepBar keepBar--intercept">
+      <div className="keepBar__card">
+        <PlayingCard card={card} wild={wild} size="md" />
+      </div>
+      <div className="keepBar__text">
+        <p className="keepBar__kicker">BATER NO LIXO — 手番を待たずに</p>
+        <p className="keepBar__title">その捨て札で上がれる</p>
+        <p className="keepBar__note">
+          <span className="keepBar__noteLong">自分の番でなくても拾って上がれる。</span>
+          見送れば<strong>次の者</strong>に権利が移る。
+        </p>
+      </div>
+      <div className="keepBar__actions">
+        <button className="btn btn--bater btn--armed" onClick={onTake}>
+          BATER!<small>拾って上がる</small>
+        </button>
+        <button className="btn btn--reject" onClick={onPass}>
+          PASSAR<small>見送る</small>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function KeepBar({
   card,
   wild,
