@@ -140,7 +140,9 @@ button {
 .app {
   min-height: 100%;
   display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  /* 場の行は minmax(0, 1fr)。素の 1fr は min-height:auto で中身より縮まないため、
+     採否バーのような要素が増えたときに下のボタンが画面外へ押し出される。 */
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   gap: 14px;
   padding: 16px clamp(12px, 3vw, 32px) 20px;
   background:
@@ -495,75 +497,73 @@ button {
   background: linear-gradient(180deg, #7d1c14, #4a0f0a);
 }
 
-/* ---------- 引いた札の採否を訊く（一番手の特権） ---------- */
-.keepPrompt {
-  position: fixed;
-  inset: 0;
-  z-index: 75;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(5, 4, 4, 0.82);
-  animation: fadeIn 260ms ease both;
-}
+/* ---------- 引いた札の採否を訊く（一番手の特権） ----------
+   全画面のパネルにすると手札が隠れて「この札が要るか」を判断できないので、
+   手札のすぐ上に横並びのバーとして出す。手札はそのまま見えるし並べ替えもできる。 */
+.keepBar {
+  /* 自分の席のすぐ上に浮かせる。行として積むと下のボタンが画面外へ押し出されるので、
+     レイアウトを一切動かさないよう場の領域に重ねる（決定中の場は飾りでしかない）。 */
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 20;
 
-.keepPrompt__panel {
-  max-width: 420px;
-  text-align: center;
-  padding: 30px 30px 26px;
-  border: 1px solid rgba(200, 162, 74, 0.45);
-  outline: 1px solid rgba(200, 162, 74, 0.16);
-  outline-offset: 7px;
-  background: linear-gradient(180deg, #1c1613, #0a0908);
-  box-shadow: 0 40px 110px rgba(0, 0, 0, 0.9);
-  animation: verdictIn 320ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
-}
-
-.keepPrompt__kicker {
-  font-family: var(--display);
-  font-size: 10px;
-  letter-spacing: 0.3em;
-  color: var(--gold);
-  margin: 0 0 12px;
-  text-indent: 0.3em;
-}
-
-.keepPrompt h2 {
-  font-family: var(--display);
-  font-size: 21px;
-  letter-spacing: 0.06em;
-  margin: 0 0 20px;
-  color: var(--cream);
-}
-
-.keepPrompt__card {
-  display: grid;
-  place-items: center;
-  margin-bottom: 18px;
-}
-
-/* 引いた札は主役なので少し大きく見せる */
-.keepPrompt__card .card {
-  transform: scale(1.25);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.75), 0 0 40px rgba(236, 205, 131, 0.15);
-}
-
-.keepPrompt__note {
-  font-size: 12px;
-  line-height: 1.9;
-  color: var(--smoke);
-  margin: 10px 0 22px;
-}
-
-.keepPrompt__note strong {
-  color: var(--gold-bright);
-  font-weight: 600;
-}
-
-.keepPrompt__actions {
   display: flex;
-  gap: 12px;
-  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 12px;
+  border: 1px solid rgba(200, 162, 74, 0.5);
+  background: linear-gradient(180deg, rgba(44, 34, 26, 0.95), rgba(20, 16, 13, 0.95));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), inset 0 0 40px rgba(200, 162, 74, 0.06);
+  animation: keepBarIn 280ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+@keyframes keepBarIn {
+  from { transform: translateY(14px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+/* .me は position:relative（スタンプ用）。バーはその基準に対して浮く。 */
+
+/* 引いた札は主役なので少し持ち上げて光らせる */
+.keepBar__card .card {
+  box-shadow: 0 0 0 2px var(--gold-bright), 0 10px 24px rgba(0, 0, 0, 0.7);
+}
+
+.keepBar__text {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.keepBar__kicker {
+  font-family: var(--display);
+  font-size: 9px;
+  letter-spacing: 0.24em;
+  color: var(--gold);
+  margin: 0 0 4px;
+}
+
+.keepBar__title {
+  font-family: var(--display);
+  font-size: 17px;
+  letter-spacing: 0.04em;
+  color: var(--cream);
+  margin: 0 0 5px;
+}
+
+.keepBar__note {
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--smoke);
+  margin: 0;
+}
+
+.keepBar__note strong { color: var(--gold-bright); font-weight: 600; }
+
+.keepBar__actions {
+  display: flex;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
@@ -889,7 +889,8 @@ button {
   padding: 14px 16px 16px;
   border: 1px solid rgba(200, 162, 74, 0.22);
   background: linear-gradient(180deg, rgba(26, 22, 19, 0.85), rgba(12, 10, 9, 0.95));
-  overflow: hidden;
+  /* overflow は切らない。採否バーをこの枠の外（上）に浮かせるため。
+     スタンプと銃痕は元々この枠に収まるので、クリップは不要だった。 */
   transition: filter 700ms ease;
 }
 
@@ -1091,6 +1092,11 @@ button {
   gap: 10px;
   margin-top: 14px;
   flex-wrap: wrap;
+}
+
+/* display:flex は hidden 属性の display:none を上書きしてしまうので明示する */
+.actions[hidden] {
+  display: none;
 }
 
 .btn {
@@ -1383,10 +1389,24 @@ button {
 
   .me__stamp { font-size: 20px; }
 
-  .keepPrompt__panel { padding: 24px 20px 22px; }
-  .keepPrompt h2 { font-size: 17px; margin-bottom: 16px; }
-  .keepPrompt__note { font-size: 11px; line-height: 1.8; }
-  .keepPrompt__actions .btn { flex: 1; }
+  /* 狭い画面では「札＋見出し」で1行、ボタンはその下に回す。
+     1行に詰め込むと見出しが3行に折り返してバーが縦に伸びる。 */
+  .keepBar {
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    padding: 8px 10px;
+    bottom: calc(100% + 6px);
+  }
+  .keepBar__card .card--md { width: 46px; height: 65px; }
+  .keepBar__card .card--md .card__center { font-size: 18px; }
+  .keepBar__card .card--md .card__corner { font-size: 9px; }
+  .keepBar__text { flex: 1 1 0; }
+  .keepBar__kicker { display: none; }
+  .keepBar__noteLong { display: none; }
+  .keepBar__title { font-size: 14px; margin-bottom: 3px; }
+  .keepBar__note { font-size: 10px; line-height: 1.5; }
+  .keepBar__actions { flex: 1 1 100%; }
+  .keepBar__actions .btn { flex: 1; }
 
   .verdict__panel { padding: 30px 22px 26px; }
   .verdict h2 { font-size: 30px; }

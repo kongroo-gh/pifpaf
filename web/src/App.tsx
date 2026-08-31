@@ -201,6 +201,17 @@ export default function App() {
             />
           </div>
 
+          {/* 採否は手札のすぐ上で訊く。全画面のパネルにすると手札が隠れて
+              「この札が要るか」を判断できない。 */}
+          {isDecidingKeep && state.pendingCard && (
+            <KeepBar
+              card={state.pendingCard}
+              wild={state.wild}
+              onKeep={keepPending}
+              onReject={rejectPending}
+            />
+          )}
+
           <PlayerHand
             cards={orderedHand}
             wild={state.wild}
@@ -249,15 +260,6 @@ export default function App() {
           chips={humanChips}
           onFold={() => decideFold(true)}
           onPlay={() => decideFold(false)}
-        />
-      )}
-
-      {isDecidingKeep && state.pendingCard && (
-        <KeepPrompt
-          card={state.pendingCard}
-          wild={state.wild}
-          onKeep={keepPending}
-          onReject={rejectPending}
         />
       )}
 
@@ -564,7 +566,7 @@ function Betting({
  * 一番手が山札から引いた札を見せて、手札に入れるか訊く。
  * 断ると手札に入れずに捨てて、山札からもう1枚引く（引き直せるのは1回だけ）。
  */
-function KeepPrompt({
+function KeepBar({
   card,
   wild,
   onKeep,
@@ -576,26 +578,26 @@ function KeepPrompt({
   onReject: () => void;
 }) {
   return (
-    <div className="panel">
-      <div className="panel__box">
-        <p className="panel__kicker">PRIMEIRA MÃO — 一番手の特権</p>
-        <h2>この札を手札に入れるか</h2>
-        <div className="keepPrompt__card">
-          <PlayingCard card={card} wild={wild} size="md" />
-        </div>
-        <p className="panel__note">
-          断れば、この札は手札に入れず捨てて、山札からもう1枚引く。
-          <br />
-          引き直せるのは<strong>一度きり</strong>。次の札は選べない。
+    <div className="keepBar">
+      <div className="keepBar__card">
+        <PlayingCard card={card} wild={wild} size="md" />
+      </div>
+      <div className="keepBar__text">
+        <p className="keepBar__kicker">PRIMEIRA MÃO — 一番手の特権</p>
+        <p className="keepBar__title">この札を手札に入れるか</p>
+        <p className="keepBar__note">
+          {/* 狭い画面では前半を畳む（CSSで制御） */}
+          <span className="keepBar__noteLong">下の手札と見比べて決めろ。並べ替えてもいい。</span>
+          引き直せるのは<strong>一度きり</strong>。
         </p>
-        <div className="panel__actions">
-          <button className="btn btn--keep" onClick={onKeep}>
-            FICAR<small>手札に入れる</small>
-          </button>
-          <button className="btn btn--reject" onClick={onReject}>
-            RECUSAR<small>捨てて引き直す</small>
-          </button>
-        </div>
+      </div>
+      <div className="keepBar__actions">
+        <button className="btn btn--keep" onClick={onKeep}>
+          FICAR<small>手札に入れる</small>
+        </button>
+        <button className="btn btn--reject" onClick={onReject}>
+          RECUSAR<small>捨てて引き直す</small>
+        </button>
       </div>
     </div>
   );
