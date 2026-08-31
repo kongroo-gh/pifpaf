@@ -26,6 +26,22 @@ export interface GameLog {
   text: string;
 }
 
+/**
+ * 開発時だけ、終了演出をすぐ確認するための細工。`?scene=win` / `?scene=lose` / `?scene=draw`。
+ * 終了演出は1局遊びきらないと見られず、勝敗も運任せなので調整しづらい。
+ * `import.meta.env.DEV` で囲ってあるので本番ビルドからは消える。
+ *
+ * 戻り値: undefined=通常どおり／それ以外=その席を勝者にして即座に決着させる
+ */
+function devSceneWinner(): number | null | undefined {
+  if (!import.meta.env.DEV) return undefined;
+  const scene = new URLSearchParams(window.location.search).get("scene");
+  if (scene === "win") return HUMAN;
+  if (scene === "lose") return 1;
+  if (scene === "draw") return null;
+  return undefined;
+}
+
 export function useGame() {
   const [screen, setScreen] = useState<Screen>("INTRO");
   const [state, setState] = useState<GameState>(() => createInitialState(dealGame(PLAYER_COUNT)));
@@ -44,7 +60,11 @@ export function useGame() {
   /** 新しい1ゲームを開始する（ワンゲームマッチなので毎回配り直し） */
   const startGame = useCallback(() => {
     const deal = dealGame(PLAYER_COUNT);
-    setState(createInitialState(deal, HUMAN));
+    const fresh = createInitialState(deal, HUMAN);
+    const forced = devSceneWinner();
+    setState(
+      forced === undefined ? fresh : { ...fresh, phase: "ROUND_OVER", winner: forced }
+    );
     setSelectedCardId(null);
     setLogs([]);
     logId.current = 0;

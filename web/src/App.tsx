@@ -7,6 +7,8 @@ import { PlayingCard, CardBack, SUIT_GLYPH, describeCard } from "./components/Pl
 import { PlayerHand } from "./components/PlayerHand";
 import { OpponentSeat } from "./components/OpponentSeat";
 import { BulletHoleCluster } from "./components/BulletHole";
+import { GunShot } from "./components/GunShot";
+import { MoneyRain } from "./components/MoneyRain";
 
 export default function App() {
   const game = useGame();
@@ -210,6 +212,10 @@ export default function App() {
       />
     )}
     {execution.firingAt !== null && <div className="muzzleFlash" aria-hidden="true" />}
+    {/* 自分が撃たれるときだけ、銃がこちらを向く */}
+    <GunShot phase={execution.gunPhase} />
+    {/* 勝ったら金が降る。判定より先に降らせて、パネルはその上に出す */}
+    {execution.verdictReady && state.winner === HUMAN && <MoneyRain />}
     {execution.verdictReady && <Verdict winner={state.winner} onRestart={startGame} />}
     </>
   );

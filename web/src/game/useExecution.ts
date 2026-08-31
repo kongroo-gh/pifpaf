@@ -9,6 +9,11 @@ const FIRST_SHOT_DELAY = 700;
 const SHOT_INTERVAL = 1050;
 const FLASH_DURATION = 240;
 const VERDICT_DELAY = 900;
+/** 自分が撃たれる何ミリ秒前に銃を構え始めるか */
+const AIM_LEAD = 750;
+
+/** 自分に向けられた銃の状態。演出用。 */
+export type GunPhase = "HIDDEN" | "AIMING" | "FIRED";
 
 export interface ExecutionProgress {
   /** すでに撃たれた席 */
@@ -17,6 +22,8 @@ export interface ExecutionProgress {
   firingAt: number | null;
   /** 全員撃ち終えて判定を出してよい状態か */
   verdictReady: boolean;
+  /** 自分が撃たれるときだけ進む。銃を出す→撃つ */
+  gunPhase: GunPhase;
 }
 
 export function useExecution(winner: number | null, active: boolean): ExecutionProgress {
@@ -35,12 +42,14 @@ export function useExecution(winner: number | null, active: boolean): ExecutionP
   const [shotCount, setShotCount] = useState(0);
   const [firingAt, setFiringAt] = useState<number | null>(null);
   const [verdictReady, setVerdictReady] = useState(false);
+  const [gunPhase, setGunPhase] = useState<GunPhase>("HIDDEN");
 
   useEffect(() => {
     if (!active) {
       setShotCount(0);
       setFiringAt(null);
       setVerdictReady(false);
+      setGunPhase("HIDDEN");
       return;
     }
 
@@ -55,6 +64,12 @@ export function useExecution(winner: number | null, active: boolean): ExecutionP
         }, at)
       );
       timers.push(setTimeout(() => setFiringAt(null), at + FLASH_DURATION));
+
+      // 自分の番だけ、少し手前から銃を構えさせて溜めを作る
+      if (seat === HUMAN) {
+        timers.push(setTimeout(() => setGunPhase("AIMING"), Math.max(0, at - AIM_LEAD)));
+        timers.push(setTimeout(() => setGunPhase("FIRED"), at));
+      }
     });
 
     const totalMs = FIRST_SHOT_DELAY + order.length * SHOT_INTERVAL + VERDICT_DELAY;
@@ -68,5 +83,5 @@ export function useExecution(winner: number | null, active: boolean): ExecutionP
     [order, shotCount]
   );
 
-  return { eliminated, firingAt, verdictReady };
+  return { eliminated, firingAt, verdictReady, gunPhase };
 }

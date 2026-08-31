@@ -911,6 +911,122 @@ button {
   100% { opacity: 0; }
 }
 
+/* ---------- 銃（自分が撃たれるとき） ---------- */
+.gunShot {
+  position: fixed;
+  inset: 0;
+  z-index: 72;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.gunShot__gun {
+  position: absolute;
+
+  /* 銃の大きさ。横長のviewBoxなので、縦長の画面では vh 基準のほうが大きく取れる。 */
+  --gun-w: max(125vw, 88vh);
+
+  /* viewBox 上での位置（-150〜260 の 410 幅）:
+       銃口 x=8   → 左から 38.5%
+       SVGの高さ  → 幅 x 230/410 = 0.561
+       銃の上下中心 → SVG高さの 57.8%
+     これを使って「銃口が画面の35%、銃の中心が高さの55%」に来るよう逆算する。
+     こうしておくと画面比率が変わっても構図が崩れない（縦画面で銃口が
+     画面外に出る、という事故を防ぐ）。 */
+  width: var(--gun-w);
+  right: calc(65vw - 0.615 * var(--gun-w));
+  bottom: calc(45vh - 0.237 * var(--gun-w));
+  /* 暗い盤面から浮かせるための、輪郭沿いのごく淡い光 */
+  filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.9))
+    drop-shadow(0 0 3px rgba(236, 227, 207, 0.28));
+  transform-origin: 82% 66%;
+  overflow: visible;
+}
+
+.gunShot--aiming .gunShot__gun {
+  animation: gunEnter 620ms cubic-bezier(0.16, 0.9, 0.3, 1) both;
+}
+
+/* 差し出される。最後にわずかに揺れて「構えた」感じを出す */
+@keyframes gunEnter {
+  0% { transform: translateX(70%) translateY(18%) rotate(10deg); opacity: 0; }
+  70% { transform: translateX(-2%) translateY(0) rotate(-2deg); opacity: 1; }
+  100% { transform: translateX(0) translateY(0) rotate(0deg); opacity: 1; }
+}
+
+.gunShot--fired .gunShot__gun {
+  animation: gunRecoil 420ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+/* 反動。後ろへ跳ねて戻る */
+@keyframes gunRecoil {
+  0% { transform: translateX(0) rotate(0deg); }
+  14% { transform: translateX(9%) translateY(-3%) rotate(-11deg); }
+  40% { transform: translateX(3%) rotate(-4deg); }
+  100% { transform: translateX(0) rotate(0deg); }
+}
+
+/* 銃口の閃光。SVG内の要素なので、銃と一緒に動く。
+   transform-box: fill-box で自分の中心を基準に膨らませる。 */
+.gunShot__flash {
+  transform-box: fill-box;
+  transform-origin: 92% 50%;
+  animation: gunFlash 280ms steps(4, end) forwards;
+}
+
+@keyframes gunFlash {
+  0% { opacity: 1; transform: scale(0.7); }
+  30% { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+
+/* ---------- 金が降る（勝ったとき） ---------- */
+.moneyRain {
+  position: fixed;
+  inset: 0;
+  z-index: 78;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.moneyRain__piece {
+  position: absolute;
+  top: -8%;
+  display: block;
+  animation-name: moneyFall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+.moneyRain__piece--coin { width: 30px; }
+.moneyRain__piece--bill { width: 44px; }
+
+.moneyRain__piece svg {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5));
+}
+
+@keyframes moneyFall {
+  0% {
+    transform: translate3d(0, -10vh, 0) rotate(0deg) scale(var(--scale));
+    opacity: 0;
+  }
+  8% { opacity: 1; }
+  92% { opacity: 1; }
+  100% {
+    transform: translate3d(var(--drift), 112vh, 0) rotate(var(--spin)) scale(var(--scale));
+    opacity: 0;
+  }
+}
+
+/* 勝ちの判定パネルには金色の光を足す */
+.verdict--win .verdict__panel {
+  border-color: var(--gold-bright);
+  box-shadow: 0 40px 110px rgba(0, 0, 0, 0.9), 0 0 90px rgba(200, 162, 74, 0.28);
+}
+
 /* ---------- 判定 ---------- */
 .verdict {
   position: fixed;
@@ -1188,5 +1304,11 @@ button {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* 降り物はアニメーションを止めると意味を成さないので、まとめて出さない。
+     銃は静止画として成立するので残す（反動と閃光だけが省かれる）。 */
+  .moneyRain {
+    display: none;
   }
 }
