@@ -8,7 +8,6 @@ import { PlayingCard, CardBack, SUIT_GLYPH, describeCard } from "./components/Pl
 import { PlayerHand } from "./components/PlayerHand";
 import { OpponentSeat } from "./components/OpponentSeat";
 import { BulletHoleCluster } from "./components/BulletHole";
-import { GunShot } from "./components/GunShot";
 import { MoneyRain } from "./components/MoneyRain";
 import { ChipStack } from "./components/ChipStack";
 
@@ -262,13 +261,10 @@ export default function App() {
         />
       )}
 
-      {/* 銃は「撃たれる瞬間」だけ。精算パネルと重ねると閃光で文字が読めなくなるので、
+      {/* 破産した席が撃たれる瞬間の閃光。精算パネルと重ねると文字が読めなくなるので、
           MATCH_OVER に進む前のラウンド結果中に見せきる。 */}
-      {screen === "ROUND_RESULT" && (
-        <>
-          <GunShot phase={execution.gunPhase} />
-          {execution.firingAt !== null && <div className="muzzleFlash" aria-hidden="true" />}
-        </>
+      {screen === "ROUND_RESULT" && execution.firingAt !== null && (
+        <div className="muzzleFlash" aria-hidden="true" />
       )}
 
       {screen === "ROUND_RESULT" && execution.done && settlement && (

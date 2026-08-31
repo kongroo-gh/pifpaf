@@ -10,11 +10,6 @@ const FIRST_SHOT_DELAY = 650;
 const SHOT_INTERVAL = 1000;
 const FLASH_DURATION = 240;
 const DONE_DELAY = 800;
-/** 自分が撃たれる何ミリ秒前に銃を構え始めるか */
-const AIM_LEAD = 750;
-
-/** 自分に向けられた銃の状態。演出用。 */
-export type GunPhase = "HIDDEN" | "AIMING" | "FIRED";
 
 export interface ExecutionProgress {
   /** すでに撃たれた席 */
@@ -23,8 +18,6 @@ export interface ExecutionProgress {
   firingAt: number | null;
   /** 一連の処刑が終わったか */
   done: boolean;
-  /** 自分が撃たれるときだけ進む。銃を出す→撃つ */
-  gunPhase: GunPhase;
 }
 
 /**
@@ -42,14 +35,12 @@ export function useExecution(seats: number[], active: boolean): ExecutionProgres
   const [shotCount, setShotCount] = useState(0);
   const [firingAt, setFiringAt] = useState<number | null>(null);
   const [done, setDone] = useState(false);
-  const [gunPhase, setGunPhase] = useState<GunPhase>("HIDDEN");
 
   useEffect(() => {
     if (!active) {
       setShotCount(0);
       setFiringAt(null);
       setDone(false);
-      setGunPhase("HIDDEN");
       return;
     }
 
@@ -70,11 +61,6 @@ export function useExecution(seats: number[], active: boolean): ExecutionProgres
         }, at)
       );
       timers.push(setTimeout(() => setFiringAt(null), at + FLASH_DURATION));
-
-      if (seat === HUMAN) {
-        timers.push(setTimeout(() => setGunPhase("AIMING"), Math.max(0, at - AIM_LEAD)));
-        timers.push(setTimeout(() => setGunPhase("FIRED"), at));
-      }
     });
 
     const totalMs = FIRST_SHOT_DELAY + order.length * SHOT_INTERVAL + DONE_DELAY;
@@ -85,5 +71,5 @@ export function useExecution(seats: number[], active: boolean): ExecutionProgres
 
   const shot = useMemo(() => new Set(order.slice(0, shotCount)), [order, shotCount]);
 
-  return { shot, firingAt, done, gunPhase };
+  return { shot, firingAt, done };
 }
