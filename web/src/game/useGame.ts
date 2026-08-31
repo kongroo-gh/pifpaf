@@ -10,7 +10,6 @@ import {
   findBaterAction,
   decideAction,
   type GameState,
-  type Card,
 } from "@pifpaf/engine";
 
 export const HUMAN = 0;
@@ -30,7 +29,6 @@ export interface GameLog {
 export function useGame() {
   const [screen, setScreen] = useState<Screen>("INTRO");
   const [state, setState] = useState<GameState>(() => createInitialState(dealGame(PLAYER_COUNT)));
-  const [vira, setVira] = useState<Card | null>(null);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   /** 配り直すたびに増える。手札の表示順をリセットする合図に使う。 */
   const [gameId, setGameId] = useState(0);
@@ -47,7 +45,6 @@ export function useGame() {
   const startGame = useCallback(() => {
     const deal = dealGame(PLAYER_COUNT);
     setState(createInitialState(deal, HUMAN));
-    setVira(deal.vira);
     setSelectedCardId(null);
     setLogs([]);
     logId.current = 0;
@@ -73,6 +70,15 @@ export function useGame() {
   /** 前のプレイヤーが捨てた札（捨て札の一番上）を拾う */
   const takeDiscard = useCallback(() => dispatch({ type: "DRAW", from: "DISCARD" }), [dispatch]);
 
+  /** 一番手の特権：場のヴィラを買う */
+  const takeVira = useCallback(() => dispatch({ type: "TAKE_VIRA" }), [dispatch]);
+
+  /** 見せられた札を手札に入れる */
+  const keepPending = useCallback(() => dispatch({ type: "KEEP" }), [dispatch]);
+
+  /** 見せられた札を手札に入れず捨て、山札から引き直す */
+  const rejectPending = useCallback(() => dispatch({ type: "REJECT" }), [dispatch]);
+
   const discardSelected = useCallback(() => {
     if (selectedCardId === null) return;
     dispatch({ type: "DISCARD", cardId: selectedCardId });
@@ -85,6 +91,17 @@ export function useGame() {
   /** 捨て札を拾えるか。拾えるのは一番上の1枚だけ。 */
   const canTakeDiscard =
     isHumanTurn && state.phase === "AWAITING_DRAW" && topDiscard !== undefined;
+
+  /** 一番手の最初の手番か（ヴィラを買える／引いた札を選び直せる） */
+  const isFirstTurn = isHumanTurn && state.phase === "AWAITING_FIRST_DRAW";
+  const canTakeVira = isFirstTurn && state.vira !== null;
+  /** 引いた札の採否を訊いている最中か */
+  const isDecidingKeep =
+    isHumanTurn && state.phase === "AWAITING_KEEP_DECISION" && state.pendingCard !== null;
+
+  /** 山札を引けるか（通常の手番でも、一番手の最初の手番でも引ける） */
+  const canDrawStock =
+    isHumanTurn && (state.phase === "AWAITING_DRAW" || state.phase === "AWAITING_FIRST_DRAW");
 
   /** 人間が今バテル（上がり）できるか。判定はengineに任せる。 */
   const humanBater =
@@ -126,7 +143,6 @@ export function useGame() {
   return {
     screen,
     state,
-    vira,
     gameId,
     logs,
     humanHand,
@@ -134,12 +150,19 @@ export function useGame() {
     humanBater,
     topDiscard,
     canTakeDiscard,
+    canDrawStock,
+    isFirstTurn,
+    canTakeVira,
+    isDecidingKeep,
     selectedCardId,
     setSelectedCardId,
     pushLog,
     startGame,
     drawCard,
     takeDiscard,
+    takeVira,
+    keepPending,
+    rejectPending,
     discardSelected,
     callBater,
   };

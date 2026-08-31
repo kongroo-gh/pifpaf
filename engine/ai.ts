@@ -70,31 +70,38 @@ export function chooseDiscard(
 }
 
 /**
- * 捨て札の一番上を拾うべきか。拾わないなら山札から引く。
+ * 表向きで見えている1枚を、手札に入れる価値があるか。
  *
- * 見えている1枚と山札の未知の1枚を比べることになるので、
- * 「確実に役に絡む」と言えるときだけ拾う、という消極的な判断にしている。
+ * 比較対象は「山札から引く未知の1枚」なので、
+ * 「確実に役に絡む」と言えるときだけ取る、という消極的な判断にしている。
+ *
+ * 捨て札を拾うか・ヴィラを買うか・引いた札を採るか、いずれも
+ * 「見えている1枚を取るか否か」で同じ形なので、判断はここに集約する。
  */
-export function shouldTakeDiscard(
-  hand: Card[],
-  topDiscard: Card | undefined,
-  wild: Wild
-): boolean {
-  if (topDiscard === undefined) return false;
+export function isCardWorthTaking(hand: Card[], card: Card | undefined, wild: Wild): boolean {
+  if (card === undefined) return false;
 
-  // 拾えばそのまま上がれるなら迷う必要がない
-  if (findBaterAction([...hand, topDiscard], wild) !== null) return true;
+  // 取ればそのまま上がれるなら迷う必要がない
+  if (findBaterAction([...hand, card], wild) !== null) return true;
 
-  // ワイルドは何にでも化けるので常に拾う
-  if (isWildCard(topDiscard, wild)) return true;
+  // ワイルドは何にでも化けるので常に取る
+  if (isWildCard(card, wild)) return true;
 
-  const prospective = [...hand, topDiscard];
-  const gain = cardAffinity(topDiscard, prospective, wild);
+  const gain = cardAffinity(card, [...hand, card], wild);
 
   // 手札で最も孤立している札より明確に良く、かつ単独で役に絡んでいること。
   // 8 = 同スートの隣接1枚ぶん。これ未満なら山札を引いたほうがまし。
   const worst = Math.min(...hand.map((c) => cardAffinity(c, hand, wild)));
   return gain >= 8 && gain > worst;
+}
+
+/** 捨て札の一番上を拾うべきか。拾わないなら山札から引く。 */
+export function shouldTakeDiscard(
+  hand: Card[],
+  topDiscard: Card | undefined,
+  wild: Wild
+): boolean {
+  return isCardWorthTaking(hand, topDiscard, wild);
 }
 
 /**
@@ -128,6 +135,21 @@ export function decideAction(state: GameState): GameAction | null {
 
   const hand = state.hands[state.currentPlayer];
   if (hand === undefined) return null;
+
+  // 一番手の最初の手番：ヴィラが使えるなら買う。使えないなら山札から引いて見る。
+  if (state.phase === "AWAITING_FIRST_DRAW") {
+    if (isCardWorthTaking(hand, state.vira ?? undefined, state.wild)) {
+      return { type: "TAKE_VIRA" };
+    }
+    return { type: "DRAW", from: "STOCK" };
+  }
+
+  // 引いた札を見て採否を決める。要らなければ捨てて引き直す。
+  if (state.phase === "AWAITING_KEEP_DECISION") {
+    return isCardWorthTaking(hand, state.pendingCard ?? undefined, state.wild)
+      ? { type: "KEEP" }
+      : { type: "REJECT" };
+  }
 
   if (state.phase === "AWAITING_DRAW") {
     const top = state.discard[state.discard.length - 1];

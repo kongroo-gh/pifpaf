@@ -90,6 +90,15 @@ Node.js側（WebSocket想定）に載せる。`web/` はUIとネットワーク�
 - `engine/gameEngine.ts`：完成。reducerスタイルの `applyAction(state, action)`。
   不正な操作は例外を投げず `{ ok: false, error }` で返す。
   `DRAW` は `from: "STOCK" | "DISCARD"` を取る（省略時は STOCK）。
+  **一番手の最初の手番だけ専用の局面がある**（`rules.md` 5.1節）:
+  `AWAITING_FIRST_DRAW`（ヴィラを買う `TAKE_VIRA` か、山札から引く）→
+  引いた場合は `AWAITING_KEEP_DECISION`（`KEEP` で手札へ / `REJECT` で捨てて引き直し）。
+  引き直しは1回だけで、そのあとは通常の `AWAITING_DRAW` に戻る。
+  - **ヴィラは `GameState.vira` が持つ。** 買われると null になる。
+    以前は web 側のReact stateに置いていたが、買えるようになった時点で
+    ゲーム状態そのものなので engine に移した。
+  - カード保存の不変条件は `手札 + 山札 + 捨て札 + 場のヴィラ + 見せている札 = 104`。
+    「ヴィラは常に場外だから103」ではなくなっている（統合テストがこれを検査する）。
 - `engine/ai.ts`：完成。`cardAffinity` で「役への絡み具合」を点数化し、最も孤立した札を
   捨てる。`shouldTakeDiscard` で捨て札を拾うかを判断する（拾えば上がれる／ワイルド／
   役に確実に絡む、のいずれかのときだけ拾う消極的な判断）。

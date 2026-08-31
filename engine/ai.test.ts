@@ -36,6 +36,8 @@ function makeState(overrides: Partial<GameState> & { hands: Card[][] }): GameSta
     winner: overrides.winner ?? null,
     takenFromDiscard: overrides.takenFromDiscard ?? null,
     recycles: overrides.recycles ?? 0,
+    vira: overrides.vira ?? null,
+    pendingCard: overrides.pendingCard ?? null,
   };
 }
 
@@ -217,6 +219,60 @@ describe("decideAction", () => {
   });
 });
 
+describe("decideAction（一番手の最初の手番）", () => {
+  // 上がりには遠く、5-6♠ だけが繋がっている手
+  const hand = [
+    c("1", "S", "5"), c("2", "S", "6"), c("3", "H", "2"),
+    c("4", "D", "10"), c("5", "C", "K"), c("6", "H", "4"),
+    c("7", "D", "J"), c("8", "C", "3"), c("9", "H", "9"),
+  ];
+
+  it("役に絡むヴィラなら買う", () => {
+    const state = makeState({
+      hands: [hand, [], [], []],
+      phase: "AWAITING_FIRST_DRAW",
+      vira: c("v", "S", "7"), // 5-6♠ に繋がる
+    });
+    expect(decideAction(state)).toEqual({ type: "TAKE_VIRA" });
+  });
+
+  it("使えないヴィラなら買わず山札から引く", () => {
+    const state = makeState({
+      hands: [hand, [], [], []],
+      phase: "AWAITING_FIRST_DRAW",
+      vira: c("v", "C", "7"), // どこにも絡まない
+    });
+    expect(decideAction(state)).toEqual({ type: "DRAW", from: "STOCK" });
+  });
+
+  it("見せられた札が使えるなら KEEP", () => {
+    const state = makeState({
+      hands: [hand, [], [], []],
+      phase: "AWAITING_KEEP_DECISION",
+      pendingCard: c("p", "S", "7"),
+    });
+    expect(decideAction(state)).toEqual({ type: "KEEP" });
+  });
+
+  it("見せられた札が使えないなら REJECT して引き直す", () => {
+    const state = makeState({
+      hands: [hand, [], [], []],
+      phase: "AWAITING_KEEP_DECISION",
+      pendingCard: c("p", "C", "7"),
+    });
+    expect(decideAction(state)).toEqual({ type: "REJECT" });
+  });
+
+  it("ワイルドのヴィラは必ず買う", () => {
+    const state = makeState({
+      hands: [hand, [], [], []],
+      phase: "AWAITING_FIRST_DRAW",
+      vira: c("v", "S", "8"), // wild = 8♠
+    });
+    expect(decideAction(state)).toEqual({ type: "TAKE_VIRA" });
+  });
+});
+
 // AI同士に最後まで打たせて、engineが破綻せず必ず決着することを確認する。
 // UI側で無限ループやカード消失が起きないための土台になるので、
 // 単体テストより先にここで潰しておく。
@@ -243,8 +299,11 @@ describe("CPU4人による通しプレイ（統合）", () => {
 
       // 決着後の不変条件：カードが増減していないこと
       const inHands = state.hands.flat().length;
-      const total = inHands + state.stock.length + state.discard.length;
-      expect(total).toBe(104 - 1); // ヴィラ1枚は場から除外されている
+      // ヴィラは一番手に買われて手札へ入ることがあるので、場に残っていれば足す
+      const onTable = state.vira === null ? 0 : 1;
+      const pending = state.pendingCard === null ? 0 : 1;
+      const total = inHands + state.stock.length + state.discard.length + onTable + pending;
+      expect(total).toBe(104);
 
       // 勝者がいるなら、その手札は実際に役として成立しているはず
       if (state.winner !== null) {

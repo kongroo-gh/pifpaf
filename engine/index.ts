@@ -17,6 +17,7 @@ export { createInitialState, applyAction } from "./gameEngine";
 export {
   cardAffinity,
   chooseDiscard,
+  isCardWorthTaking,
   shouldTakeDiscard,
   findBaterAction,
   decideAction,

@@ -17,11 +17,13 @@ function makeState(overrides: Partial<GameState> & { hands: Card[][] }): GameSta
     winner: overrides.winner ?? null,
     takenFromDiscard: overrides.takenFromDiscard ?? null,
     recycles: overrides.recycles ?? 0,
+    vira: overrides.vira ?? null,
+    pendingCard: overrides.pendingCard ?? null,
   };
 }
 
 describe("createInitialState", () => {
-  it("dealGameの結果からAWAITING_DRAWの初期状態を作る", () => {
+  it("dealGameの結果から、一番手の特別な手番で始まる状態を作る", () => {
     const deal = {
       hands: [[c("1", "S", "5")], [c("2", "H", "6")], [c("3", "D", "7")], [c("4", "C", "8")]],
       vira: c("v", "S", "7"),
@@ -29,10 +31,125 @@ describe("createInitialState", () => {
       stock: [c("5", "S", "9")],
     };
     const state = createInitialState(deal);
-    expect(state.phase).toBe("AWAITING_DRAW");
+    expect(state.phase).toBe("AWAITING_FIRST_DRAW");
     expect(state.currentPlayer).toBe(0);
     expect(state.winner).toBeNull();
     expect(state.hands).toEqual(deal.hands);
+    // ヴィラは場に出ている（一番手だけが買える）
+    expect(state.vira).toEqual(deal.vira);
+    expect(state.pendingCard).toBeNull();
+  });
+});
+
+// 一番手だけの特権。ヴィラを買う／引いた札を1回だけ選び直せる。
+describe("一番手の最初の手番", () => {
+  const viraCard = c("vira", "S", "7");
+
+  function firstTurnState(overrides: Partial<GameState> = {}) {
+    return makeState({
+      hands: [[c("mine", "H", "3")], [], [], []],
+      stock: [c("s2", "C", "4"), c("s1", "D", "5")], // 末尾が一番上
+      phase: "AWAITING_FIRST_DRAW",
+      vira: viraCard,
+      ...overrides,
+    });
+  }
+
+  it("ヴィラを買うと手札に入り、場から消えて捨てる場面へ進む", () => {
+    const result = applyAction(firstTurnState(), { type: "TAKE_VIRA" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.hands[0]).toEqual([c("mine", "H", "3"), viraCard]);
+    expect(result.state.vira).toBeNull();
+    expect(result.state.phase).toBe("AWAITING_DISCARD");
+    // 山札には手を付けない
+    expect(result.state.stock).toHaveLength(2);
+  });
+
+  it("ヴィラを買えるのは一番手の最初の手番だけ", () => {
+    const later = makeState({
+      hands: [[], [], [], []],
+      phase: "AWAITING_DRAW",
+      vira: viraCard,
+    });
+    expect(applyAction(later, { type: "TAKE_VIRA" }).ok).toBe(false);
+  });
+
+  it("一度買ったヴィラは二度は買えない", () => {
+    const taken = firstTurnState({ vira: null });
+    expect(applyAction(taken, { type: "TAKE_VIRA" }).ok).toBe(false);
+  });
+
+  it("最初の手番にはまだ捨て札が無いので、捨て札からは引けない", () => {
+    const result = applyAction(firstTurnState(), { type: "DRAW", from: "DISCARD" });
+    expect(result.ok).toBe(false);
+  });
+
+  it("山札から引くと、手札に入れずまず表向きで見せる", () => {
+    const result = applyAction(firstTurnState(), { type: "DRAW" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.pendingCard).toEqual(c("s1", "D", "5"));
+    expect(result.state.phase).toBe("AWAITING_KEEP_DECISION");
+    // まだ手札には入っていない
+    expect(result.state.hands[0]).toHaveLength(1);
+    expect(result.state.stock).toHaveLength(1);
+  });
+
+  it("KEEP で見せられた札が手札に入る", () => {
+    const shown = firstTurnState({
+      phase: "AWAITING_KEEP_DECISION",
+      pendingCard: c("p", "D", "5"),
+    });
+
+    const result = applyAction(shown, { type: "KEEP" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.hands[0]).toEqual([c("mine", "H", "3"), c("p", "D", "5")]);
+    expect(result.state.pendingCard).toBeNull();
+    expect(result.state.phase).toBe("AWAITING_DISCARD");
+    expect(result.state.discard).toEqual([]);
+  });
+
+  it("REJECT すると、その札は手札に入らず捨てられ、山札から引き直す", () => {
+    const rejected = c("p", "D", "5");
+    const shown = firstTurnState({
+      phase: "AWAITING_KEEP_DECISION",
+      pendingCard: rejected,
+    });
+
+    const result = applyAction(shown, { type: "REJECT" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // 捨てた札は捨て札へ（次のプレイヤーが拾える）
+    expect(result.state.discard).toEqual([rejected]);
+    // 引き直した札は無条件で手札に入る
+    expect(result.state.hands[0]).toEqual([c("mine", "H", "3"), c("s1", "D", "5")]);
+    expect(result.state.pendingCard).toBeNull();
+    // 選び直せるのは1回だけ。もう採否は訊かれない
+    expect(result.state.phase).toBe("AWAITING_DISCARD");
+  });
+
+  it("見せている札が無いのに KEEP / REJECT はできない", () => {
+    const s = firstTurnState();
+    expect(applyAction(s, { type: "KEEP" }).ok).toBe(false);
+    expect(applyAction(s, { type: "REJECT" }).ok).toBe(false);
+  });
+
+  it("特権は最初の手番限り。捨てた後は通常のドローに戻る", () => {
+    const afterTake = applyAction(firstTurnState(), { type: "TAKE_VIRA" });
+    expect(afterTake.ok).toBe(true);
+    if (!afterTake.ok) return;
+
+    const afterDiscard = applyAction(afterTake.state, { type: "DISCARD", cardId: "mine" });
+    expect(afterDiscard.ok).toBe(true);
+    if (!afterDiscard.ok) return;
+    expect(afterDiscard.state.phase).toBe("AWAITING_DRAW");
+    expect(afterDiscard.state.currentPlayer).toBe(1);
   });
 });
 

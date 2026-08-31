@@ -5,7 +5,17 @@ import type { Card, Wild } from "./types";
 import type { DealResult } from "./deck";
 import { classifyAsMelds } from "./melds";
 
-export type Phase = "AWAITING_DRAW" | "AWAITING_DISCARD" | "ROUND_OVER";
+export type Phase =
+  /**
+   * 一番手の最初の手番だけの局面。ここでだけヴィラを買える。
+   * 山札から引くと AWAITING_KEEP_DECISION に移り、見てから採否を決められる。
+   */
+  | "AWAITING_FIRST_DRAW"
+  /** 引いた札を表向きで見せている。手札に入れる（KEEP）か、捨てて引き直す（REJECT）か。 */
+  | "AWAITING_KEEP_DECISION"
+  | "AWAITING_DRAW"
+  | "AWAITING_DISCARD"
+  | "ROUND_OVER";
 
 export interface GameState {
   /** hands[playerIndex] = そのプレイヤーの手札 */
@@ -32,6 +42,16 @@ export interface GameState {
   takenFromDiscard: string | null;
   /** 捨て札から山札を組み直した回数。無限に続かないための安全弁に使う。 */
   recycles: number;
+  /**
+   * 場に表向きで置かれたヴィラ。一番手が買うと null になる。
+   * 買われなければ最後まで場に残る（山札にも捨て札にも混ぜない）。
+   */
+  vira: Card | null;
+  /**
+   * 一番手が山札から引いて、採否を決めている最中の札。
+   * AWAITING_KEEP_DECISION のときだけ入っている。
+   */
+  pendingCard: Card | null;
 }
 
 /** ドロー元。捨て札から取れるのは一番上の1枚だけ（表向きなのはその1枚だけのため）。 */
@@ -39,6 +59,12 @@ export type DrawSource = "STOCK" | "DISCARD";
 
 export type GameAction =
   | { type: "DRAW"; from?: DrawSource }
+  /** 一番手だけの特権。場のヴィラを手札に入れる。 */
+  | { type: "TAKE_VIRA" }
+  /** 見せられている札を手札に入れる */
+  | { type: "KEEP" }
+  /** 見せられている札を手札に入れず捨て、山札から引き直す */
+  | { type: "REJECT" }
   | { type: "DISCARD"; cardId: string }
   | { type: "BATER"; cardId?: string };
 
@@ -61,10 +87,13 @@ export function createInitialState(deal: DealResult, firstPlayer = 0): GameState
     discard: [],
     currentPlayer: firstPlayer,
     wild: deal.wild,
-    phase: "AWAITING_DRAW",
+    // 一番手の最初の手番だけ、ヴィラを買う／引いた札を選び直す特権がある
+    phase: "AWAITING_FIRST_DRAW",
     winner: null,
     takenFromDiscard: null,
     recycles: 0,
+    vira: deal.vira,
+    pendingCard: null,
   };
 }
 
@@ -76,6 +105,12 @@ export function applyAction(state: GameState, action: GameAction): GameActionRes
   switch (action.type) {
     case "DRAW":
       return applyDraw(state, action.from ?? "STOCK");
+    case "TAKE_VIRA":
+      return applyTakeVira(state);
+    case "KEEP":
+      return applyKeep(state);
+    case "REJECT":
+      return applyReject(state);
     case "DISCARD":
       return applyDiscard(state, action.cardId);
     case "BATER":
@@ -83,15 +118,120 @@ export function applyAction(state: GameState, action: GameAction): GameActionRes
   }
 }
 
+/** 手札に1枚加えた hands を作る */
+function handsWith(state: GameState, card: Card): Card[][] {
+  return state.hands.map((hand, i) => (i === state.currentPlayer ? [...hand, card] : hand));
+}
+
+/**
+ * 一番手の特権：場のヴィラを手札に入れる。
+ * 買ったあとは通常どおり1枚捨てて手番を終える。
+ */
+function applyTakeVira(state: GameState): GameActionResult {
+  if (state.phase !== "AWAITING_FIRST_DRAW") {
+    return { ok: false, error: "ヴィラを買えるのは一番手の最初の手番だけです" };
+  }
+  if (state.vira === null) {
+    return { ok: false, error: "ヴィラはもう場にありません" };
+  }
+
+  return {
+    ok: true,
+    state: {
+      ...state,
+      hands: handsWith(state, state.vira),
+      vira: null,
+      phase: "AWAITING_DISCARD",
+    },
+  };
+}
+
+/** 見せられている札を手札に入れる */
+function applyKeep(state: GameState): GameActionResult {
+  if (state.phase !== "AWAITING_KEEP_DECISION" || state.pendingCard === null) {
+    return { ok: false, error: "いま採否を決める札はありません" };
+  }
+
+  return {
+    ok: true,
+    state: {
+      ...state,
+      hands: handsWith(state, state.pendingCard),
+      pendingCard: null,
+      phase: "AWAITING_DISCARD",
+    },
+  };
+}
+
+/**
+ * 見せられている札を手札に入れずに捨て、山札から引き直す。
+ * 引き直した札は無条件で手札に入る（選び直せるのは1回だけ）。
+ */
+function applyReject(state: GameState): GameActionResult {
+  if (state.phase !== "AWAITING_KEEP_DECISION" || state.pendingCard === null) {
+    return { ok: false, error: "いま採否を決める札はありません" };
+  }
+
+  const discard = [...state.discard, state.pendingCard];
+
+  // 引き直そうとして山札が尽きているなら、捨てた札だけ確定させて捨てる場面へ進む。
+  // 配りたての67枚では起こり得ないが、状態としては潰しておく。
+  if (state.stock.length === 0) {
+    return {
+      ok: true,
+      state: { ...state, discard, pendingCard: null, phase: "AWAITING_DISCARD" },
+    };
+  }
+
+  const stock = [...state.stock];
+  const drawn = stock.pop()!;
+
+  return {
+    ok: true,
+    state: {
+      ...state,
+      hands: handsWith(state, drawn),
+      stock,
+      discard,
+      pendingCard: null,
+      phase: "AWAITING_DISCARD",
+    },
+  };
+}
+
 function applyDraw(state: GameState, from: DrawSource): GameActionResult {
   if (state.phase === "ROUND_OVER") {
     return { ok: false, error: "ラウンドは終了しています" };
   }
+
+  // 一番手の最初の引きは、手札に入れる前に表向きで見せて採否を決めさせる
+  if (state.phase === "AWAITING_FIRST_DRAW") {
+    if (from === "DISCARD") {
+      return { ok: false, error: "最初の手番にはまだ捨て札がありません" };
+    }
+    return revealFromStock(state);
+  }
+
   if (state.phase !== "AWAITING_DRAW") {
     return { ok: false, error: "今はドローできません（先に捨て札が必要です）" };
   }
 
   return from === "DISCARD" ? drawFromDiscard(state) : drawFromStock(state);
+}
+
+/** 一番手の最初の引き。手札には入れず、まず表向きにして見せる。 */
+function revealFromStock(state: GameState): GameActionResult {
+  if (state.stock.length === 0) {
+    return { ok: true, state: { ...state, phase: "ROUND_OVER", winner: null } };
+  }
+
+  const stock = [...state.stock];
+  const drawn = stock.pop()!;
+
+  return {
+    ok: true,
+    state: { ...state, stock, pendingCard: drawn, phase: "AWAITING_KEEP_DECISION" },
+  };
 }
 
 /** 捨て札の一番上を拾う。表向きなのは最後の1枚だけなので、取れるのもその1枚だけ。 */

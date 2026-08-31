@@ -1,3 +1,4 @@
+import type { Card, Wild } from "@pifpaf/engine";
 import { useGame, HUMAN } from "./game/useGame";
 import { useExecution } from "./game/useExecution";
 import { useHandOrder } from "./game/useHandOrder";
@@ -12,18 +13,24 @@ export default function App() {
   const {
     screen,
     state,
-    vira,
     gameId,
     humanHand,
     isHumanTurn,
     humanBater,
     topDiscard,
     canTakeDiscard,
+    canDrawStock,
+    isFirstTurn,
+    canTakeVira,
+    isDecidingKeep,
     selectedCardId,
     setSelectedCardId,
     startGame,
     drawCard,
     takeDiscard,
+    takeVira,
+    keepPending,
+    rejectPending,
     discardSelected,
     callBater,
   } = game;
@@ -55,11 +62,23 @@ export default function App() {
         <div className="topbar__wild">
           <span className="topbar__wildLabel">CORINGA / ワイルド</span>
           <span className="topbar__wildRank">{state.wild.rank}{SUIT_GLYPH[state.wild.suit]}</span>
-          {vira && (
-            <span className="topbar__vira">
-              ヴィラ <PlayingCard card={vira} wild={state.wild} size="sm" />
-            </span>
-          )}
+          <span className="topbar__vira">
+            ヴィラ
+            {state.vira ? (
+              // 一番手の最初の手番だけ、ここから買える
+              <button
+                type="button"
+                className={`viraButton ${canTakeVira ? "viraButton--live" : ""}`}
+                disabled={!canTakeVira}
+                onClick={takeVira}
+                aria-label={`ヴィラの ${describeCard(state.vira, state.wild)} を買う`}
+              >
+                <PlayingCard card={state.vira} wild={state.wild} size="sm" />
+              </button>
+            ) : (
+              <span className="topbar__viraGone">買われた</span>
+            )}
+          </span>
         </div>
       </header>
 
@@ -79,13 +98,13 @@ export default function App() {
 
       <section className="table">
         <div className="table__felt">
-          <div className={`pile ${isHumanTurn && state.phase === "AWAITING_DRAW" ? "pile--live" : ""}`}>
+          <div className={`pile ${canDrawStock ? "pile--live" : ""}`}>
             <span className="pile__label">MONTE / 山札</span>
             <div className="pile__stack">
               <button
                 type="button"
                 className="pile__button"
-                disabled={!isHumanTurn || state.phase !== "AWAITING_DRAW"}
+                disabled={!canDrawStock}
                 onClick={drawCard}
                 aria-label="山札から1枚引く"
               >
@@ -153,11 +172,7 @@ export default function App() {
         />
 
         <div className="actions">
-          <button
-            className="btn btn--draw"
-            disabled={!isHumanTurn || state.phase !== "AWAITING_DRAW"}
-            onClick={drawCard}
-          >
+          <button className="btn btn--draw" disabled={!canDrawStock} onClick={drawCard}>
             COMPRAR<small>山札から引く</small>
           </button>
           <button
@@ -186,9 +201,58 @@ export default function App() {
 
     </div>
 
+    {isDecidingKeep && state.pendingCard && (
+      <KeepPrompt
+        card={state.pendingCard}
+        wild={state.wild}
+        onKeep={keepPending}
+        onReject={rejectPending}
+      />
+    )}
     {execution.firingAt !== null && <div className="muzzleFlash" aria-hidden="true" />}
     {execution.verdictReady && <Verdict winner={state.winner} onRestart={startGame} />}
     </>
+  );
+}
+
+/**
+ * 一番手が山札から引いた札を見せて、手札に入れるか訊く。
+ * 断ると手札に入れずに捨てて、山札からもう1枚引く（引き直せるのは1回だけ）。
+ */
+function KeepPrompt({
+  card,
+  wild,
+  onKeep,
+  onReject,
+}: {
+  card: Card;
+  wild: Wild;
+  onKeep: () => void;
+  onReject: () => void;
+}) {
+  return (
+    <div className="keepPrompt">
+      <div className="keepPrompt__panel">
+        <p className="keepPrompt__kicker">PRIMEIRA MÃO — 一番手の特権</p>
+        <h2>この札を手札に入れるか</h2>
+        <div className="keepPrompt__card">
+          <PlayingCard card={card} wild={wild} size="md" />
+        </div>
+        <p className="keepPrompt__note">
+          断れば、この札は手札に入れず捨てて、山札からもう1枚引く。
+          <br />
+          引き直せるのは<strong>一度きり</strong>。次の札は選べない。
+        </p>
+        <div className="keepPrompt__actions">
+          <button className="btn btn--keep" onClick={onKeep}>
+            FICAR<small>手札に入れる</small>
+          </button>
+          <button className="btn btn--reject" onClick={onReject}>
+            RECUSAR<small>捨てて引き直す</small>
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -207,11 +271,17 @@ function TurnBanner({
   if (!isHumanTurn) {
     return <span className="turnBanner">{personaOf(currentPlayer).name} の番…</span>;
   }
-  return (
-    <span className="turnBanner turnBanner--mine">
-      {phase === "AWAITING_DRAW" ? "山札か、捨て札から1枚。" : "1枚捨てろ。"}
-    </span>
-  );
+
+  const message =
+    phase === "AWAITING_FIRST_DRAW"
+      ? "先手だ。ヴィラを買うか、山札から引くか。"
+      : phase === "AWAITING_KEEP_DECISION"
+        ? "その札、取るか捨てるか。"
+        : phase === "AWAITING_DRAW"
+          ? "山札か、捨て札から1枚。"
+          : "1枚捨てろ。";
+
+  return <span className="turnBanner turnBanner--mine">{message}</span>;
 }
 
 function Verdict({ winner, onRestart }: { winner: number | null; onRestart: () => void }) {
