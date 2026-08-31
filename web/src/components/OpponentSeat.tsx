@@ -3,14 +3,21 @@
 import type { Persona } from "../game/players";
 import { CardBack } from "./PlayingCard";
 import { BulletHoleCluster } from "./BulletHole";
+import { ChipStack } from "./ChipStack";
 
 export interface OpponentSeatProps {
   persona: Persona;
   handCount: number;
   isActive: boolean;
-  /** 決着後、この席が「撃たれた」状態か */
+  /** 残りチップ（掛け金）。0で破産 */
+  chips: number;
+  /** このラウンドで失ったチップ。結果表示中だけ渡す */
+  lostChips?: number;
+  /** このラウンドを降りたか */
+  folded?: boolean;
+  /** 破産して「撃たれた」状態か */
   eliminated: boolean;
-  /** 決着後、この席が勝者か */
+  /** マッチ勝者か */
   survived: boolean;
   /** 発砲の瞬間だけ true にしてフラッシュさせる */
   firing: boolean;
@@ -20,6 +27,9 @@ export function OpponentSeat({
   persona,
   handCount,
   isActive,
+  chips,
+  lostChips,
+  folded = false,
   eliminated,
   survived,
   firing,
@@ -27,6 +37,7 @@ export function OpponentSeat({
   const classes = [
     "seat",
     isActive ? "seat--active" : "",
+    folded ? "seat--folded" : "",
     eliminated ? "seat--eliminated" : "",
     survived ? "seat--survived" : "",
     firing ? "seat--firing" : "",
@@ -52,6 +63,14 @@ export function OpponentSeat({
         <div className="seat__title">{persona.title}</div>
       </div>
 
+      <div className="seat__chips" aria-label={`残りチップ ${chips}`}>
+        <ChipStack count={chips} />
+        <span className="seat__chipCount">{chips}</span>
+        {lostChips !== undefined && lostChips > 0 && (
+          <span className="seat__chipLoss">−{lostChips}</span>
+        )}
+      </div>
+
       <div className="seat__cards" aria-label={`手札 ${handCount}枚`}>
         {Array.from({ length: Math.min(handCount, 10) }, (_, i) => (
           <span className="seat__cardSlot" key={i}>
@@ -62,6 +81,7 @@ export function OpponentSeat({
       </div>
 
       {isActive && <div className="seat__thinking">…考えている</div>}
+      {folded && !eliminated && <div className="seat__foldTag">降りた</div>}
       {eliminated && (
         <>
           <BulletHoleCluster />

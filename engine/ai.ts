@@ -95,6 +95,28 @@ export function isCardWorthTaking(hand: Card[], card: Card | undefined, wild: Wi
   return gain >= 8 && gain > worst;
 }
 
+/**
+ * 手札の「役への絡み具合」を枚数で測る。
+ * 8 は同スート隣接1枚ぶんの点なので、これ以上ある札を「使える札」とみなす。
+ */
+export function handStrength(hand: Card[], wild: Wild): number {
+  return hand.filter((c) => cardAffinity(c, hand, wild) >= 8).length;
+}
+
+/**
+ * ラウンド開始時に降りるべきか（Cachetãoの fold）。
+ * 降りれば失点は軽いが勝つ権利を失うので、勝ち目が薄いときだけ降りる。
+ *
+ * しきい値5は、9枚のうち5枚も噛み合っていない手を「見込み薄」とする線。
+ * 手の強さの中央値がちょうど5なので、下位およそ3割が降りになる。
+ * 下げると降りが減って fold の意味が薄れ、上げると降りすぎてマッチが延びる。
+ */
+export function shouldFold(hand: Card[], wild: Wild): boolean {
+  // ワイルドを持っているなら勝負する価値がある
+  if (hand.some((c) => isWildCard(c, wild))) return false;
+  return handStrength(hand, wild) < 5;
+}
+
 /** 捨て札の一番上を拾うべきか。拾わないなら山札から引く。 */
 export function shouldTakeDiscard(
   hand: Card[],

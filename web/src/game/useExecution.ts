@@ -1,14 +1,15 @@
-// 決着後の「処刑」演出を進めるフック。純粋に見た目のタイミング管理だけを行う。
-// 敗者を1人ずつ撃っていき、最後に判定を表示する。人間は最後に回して溜めを作る。
+// 「破産した者が撃たれる」演出のタイミング管理。純粋に見た目の話だけ。
+//
+// ポイント制にしたことで、撃たれるのは毎ラウンドではなく
+// チップが尽きて脱落した瞬間だけになった。そのぶん一発が重い。
 
 import { useEffect, useMemo, useState } from "react";
 import { HUMAN } from "./useGame";
 
-const PLAYER_COUNT = 4;
-const FIRST_SHOT_DELAY = 700;
-const SHOT_INTERVAL = 1050;
+const FIRST_SHOT_DELAY = 650;
+const SHOT_INTERVAL = 1000;
 const FLASH_DURATION = 240;
-const VERDICT_DELAY = 900;
+const DONE_DELAY = 800;
 /** 自分が撃たれる何ミリ秒前に銃を構え始めるか */
 const AIM_LEAD = 750;
 
@@ -17,39 +18,44 @@ export type GunPhase = "HIDDEN" | "AIMING" | "FIRED";
 
 export interface ExecutionProgress {
   /** すでに撃たれた席 */
-  eliminated: Set<number>;
+  shot: Set<number>;
   /** いま発砲された席（フラッシュ用。すぐ null に戻る） */
   firingAt: number | null;
-  /** 全員撃ち終えて判定を出してよい状態か */
-  verdictReady: boolean;
+  /** 一連の処刑が終わったか */
+  done: boolean;
   /** 自分が撃たれるときだけ進む。銃を出す→撃つ */
   gunPhase: GunPhase;
 }
 
-export function useExecution(winner: number | null, active: boolean): ExecutionProgress {
-  // 敗者の処刑順。CPUを先に片付け、人間が敗者なら最後に回す。
+/**
+ * @param seats 撃たれる席（このラウンドで破産した者）。自分は最後に回して溜めを作る。
+ * @param active 演出を走らせるか
+ */
+export function useExecution(seats: number[], active: boolean): ExecutionProgress {
+  // 自分が含まれるなら最後に回す
   const order = useMemo(() => {
     if (!active) return [];
-    const losers: number[] = [];
-    for (let i = 0; i < PLAYER_COUNT; i++) {
-      if (i !== winner && i !== HUMAN) losers.push(i);
-    }
-    if (winner !== HUMAN && winner !== null) losers.push(HUMAN);
-    // 山札切れの引き分け（winner===null）は誰も撃たれない
-    return winner === null ? [] : losers;
-  }, [winner, active]);
+    const others = seats.filter((s) => s !== HUMAN);
+    return seats.includes(HUMAN) ? [...others, HUMAN] : others;
+  }, [seats, active]);
 
   const [shotCount, setShotCount] = useState(0);
   const [firingAt, setFiringAt] = useState<number | null>(null);
-  const [verdictReady, setVerdictReady] = useState(false);
+  const [done, setDone] = useState(false);
   const [gunPhase, setGunPhase] = useState<GunPhase>("HIDDEN");
 
   useEffect(() => {
     if (!active) {
       setShotCount(0);
       setFiringAt(null);
-      setVerdictReady(false);
+      setDone(false);
       setGunPhase("HIDDEN");
+      return;
+    }
+
+    // 誰も脱落していないラウンドは、すぐ次へ進めてよい
+    if (order.length === 0) {
+      setDone(true);
       return;
     }
 
@@ -65,23 +71,19 @@ export function useExecution(winner: number | null, active: boolean): ExecutionP
       );
       timers.push(setTimeout(() => setFiringAt(null), at + FLASH_DURATION));
 
-      // 自分の番だけ、少し手前から銃を構えさせて溜めを作る
       if (seat === HUMAN) {
         timers.push(setTimeout(() => setGunPhase("AIMING"), Math.max(0, at - AIM_LEAD)));
         timers.push(setTimeout(() => setGunPhase("FIRED"), at));
       }
     });
 
-    const totalMs = FIRST_SHOT_DELAY + order.length * SHOT_INTERVAL + VERDICT_DELAY;
-    timers.push(setTimeout(() => setVerdictReady(true), totalMs));
+    const totalMs = FIRST_SHOT_DELAY + order.length * SHOT_INTERVAL + DONE_DELAY;
+    timers.push(setTimeout(() => setDone(true), totalMs));
 
     return () => timers.forEach(clearTimeout);
   }, [active, order]);
 
-  const eliminated = useMemo(
-    () => new Set(order.slice(0, shotCount)),
-    [order, shotCount]
-  );
+  const shot = useMemo(() => new Set(order.slice(0, shotCount)), [order, shotCount]);
 
-  return { eliminated, firingAt, verdictReady, gunPhase };
+  return { shot, firingAt, done, gunPhase };
 }

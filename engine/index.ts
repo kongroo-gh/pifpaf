@@ -19,6 +19,22 @@ export {
   chooseDiscard,
   isCardWorthTaking,
   shouldTakeDiscard,
+  handStrength,
+  shouldFold,
   findBaterAction,
   decideAction,
 } from "./ai";
+
+export type { MatchState, RoundResult, RoundSettlement } from "./match";
+export {
+  createMatch,
+  settleRound,
+  alivePlayers,
+  isAlive,
+  payoutMultiplier,
+  payoutBreakdown,
+  DEFAULT_CHIPS,
+  LOSS_PLAY,
+  LOSS_FOLD,
+  LOSS_COM10,
+} from "./match";

@@ -52,6 +52,11 @@ export interface GameState {
    * AWAITING_KEEP_DECISION のときだけ入っている。
    */
   pendingCard: Card | null;
+  /**
+   * このラウンドを降りたプレイヤー。手番を飛ばす。
+   * 降りるかどうかはラウンド開始前に決まるので、engineは結果だけ受け取る。
+   */
+  folded: boolean[];
 }
 
 /** ドロー元。捨て札から取れるのは一番上の1枚だけ（表向きなのはその1枚だけのため）。 */
@@ -79,13 +84,23 @@ export type GameActionResult =
   | { ok: true; state: GameState }
   | { ok: false; error: string };
 
-/** dealGame()の結果から、最初の手番のプレイヤーを指定してゲーム開始状態を作る */
-export function createInitialState(deal: DealResult, firstPlayer = 0): GameState {
+/**
+ * dealGame()の結果から、最初の手番のプレイヤーを指定してゲーム開始状態を作る。
+ *
+ * @param folded このラウンドを降りたプレイヤー。手番を飛ばす。
+ *   指定した firstPlayer が降りていた場合は、次の降りていない者から始める。
+ */
+export function createInitialState(
+  deal: DealResult,
+  firstPlayer = 0,
+  folded: boolean[] = deal.hands.map(() => false)
+): GameState {
+  const starter = folded[firstPlayer] ? nextPlayer(firstPlayer, folded) : firstPlayer;
   return {
     hands: deal.hands.map((hand) => [...hand]),
     stock: [...deal.stock],
     discard: [],
-    currentPlayer: firstPlayer,
+    currentPlayer: starter,
     wild: deal.wild,
     // 一番手の最初の手番だけ、ヴィラを買う／引いた札を選び直す特権がある
     phase: "AWAITING_FIRST_DRAW",
@@ -94,6 +109,7 @@ export function createInitialState(deal: DealResult, firstPlayer = 0): GameState
     recycles: 0,
     vira: deal.vira,
     pendingCard: null,
+    folded: [...folded],
   };
 }
 
@@ -321,7 +337,7 @@ function applyDiscard(state: GameState, cardId: string): GameActionResult {
   const nextHand = [...hand.slice(0, cardIndex), ...hand.slice(cardIndex + 1)];
   const hands = state.hands.map((h, i) => (i === state.currentPlayer ? nextHand : h));
   const discard = [...state.discard, discardedCard];
-  const currentPlayer = nextPlayer(state.currentPlayer, state.hands.length);
+  const currentPlayer = nextPlayer(state.currentPlayer, state.folded);
 
   return {
     ok: true,
@@ -381,6 +397,12 @@ function applyBater(state: GameState, cardId: string | undefined): GameActionRes
   };
 }
 
-function nextPlayer(current: number, playerCount: number): number {
-  return (current + 1) % playerCount;
+/** 降りた者を飛ばして次の手番へ。全員降りていたら自分に戻る。 */
+function nextPlayer(current: number, folded: boolean[]): number {
+  const count = folded.length;
+  for (let step = 1; step <= count; step++) {
+    const candidate = (current + step) % count;
+    if (!folded[candidate]) return candidate;
+  }
+  return current;
 }

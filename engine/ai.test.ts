@@ -6,6 +6,8 @@ import {
   cardAffinity,
   chooseDiscard,
   shouldTakeDiscard,
+  handStrength,
+  shouldFold,
   findBaterAction,
   decideAction,
 } from "./ai";
@@ -38,6 +40,7 @@ function makeState(overrides: Partial<GameState> & { hands: Card[][] }): GameSta
     recycles: overrides.recycles ?? 0,
     vira: overrides.vira ?? null,
     pendingCard: overrides.pendingCard ?? null,
+    folded: overrides.folded ?? overrides.hands.map(() => false),
   };
 }
 
@@ -124,6 +127,41 @@ describe("shouldTakeDiscard", () => {
     ];
     // 9枚が既に揃っているので、何を拾っても余らせて上がれる
     expect(shouldTakeDiscard(meldedNine, c("t", "D", "2"), wild)).toBe(true);
+  });
+});
+
+describe("shouldFold（降りる判断）", () => {
+  it("噛み合っている手では降りない", () => {
+    const good = [
+      c("1", "S", "5"), c("2", "S", "6"), c("3", "S", "7"),
+      c("4", "H", "9"), c("5", "D", "9"), c("6", "C", "9"),
+      c("7", "H", "J"), c("8", "H", "Q"), c("9", "C", "3"),
+    ];
+    expect(shouldFold(good, wild)).toBe(false);
+  });
+
+  it("バラバラの手では降りる", () => {
+    const bad = [
+      c("1", "S", "2"), c("2", "H", "5"), c("3", "D", "9"),
+      c("4", "C", "Q"), c("5", "S", "7"), c("6", "H", "10"),
+      c("7", "D", "A"), c("8", "C", "4"), c("9", "S", "K"),
+    ];
+    expect(shouldFold(bad, wild)).toBe(true);
+  });
+
+  it("ワイルドを持っていれば、噛み合っていなくても降りない", () => {
+    const withWild = [
+      c("w", "S", "8"),
+      c("1", "S", "2"), c("2", "H", "5"), c("3", "D", "9"),
+      c("4", "C", "Q"), c("5", "S", "7"), c("6", "H", "10"),
+      c("7", "D", "A"), c("8", "C", "4"),
+    ];
+    expect(shouldFold(withWild, wild)).toBe(false);
+  });
+
+  it("handStrength は役に絡む札の枚数を返す", () => {
+    const hand = [c("1", "S", "5"), c("2", "S", "6"), c("lonely", "D", "K")];
+    expect(handStrength(hand, wild)).toBe(2);
   });
 });
 

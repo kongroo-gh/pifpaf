@@ -19,6 +19,7 @@ function makeState(overrides: Partial<GameState> & { hands: Card[][] }): GameSta
     recycles: overrides.recycles ?? 0,
     vira: overrides.vira ?? null,
     pendingCard: overrides.pendingCard ?? null,
+    folded: overrides.folded ?? overrides.hands.map(() => false),
   };
 }
 
