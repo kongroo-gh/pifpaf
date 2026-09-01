@@ -42,8 +42,18 @@ pifpaf/                  npm workspaces のルート
 │   ├── *.test.ts         Vitestテスト（100件・全て通過）
 │   ├── sanity-check.ts   npm installなしで `node --experimental-strip-types` で動作確認できるスクリプト
 │   └── package.json / tsconfig.json
+├── protocol/            オンライン対戦の通信仕様。web と server の両方が参照する
+│   ├── view.ts          席ごとに削った盤面の型（PublicGameState / PlayerView）
+│   ├── mask.ts          削る純粋関数。**ここが破れると対戦が成立しない**
+│   └── messages.ts      往復するメッセージと、受信時の検証
+├── server/              オンライン対戦の権威サーバー
+│   ├── room.ts          1卓の状態と規則。**通信手段もタイマーも知らない**
+│   ├── ws.ts            WebSocket（標準ライブラリのみ。ws は使わない）
+│   ├── hub.ts           卓と接続の橋渡し。CPUの「間合い」もここ
+│   └── index.ts         起動口
 └── web/                  React + Vite のUI。engineを呼び出すだけで、
     ├── src/game/         ゲームルール自体は一切持たない
+    ├── src/net/          オンライン対戦（接続層と卓の画面）
     │   ├── useGame.ts    状態保持とCPUのタイマー駆動（副作用はここに閉じ込める）
     │   ├── useExecution.ts 決着後の演出タイミング
     │   └── players.ts    席の設定（演出のみ。engineは席番号しか知らない）
@@ -261,9 +271,67 @@ http://localhost:5173/?scene=lose   破産（精算画面）
 あくまで記号的な表現にとどめ、生々しい描写はしない（血や傷は描かない）。
 イントロに「※演出です」の注記を置いている。
 
-将来オンライン化する際は `server/` パッケージを追加し、`engine/` をそのまま
-Node.js側（WebSocket想定）に載せる。`web/` はUIとネットワーク送受信のみを担当し、
-ルール判定ロジックを持たせない、という原則を崩さないこと。
+## オンライン対戦（2026-09-02 に実装）
+当初の計画どおり `server/` を足し、engine をそのまま Node 側に載せた。
+**engine は1行も書き換えていない**（足したのは規則の穴が1つだけ。後述）。
+
+### 動かし方
+```
+npm run server                  # ws://127.0.0.1:8787
+npm run dev --workspace=web     # イントロの ONLINE、または ?online=1
+```
+繋ぎ先は `VITE_WS_URL` で差せる。**既定で localhost にしか出さない**
+（外に出すときは `HOST=0.0.0.0` を明示）。
+
+### 芯になっている決めごと
+- **サーバーが権威。クライアントは意図だけ送る。** 盤面を送らせると改竄の
+  検査が要るが、「その席の番か」だけ見れば済む形にしてある
+- **配る型は `GameState` から派生させない。** `PublicGameState` は別物として
+  書いてある。共通の親から派生させると、engine に伏せ札を足したときに黙って漏れる
+- **`Room` は通信手段もタイマーも知らない。** 変化したら `onChange` を呼ぶだけ。
+  CPU も自分では動かず、`needsBotStep()` / `stepBot()` を外から回す。
+  Cloudflare Durable Objects へ移すとき書き換えるのが transport だけで済み、
+  テストに時計を差し込む必要もない（卓の検査19件はすべて素の同期コード）
+- **web にルール判定を持たせない原則はそのまま。** オンライン画面は
+  「上がれるか」の判定すらせず、BATER は押して断られたら断られたまま
+
+### 席が抜けたときの扱い
+**席は空けない。操作だけ CPU に渡す。** 対局中に席を消すと残りが続けられない。
+戻ってくればトークンで同じ席に戻れる。
+
+**手番だけ CPU に渡しても足りない。** 「降りるか決める」「結果画面で次へ」の
+2か所でも人を待っているので、切断時にその判断も肩代わりしないと卓が永久に止まる
+（実際に止まり、テストが掴んだ）。
+
+### engine に足した規則
+`walkoverWinner` … 降りた結果、打つ人が1人以下になったラウンドの扱い。
+1人だけ残ったら不戦勝。これが無いと残った1人が延々と引いて捨てるだけになる。
+単機版にも同じ場面の処理はあったが、打っていないのに手札のワイルドを
+「使った」と数えて配当が0.75倍になる欠陥があったので、engine の判定に寄せた。
+
+### まだ載せていないもの
+配札の演出・札が飛ぶ演出・勝ちの祝い。どれも単機版では `GameState`
+（全員の手札）を前提に組んであるため、そのままでは持ってこられない。
+**先にやるべき整理**: UI が扱う盤面の型を `PlayerView` に揃える。単機版も
+自分の状態を `maskFor` に通せば同じ型になるので、盤面の画面を1つにできる。
+いまは単機版とオンライン版で2つあり、放っておくとずれる。
+
+### 公開先は未定（ユーザーの承認が要る）
+GitHub Pages は静的配信のみで WebSocket を置けない。行き先と費用の判断が
+必要なため、こちらでは進めていない。候補は Cloudflare Workers + Durable
+Objects（`ws.ts` が不要になる）、Fly.io / Render（いまのまま載る）。
+
+### import に拡張子を明示している
+Node の ESM は拡張子を省略できないため、engine / protocol / server の
+相対 import には `.ts` を付けてある（`allowImportingTsExtensions` を
+`tsconfig.base.json` に置いた）。ビルド段階や tsx のような依存を足さずに
+`node --experimental-strip-types` で直接動かすため。**新しいファイルを
+足すときも拡張子を付けること。** 忘れるとサーバーだけ起動しなくなる。
+
+### CI
+公開の関門（`deploy.yml`）には**決定性のあるものだけ**を置く（engine と
+protocol）。実際にポートを開く server の e2e は `ci.yml` に分けてある。
+落ちたときに web の公開まで止まるのは割に合わないため。
 
 ## 現在の実装状況
 - `engine/types.ts`：完成。Card/Suit/Rank。
@@ -348,22 +416,33 @@ engineはカードをIDでしか見ないので、並び順を変えてもルー
 ## 動かし方
 ```
 npm install                        # ルートで1回
-npm test --workspace=engine        # 100件
+npm test                           # 全ワークスペース（184件）
+npm run typecheck                  # 全ワークスペース
 npm run dev --workspace=web        # http://localhost:5173
+npm run server                     # ws://127.0.0.1:8787（オンライン対戦）
 ```
 
 ## 次のタスク（優先順）
-2. **AIの強化**：今は自分の手札しか見ていない。捨て札の履歴を見て危険牌を避ける、
+1. **盤面の型を `PlayerView` に揃える**：いま単機版（`GameState`）と
+   オンライン版（`PublicGameState`）で盤面の画面が2つある。放っておくとずれる。
+   単機版も `maskFor(HUMAN, state, match)` を通せば同じ型になるので、
+   1つに畳める。**配札の演出・札が飛ぶ演出・勝ちの祝いをオンラインへ
+   持っていくには、先にこれが要る。**
+2. **公開先の決定**（ユーザーの承認が要る）：GitHub Pages に WebSocket は
+   置けない。→ オンライン対戦の節を参照
+3. **AIの強化**：今は自分の手札しか見ていない。捨て札の履歴を見て危険牌を避ける、
    ワイルドの温存判断を入れる、など。`cardAffinity` の重み調整でかなり変わるはず。
-3. **人間のBATER時の捨て札選択**：`findBaterAction` は「上がれる組み合わせ」を
+4. **人間のBATER時の捨て札選択**：`findBaterAction` は「上がれる組み合わせ」を
    1つ見つけて返すだけなので、余り札が複数あり得る場合に選ばせていない。
-4. オンライン化：`server/` を足し、`engine` をNode側に載せる。
-   `web/` に手札マスク済みの状態だけを配信する。
-   なお現在の公開先（GitHub Pages）は静的配信のみでWebSocketを置けないため、
-   この段階で Cloudflare Workers + Durable Objects などへの移行が必要になる。
+5. オンラインの賭け金・配当：いまはチップだけで、掛け金は載せていない。
+   金銭の見せ方は仕様の判断が要る。
 
 ## コーディング規約（このプロジェクト内で守ってきたこと）
 - `engine/` 配下は副作用ゼロの純粋関数のみ。DOM・React・fetch・WebSocketへの依存禁止
+- `protocol/` も同じ（型と純粋関数のみ）。通信手段を知らせない
+- `server/room.ts` に `setTimeout` を書かない。間合いは `hub.ts` の担当
+- **相対 import には `.ts` を明示する**（engine / protocol / server）。
+  Node が直接読むため。付け忘れるとサーバーだけ起動しない
 - 乱数は関数引数として注入可能にする（テスト再現性のため）
 - コード内コメントは日本語で統一
 - 型はできるだけ厳密に（`tsconfig.base.json` は `strict: true` + `noUncheckedIndexedAccess: true`）
