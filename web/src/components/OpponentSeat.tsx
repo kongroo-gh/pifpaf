@@ -21,6 +21,8 @@ export interface OpponentSeatProps {
   survived: boolean;
   /** 発砲の瞬間だけ true にしてフラッシュさせる */
   firing: boolean;
+  /** いま捨て札から札を受け取ったところか（飛んできた札の着地先） */
+  receiving?: boolean;
 }
 
 export function OpponentSeat({
@@ -33,6 +35,7 @@ export function OpponentSeat({
   eliminated,
   survived,
   firing,
+  receiving = false,
 }: OpponentSeatProps) {
   const classes = [
     "seat",
@@ -41,12 +44,13 @@ export function OpponentSeat({
     eliminated ? "seat--eliminated" : "",
     survived ? "seat--survived" : "",
     firing ? "seat--firing" : "",
+    receiving ? "seat--receiving" : "",
   ]
     .filter(Boolean)
     .join(" ");
 
   return (
-    <div className={classes}>
+    <div className={classes} data-seat={persona.index}>
       <div className="seat__avatar" aria-hidden="true">
         {/* 中折れ帽のシルエット */}
         <svg viewBox="0 0 64 64">

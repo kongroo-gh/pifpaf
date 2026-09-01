@@ -10,6 +10,7 @@ import { OpponentSeat } from "./components/OpponentSeat";
 import { BulletHoleCluster } from "./components/BulletHole";
 import { MoneyRain } from "./components/MoneyRain";
 import { ChipStack } from "./components/ChipStack";
+import { CardFlight } from "./components/CardFlight";
 
 const WAGERS = [100, 250, 500];
 
@@ -30,6 +31,8 @@ export default function App() {
     foldedSeats,
     isHumanTurn,
     canIntercept,
+    pickup,
+    clearPickup,
     humanBater,
     speedLabel,
     cycleSpeed,
@@ -135,6 +138,7 @@ export default function App() {
                 state.currentPlayer === persona.index &&
                 state.phase !== "ROUND_OVER"
               }
+              receiving={pickup?.seat === persona.index}
               eliminated={execution.shot.has(persona.index)}
               survived={match.winner === persona.index}
               firing={execution.firingAt === persona.index}
@@ -171,7 +175,7 @@ export default function App() {
 
             <div className={`pile ${canTakeDiscard ? "pile--live" : ""}`}>
               <span className="pile__label">DESCARTE / 捨て札</span>
-              <div className="pile__stack">
+              <div className="pile__stack" data-discard-pile>
                 {topDiscard ? (
                   <button
                     type="button"
@@ -193,7 +197,10 @@ export default function App() {
         </section>
 
         <section
-          className={`me ${humanShot ? "me--eliminated" : ""} ${humanWonMatch ? "me--survived" : ""}`}
+          data-seat={HUMAN}
+          className={`me ${humanShot ? "me--eliminated" : ""} ${humanWonMatch ? "me--survived" : ""} ${
+            pickup?.seat === HUMAN ? "me--receiving" : ""
+          }`}
         >
           <div className="me__header">
             <span className="me__name">{personaOf(HUMAN).name}</span>
@@ -290,6 +297,16 @@ export default function App() {
 
       {/* 破産した席が撃たれる瞬間の閃光。精算パネルと重ねると文字が読めなくなるので、
           MATCH_OVER に進む前のラウンド結果中に見せきる。 */}
+      {pickup && (
+        <CardFlight
+          key={pickup.id}
+          card={pickup.card}
+          wild={state.wild}
+          seat={pickup.seat}
+          onDone={clearPickup}
+        />
+      )}
+
       {screen === "ROUND_RESULT" && execution.firingAt !== null && (
         <div className="muzzleFlash" aria-hidden="true" />
       )}

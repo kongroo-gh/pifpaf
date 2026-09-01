@@ -21,6 +21,7 @@ import {
   payoutMultiplier,
   payoutBreakdown,
   DEFAULT_CHIPS,
+  type Card,
   type GameState,
   type MatchState,
   type RoundResult,
@@ -119,6 +120,21 @@ export function useGame() {
   const [gameId, setGameId] = useState(0);
   /** 配当倍率（マッチ制覇時のみ）。0 なら負け。 */
   const [payout, setPayout] = useState(0);
+  /**
+   * 捨て札から札が持っていかれたことを見せるための控え。
+   * 誰がどの札を取ったのか、盤面の数字が変わるだけでは追えないので、
+   * 札が飛んでいく演出に使う。idは同じ札が続けて取られたときの作り直し用。
+   */
+  const [pickup, setPickup] = useState<{ card: Card; seat: number; id: number } | null>(null);
+  const pickupId = useRef(0);
+
+  const notePickup = useCallback((card: Card | undefined, seat: number) => {
+    if (card === undefined) return;
+    pickupId.current += 1;
+    setPickup({ card, seat, id: pickupId.current });
+  }, []);
+
+  const clearPickup = useCallback(() => setPickup(null), []);
 
   /** CPUの速度を切り替える（対局中でも変えられる） */
   const cycleSpeed = useCallback(() => {
@@ -285,13 +301,19 @@ export function useGame() {
   }, []);
 
   const drawCard = useCallback(() => dispatch({ type: "DRAW", from: "STOCK" }), [dispatch]);
-  const takeDiscard = useCallback(() => dispatch({ type: "DRAW", from: "DISCARD" }), [dispatch]);
+  const takeDiscard = useCallback(() => {
+    notePickup(state.discard[state.discard.length - 1], HUMAN);
+    dispatch({ type: "DRAW", from: "DISCARD" });
+  }, [dispatch, notePickup, state.discard]);
   const takeVira = useCallback(() => dispatch({ type: "TAKE_VIRA" }), [dispatch]);
   const keepPending = useCallback(() => dispatch({ type: "KEEP" }), [dispatch]);
   const rejectPending = useCallback(() => dispatch({ type: "REJECT" }), [dispatch]);
 
   /** 手番外で捨て札を拾って上がる */
-  const intercept = useCallback(() => dispatch({ type: "INTERCEPT" }), [dispatch]);
+  const intercept = useCallback(() => {
+    notePickup(state.discard[state.discard.length - 1], HUMAN);
+    dispatch({ type: "INTERCEPT" });
+  }, [dispatch, notePickup, state.discard]);
   /** 割り込まずに見送る */
   const passIntercept = useCallback(() => dispatch({ type: "PASS_INTERCEPT" }), [dispatch]);
 
@@ -353,13 +375,19 @@ export function useGame() {
     const timer = setTimeout(() => {
       const action = decideAction(state);
       if (action === null) return;
+      // 捨て札から取る手なら、飛ばす札と受け手を控えてから適用する
+      const takesFromDiscard =
+        (action.type === "DRAW" && action.from === "DISCARD") || action.type === "INTERCEPT";
+      const taken = takesFromDiscard ? state.discard[state.discard.length - 1] : undefined;
+
       const result = applyAction(state, action);
       if (!result.ok) return;
+      if (taken !== undefined) notePickup(taken, acting);
       setState(result.state);
     }, delay);
 
     return () => clearTimeout(timer);
-  }, [screen, state, humanFolded, speed]);
+  }, [screen, state, humanFolded, speed, notePickup]);
 
   // ラウンドが決着したら勘定する
   useEffect(() => {
@@ -397,6 +425,8 @@ export function useGame() {
     foldedSeats,
     isHumanTurn,
     canIntercept,
+    pickup,
+    clearPickup,
     humanBater,
     speed,
     speedLabel: SPEED_LABEL[speed],

@@ -107,6 +107,17 @@ pifpaf/                  npm workspaces のルート
 実測（200局）の上がりの形: 3+3+3 が159、3+3+4 が35、4+5 が6。
 5枚組は稀だが経路として機能しており、割り込み率・ラウンド長への影響は無かった。
 
+## 捨て札から札が飛ぶ演出
+誰かが捨て札を拾ったとき、札が山から取った人の席へ飛ぶ（`CardFlight`）。
+枚数の数字が変わるだけでは「誰が何を取ったか」が追えないため。
+
+- 位置は `[data-discard-pile]` と `[data-seat="N"]` を querySelector で拾って
+  実測する。自分の席は `.me` に `data-seat={HUMAN}` が付いている
+- `left/top` は出発点に固定し、移動は `transform: translate()` で行う
+- 拾いの検知は `useGame` 側。CPUの手を適用する直前に
+  `DRAW from:"DISCARD"` と `INTERCEPT` を拾って `notePickup` する
+  （適用後だと札が捨て札から消えていて何を取ったのか分からない）
+
 ## 上がり手の公開
 ラウンド結果で勝者の手札を役ごとに分けて見せる（`MeldReveal`）。
 分類は `classifyAsMelds` の戻り値をそのまま使い、**web側で役を判定しない**。
