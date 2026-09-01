@@ -421,6 +421,28 @@ describe("BATER", () => {
     expect(result.ok).toBe(false);
   });
 
+  it("5枚組x2の10枚は、捨てずにそのまま上がれる", () => {
+    const fiveAndFive = [
+      c("1", "S", "7"), c("2", "S", "7"), c("3", "C", "7"), c("4", "C", "7"), c("5", "H", "7"),
+      c("6", "S", "9"), c("7", "S", "9"), c("8", "D", "9"), c("9", "D", "9"), c("10", "H", "9"),
+    ];
+    const state = makeState({
+      hands: [fiveAndFive, [], [], []],
+      currentPlayer: 0,
+      phase: "AWAITING_DISCARD",
+    });
+
+    const result = applyAction(state, { type: "BATER" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.phase).toBe("ROUND_OVER");
+    expect(result.state.winner).toBe(0);
+    // 10枚のまま＝bater com 10（相手は3チップ失う）
+    expect(result.state.hands[0]).toHaveLength(10);
+    expect(result.state.discard).toEqual([]);
+  });
+
   it("拾った札を余らせての上がりは許される（捨て直しの禁止は上がりには及ばない）", () => {
     const taken = c("taken", "D", "2");
     const state = makeState({

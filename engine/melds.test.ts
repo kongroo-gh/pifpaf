@@ -186,6 +186,18 @@ describe("トリンカの枚数別ルール", () => {
     expect(m?.map((x) => x.cards.length)).toEqual([3, 3]);
   });
 
+  it("5枚組x2の10枚で上がれる", () => {
+    const hand = [
+      // 7 の5枚組（♠♠♣♣♥）
+      c("1", "S", "7"), c("2", "S", "7"), c("3", "C", "7"), c("4", "C", "7"), c("5", "H", "7"),
+      // 9 の5枚組（♠♠♦♦♥）
+      c("6", "S", "9"), c("7", "S", "9"), c("8", "D", "9"), c("9", "D", "9"), c("10", "H", "9"),
+    ];
+    const m = classifyAsMelds(hand, wild);
+    expect(m).not.toBeNull();
+    expect(m?.map((x) => x.cards.length)).toEqual([5, 5]);
+  });
+
   it("4枚組+5枚組の9枚で上がれる", () => {
     const hand = [
       // 4枚組（♠♣♥♥）
