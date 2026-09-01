@@ -146,12 +146,55 @@ describe("トリンカの枚数別ルール", () => {
     ).toBe(false);
   });
 
-  it("5枚以上は不成立", () => {
+  it("5枚組は記号が2つ重複していれば成立する（♠♠♣♣♥）", () => {
     expect(
       isValidTrinca(
-        [c("a", "S", "7"), c("b", "H", "7"), c("d", "D", "7"), c("e", "C", "7"), c("f", "H", "7")],
+        [c("a", "S", "7"), c("b", "S", "7"), c("d", "C", "7"), c("e", "C", "7"), c("f", "H", "7")],
+        wild
+      )
+    ).toBe(true);
+  });
+
+  it("5枚組で重複が1つだけなら不成立（♠♠♣♥♦）", () => {
+    expect(
+      isValidTrinca(
+        [c("a", "S", "7"), c("b", "S", "7"), c("d", "C", "7"), c("e", "H", "7"), c("f", "D", "7")],
         wild
       )
     ).toBe(false);
+  });
+
+  it("5枚組にワイルドが混じっていれば、足りない重複を担える", () => {
+    // 7♠7♠7♣7♥ + 8♠(ワイルド) → ワイルドが♣か♥の2枚目になれば2つ重複になる
+    expect(
+      isValidTrinca(
+        [c("a", "S", "7"), c("b", "S", "7"), c("d", "C", "7"), c("e", "H", "7"), c("w", "S", "8")],
+        wild
+      )
+    ).toBe(true);
+  });
+
+  it("6枚組は無い（同ランク6枚は3枚組が2つになる）", () => {
+    const six = [
+      c("a", "S", "7"), c("b", "S", "7"), c("d", "C", "7"),
+      c("e", "C", "7"), c("f", "H", "7"), c("g", "H", "7"),
+    ];
+    expect(isValidTrinca(six, wild)).toBe(false);
+    // 3枚組2つには分類できる
+    const m = classifyAsMelds(six, wild);
+    expect(m).not.toBeNull();
+    expect(m?.map((x) => x.cards.length)).toEqual([3, 3]);
+  });
+
+  it("4枚組+5枚組の9枚で上がれる", () => {
+    const hand = [
+      // 4枚組（♠♣♥♥）
+      c("1", "S", "7"), c("2", "C", "7"), c("3", "H", "7"), c("4", "H", "7"),
+      // 5枚組（♠♠♣♣♥）
+      c("5", "S", "9"), c("6", "S", "9"), c("7", "C", "9"), c("8", "C", "9"), c("9", "H", "9"),
+    ];
+    const m = classifyAsMelds(hand, wild);
+    expect(m).not.toBeNull();
+    expect(m?.map((x) => x.cards.length).sort()).toEqual([4, 5]);
   });
 });

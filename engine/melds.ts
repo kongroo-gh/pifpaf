@@ -13,18 +13,25 @@ export interface Meld {
 }
 
 /**
- * トリンカ：同じランクの3枚または4枚。
+ * トリンカ：同じランクの3〜5枚。
  *
- * 枚数で条件が変わる（ユーザー指定）:
- * - **3枚組** … 記号は全て異なること（7♠7♥7♦）
- * - **4枚組** … 記号の重複が必要（7♠7♣7♥7♥）。
- *   7♠7♥7♦7♣ のように4種類すべて違う形は4枚組として認めない。
+ * **重複すべき記号の数 = 枚数 − 3**（ユーザー指定）。
  *
- * 4枚組を作るには同じ札が2枚要るので、2組デッキであることが前提になる。
- * ワイルドは任意の札の代役なので、混じっていれば重複ぶんを担える。
+ * | 枚数 | 記号の条件 | 例 |
+ * |---|---|---|
+ * | 3枚 | 全て異なる | 7♠7♥7♦ ○ ／ 7♠7♠7♥ ✕ |
+ * | 4枚 | 1つ重複 | 7♠7♣7♥7♥ ○ ／ 7♠7♥7♦7♣ ✕ |
+ * | 5枚 | 2つ重複 | 7♠7♠7♣7♣7♥ ○ ／ 7♠7♠7♣7♥7♦ ✕ |
+ *
+ * 6枚組は無い。同ランク6枚は3枚組が2つになる（classifyAsMelds が
+ * 小さい役から順に試すので自然にそう割れる）。
+ *
+ * 同じ記号は2枚まで（2組デッキに同じ札は2枚しかない）。
+ * ワイルドは任意の札の代役なので、記号の割り当てを総当たりして
+ * 条件を満たせる組み合わせがあるかを見る。
  */
 export function isValidTrinca(cards: Card[], wild: Wild): boolean {
-  if (cards.length < 3 || cards.length > 4) return false;
+  if (cards.length < 3 || cards.length > 5) return false;
 
   const naturals = cards.filter((c) => !isWildCard(c, wild));
   const wildCount = cards.length - naturals.length;
@@ -37,20 +44,43 @@ export function isValidTrinca(cards: Card[], wild: Wild): boolean {
   const rank = naturals[0]!.rank;
   if (!naturals.every((c) => c.rank === rank)) return false;
 
-  // 同じ札は2組デッキに2枚しかないので、同じ記号は2枚まで
-  const perSuit = new Map<Suit, number>();
-  for (const c of naturals) perSuit.set(c.suit, (perSuit.get(c.suit) ?? 0) + 1);
-  for (const n of perSuit.values()) if (n > 2) return false;
+  return suitsSatisfyTrinca(naturals.map((c) => c.suit), wildCount, cards.length);
+}
 
-  if (cards.length === 3) {
-    // 3枚組は記号が全て異なること
-    return perSuit.size === naturals.length;
-  }
+const ALL_SUITS: Suit[] = ["S", "H", "D", "C"];
 
-  // ここから4枚組。記号の重複が要る。
-  // ワイルドが混じっていれば、それを重複ぶんに充てられるので成立する。
-  if (wildCount > 0) return true;
-  return perSuit.size < naturals.length;
+/**
+ * 記号の配り方が枚数別の条件を満たせるか。
+ * ワイルドの記号は自由に決められるので、割り当てを総当たりする
+ * （ワイルドは高々2枚なので探索は小さい）。
+ */
+function suitsSatisfyTrinca(naturalSuits: Suit[], wildCount: number, size: number): boolean {
+  const base = new Map<Suit, number>();
+  for (const s of naturalSuits) base.set(s, (base.get(s) ?? 0) + 1);
+  // 同じ札は2枚までしか存在しない
+  for (const n of base.values()) if (n > 2) return false;
+
+  const ok = (counts: Map<Suit, number>): boolean => {
+    const distinct = counts.size;
+    const dups = [...counts.values()].filter((n) => n >= 2).length;
+    // 3枚組だけは「重複ゼロ」＝全て異なることを要求する
+    if (size === 3) return distinct === size;
+    return dups >= size - 3;
+  };
+
+  const place = (remaining: number, counts: Map<Suit, number>): boolean => {
+    if (remaining === 0) return ok(counts);
+    for (const s of ALL_SUITS) {
+      const have = counts.get(s) ?? 0;
+      if (have >= 2) continue;
+      const next = new Map(counts);
+      next.set(s, have + 1);
+      if (place(remaining - 1, next)) return true;
+    }
+    return false;
+  };
+
+  return place(wildCount, base);
 }
 
 /**
