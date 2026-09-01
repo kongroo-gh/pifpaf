@@ -4,7 +4,7 @@
 //
 // マッチ（複数ラウンド）の勘定は engine/match.ts が持つ。ここはその進行役。
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   dealGame,
   createInitialState,
@@ -59,6 +59,8 @@ export const LOAN_AMOUNT = 500;
 export type Screen =
   | "INTRO"
   | "BETTING"
+  /** 配札の演出中。engineの配り終えた結果を再生しているだけで、進行は止めている */
+  | "DEALING"
   | "FOLD"
   | "PLAYING"
   | "ROUND_RESULT"
@@ -127,6 +129,10 @@ export function useGame() {
    */
   const [pickup, setPickup] = useState<{ card: Card; seat: number; id: number } | null>(null);
   const pickupId = useRef(0);
+  /** 配札の演出が終わったあとに進む画面 */
+  const afterDealing = useRef<Screen>("FOLD");
+  /** 演出の途中でヴィラを伏せておくための印。めくる瞬間に true になる */
+  const [viraRevealed, setViraRevealed] = useState(true);
 
   const notePickup = useCallback((card: Card | undefined, seat: number) => {
     if (card === undefined) return;
@@ -178,8 +184,19 @@ export function useGame() {
     setSelectedCardId(null);
     setGameId((n) => n + 1);
     setSettlement(null);
-    setScreen(isAlive(m, HUMAN) ? "FOLD" : "PLAYING");
+    afterDealing.current = isAlive(m, HUMAN) ? "FOLD" : "PLAYING";
+    setViraRevealed(false);
+    setScreen("DEALING");
   }, []);
+
+  /** 配札の演出が終わった。ここから実際の手番が始まる。 */
+  const finishDealing = useCallback(() => {
+    setViraRevealed(true);
+    setScreen(afterDealing.current);
+  }, []);
+
+  /** 演出の途中、ヴィラをめくった瞬間に呼ぶ */
+  const revealVira = useCallback(() => setViraRevealed(true), []);
 
   /** 掛け金を決めてマッチ開始 */
   const startMatch = useCallback(
@@ -350,6 +367,9 @@ export function useGame() {
       ? findBaterAction(humanHand, state.wild)
       : null;
 
+  /** 生存している席。毎描画で新しい配列を作ると、これを依存に持つ演出が作り直される。 */
+  const aliveSeats = useMemo(() => alivePlayers(match), [match]);
+
   const callBater = useCallback(() => {
     if (humanBater === null) return;
     dispatch(humanBater);
@@ -427,6 +447,9 @@ export function useGame() {
     canIntercept,
     pickup,
     clearPickup,
+    viraRevealed,
+    revealVira,
+    finishDealing,
     humanBater,
     speed,
     speedLabel: SPEED_LABEL[speed],
@@ -439,7 +462,7 @@ export function useGame() {
     isDecidingKeep,
     selectedCardId,
     setSelectedCardId,
-    aliveSeats: alivePlayers(match),
+    aliveSeats,
     sitDown,
     startMatch,
     decideFold,

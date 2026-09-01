@@ -102,7 +102,7 @@ export function PlayerHand({
 
   return (
     <div className="hand" ref={containerRef}>
-      {cards.map((card) => {
+      {cards.map((card, index) => {
         const locked = card.id === lockedCardId;
         return (
           <button
@@ -110,6 +110,7 @@ export function PlayerHand({
             key={card.id}
             data-card-id={card.id}
             className={`hand__slot ${draggingId === card.id ? "hand__slot--dragging" : ""}`}
+            style={{ ["--i" as string]: index }}
             aria-label={
               describeCard(card, wild) +
               (locked ? "（拾ったばかりで捨てられない）" : "") +

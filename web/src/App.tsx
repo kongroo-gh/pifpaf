@@ -11,6 +11,7 @@ import { BulletHoleCluster } from "./components/BulletHole";
 import { MoneyRain } from "./components/MoneyRain";
 import { ChipStack } from "./components/ChipStack";
 import { CardFlight } from "./components/CardFlight";
+import { DealingScene } from "./components/DealingScene";
 
 const WAGERS = [100, 250, 500];
 
@@ -33,6 +34,11 @@ export default function App() {
     canIntercept,
     pickup,
     clearPickup,
+    viraRevealed,
+    revealVira,
+    finishDealing,
+    speed,
+    aliveSeats,
     humanBater,
     speedLabel,
     cycleSpeed,
@@ -102,12 +108,18 @@ export default function App() {
           <div className="topbar__wild">
             <span className="topbar__wildLabel">CORINGA</span>
             <span className="topbar__wildRank">
-              {state.wild.rank}
-              {SUIT_GLYPH[state.wild.suit]}
+              {viraRevealed ? (
+                <>
+                  {state.wild.rank}
+                  {SUIT_GLYPH[state.wild.suit]}
+                </>
+              ) : (
+                <span className="topbar__wildHidden">?</span>
+              )}
             </span>
-            <span className="topbar__vira">
+            <span className="topbar__vira" data-vira-slot>
               ヴィラ
-              {state.vira ? (
+              {state.vira && viraRevealed ? (
                 <button
                   type="button"
                   className={`viraButton ${canTakeVira ? "viraButton--live" : ""}`}
@@ -150,7 +162,7 @@ export default function App() {
           <div className="table__felt">
             <div className={`pile ${canDrawStock ? "pile--live" : ""}`}>
               <span className="pile__label">MONTE / 山札</span>
-              <div className="pile__stack">
+              <div className="pile__stack" data-stock-pile>
                 <button
                   type="button"
                   className="pile__button"
@@ -244,7 +256,13 @@ export default function App() {
             />
           )}
 
+          {/* 配り終えるまで手札は伏せておき、演出のあとに並べる。
+              高さは同じ .hand で確保して、並んだ瞬間に盤面がずれないようにする。 */}
+          {screen === "DEALING" ? (
+            <div className="hand" aria-hidden="true" />
+          ) : (
           <PlayerHand
+            key={gameId}
             cards={orderedHand}
             wild={state.wild}
             selectedCardId={selectedCardId}
@@ -253,6 +271,7 @@ export default function App() {
             onSelect={setSelectedCardId}
             onReorder={reorder}
           />
+          )}
 
           <div className="actions">
             <button className="btn btn--draw" disabled={!canDrawStock} onClick={drawCard}>
@@ -297,6 +316,17 @@ export default function App() {
 
       {/* 破産した席が撃たれる瞬間の閃光。精算パネルと重ねると文字が読めなくなるので、
           MATCH_OVER に進む前のラウンド結果中に見せきる。 */}
+      {screen === "DEALING" && (
+        <DealingScene
+          vira={state.vira}
+          wild={state.wild}
+          dealtSeats={aliveSeats}
+          speedFactor={speed === "FAST" ? 0.55 : speed === "SLOW" ? 1.5 : 1}
+          onRevealVira={revealVira}
+          onDone={finishDealing}
+        />
+      )}
+
       {pickup && (
         <CardFlight
           key={pickup.id}
