@@ -150,9 +150,7 @@ export function RuleBook({ onClose }: RuleBookProps) {
                   <td>10枚のうち9枚が役。余り1枚を捨てて上がる（3+3+3 か 4+5）</td>
                 </tr>
                 <tr>
-                  <td>
-                    10枚<span className="rulebook__badge">重い</span>
-                  </td>
+                  <td>10枚</td>
                   <td>10枚すべてが役。捨てずに上がる（3+3+4 か 5+5）</td>
                 </tr>
               </tbody>

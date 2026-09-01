@@ -467,15 +467,6 @@ button {
 .rulebook__body .ok { color: var(--cream); }
 .rulebook__body .ng { color: var(--blood-hot); }
 
-.rulebook__badge {
-  margin-left: 6px;
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  padding: 1px 6px;
-  color: var(--blood-hot);
-  border: 1px solid rgba(210, 74, 52, 0.5);
-}
-
 .rulebook__foot {
   padding: 14px 22px 18px;
   border-top: 1px solid rgba(200, 162, 74, 0.28);
