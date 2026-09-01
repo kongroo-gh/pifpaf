@@ -1,5 +1,5 @@
 import type { Card, Wild } from "@pifpaf/engine";
-import { LOSS_PLAY, LOSS_FOLD, LOSS_COM10 } from "@pifpaf/engine";
+import { LOSS_PLAY, LOSS_FOLD, LOSS_COM10, classifyAsMelds } from "@pifpaf/engine";
 import { useGame, HUMAN, LOAN_AMOUNT } from "./game/useGame";
 import { useExecution } from "./game/useExecution";
 import { useHandOrder } from "./game/useHandOrder";
@@ -295,7 +295,12 @@ export default function App() {
       )}
 
       {screen === "ROUND_RESULT" && execution.done && settlement && (
-        <RoundResult settlement={settlement} onNext={advance} />
+        <RoundResult
+          settlement={settlement}
+          winnerHand={state.winner === null ? null : (state.hands[state.winner] ?? null)}
+          wild={state.wild}
+          onNext={advance}
+        />
       )}
 
       {screen === "MATCH_OVER" && (
@@ -394,11 +399,58 @@ function FoldPrompt({
 }
 
 /** ラウンドの決着。誰が取って、誰がいくら失ったか。 */
+/**
+ * 上がった手札を公開する。どう組めていたのかが分かるよう、役ごとに分けて見せる。
+ * 分類は engine の classifyAsMelds に任せる（web側で役を判定しない）。
+ */
+function MeldReveal({ hand, wild }: { hand: Card[]; wild: Wild }) {
+  const melds = classifyAsMelds(hand, wild);
+
+  // 上がった手なら必ず分類できるはずだが、
+  // 割り込みなどで余り札が付く形もあるので、駄目なら素の手札を並べる
+  if (melds === null) {
+    return (
+      <div className="reveal">
+        <p className="reveal__label">上がり手</p>
+        <div className="reveal__meld">
+          {hand.map((c) => (
+            <PlayingCard key={c.id} card={c} wild={wild} size="sm" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="reveal">
+      <p className="reveal__label">
+        上がり手 <span className="reveal__count">{hand.length}枚</span>
+      </p>
+      {melds.map((meld, i) => (
+        <div className="reveal__group" key={i}>
+          <span className="reveal__type">
+            {meld.type === "TRINCA" ? "組" : "階段"}
+          </span>
+          <div className="reveal__meld">
+            {meld.cards.map((c) => (
+              <PlayingCard key={c.id} card={c} wild={wild} size="sm" />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function RoundResult({
   settlement,
+  winnerHand,
+  wild,
   onNext,
 }: {
   settlement: NonNullable<ReturnType<typeof useGame>["settlement"]>;
+  winnerHand: Card[] | null;
+  wild: Wild;
   onNext: () => void;
 }) {
   const { losses, eliminated, state } = settlement;
@@ -415,6 +467,10 @@ function RoundResult({
               ? "あんたが取った"
               : `${personaOf(winner).name} が取った`}
         </h2>
+
+        {winner !== null && winnerHand && (
+          <MeldReveal hand={winnerHand} wild={wild} />
+        )}
 
         <ul className="result__list">
           {losses.map((loss, seat) => {

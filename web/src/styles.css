@@ -390,6 +390,52 @@ button {
   margin-bottom: 6px;
 }
 
+/* ---------- 上がり手の公開 ---------- */
+.reveal {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid rgba(200, 162, 74, 0.28);
+  background: rgba(200, 162, 74, 0.05);
+  text-align: left;
+}
+
+.reveal__label {
+  font-family: var(--display);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  margin: 0 0 8px;
+}
+
+.reveal__count {
+  color: var(--smoke-dim);
+  letter-spacing: 0.05em;
+}
+
+.reveal__group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+/* 役の種類。幅を揃えて札の先頭を縦に並べる */
+.reveal__type {
+  flex: 0 0 34px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--smoke);
+  border: 1px solid rgba(143, 136, 124, 0.28);
+  padding: 2px 0;
+  text-align: center;
+}
+
+.reveal__meld {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
 /* ---------- ラウンド結果 ---------- */
 .result__list {
   list-style: none;
@@ -1456,6 +1502,12 @@ button {
   .keepBar__note { font-size: 10px; line-height: 1.5; }
   .keepBar__actions { flex: 1 1 100%; }
   .keepBar__actions .btn { flex: 1; }
+
+  .reveal { padding: 8px 9px; margin-bottom: 12px; }
+  .reveal__type { flex-basis: 30px; font-size: 9px; }
+  .reveal__meld .card--sm { width: 32px; height: 46px; }
+  .reveal__meld .card--sm .card__center { font-size: 12px; }
+  .reveal__meld .card--sm .card__corner { font-size: 7px; }
 
   .verdict__panel { padding: 30px 22px 26px; }
   .verdict h2 { font-size: 30px; }
