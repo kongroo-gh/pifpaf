@@ -39,6 +39,8 @@ export {
   createMatch,
   settleRound,
   alivePlayers,
+  contenders,
+  walkoverWinner,
   isAlive,
   payoutMultiplier,
   payoutBreakdown,

@@ -1,0 +1,22 @@
+{
+  "name": "@pifpaf/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "オンライン対戦の権威サーバー。engine をそのまま載せ、席ごとにマスクした盤面を配る。",
+  "main": "index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "dev": "node --experimental-strip-types index.ts"
+  },
+  "dependencies": {
+    "@pifpaf/engine": "0.1.0",
+    "@pifpaf/protocol": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}

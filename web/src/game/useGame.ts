@@ -16,6 +16,7 @@ import {
   currentActor,
   createMatch,
   settleRound,
+  walkoverWinner,
   alivePlayers,
   isAlive,
   payoutMultiplier,
@@ -228,10 +229,15 @@ export function useGame() {
 
   // ---- ラウンドの決着 -------------------------------------------------
 
+  /**
+   * @param played 実際に打って決着したか。不戦勝（全員降りて1人だけ残った）なら false。
+   *   打っていないラウンドで手札のワイルドを「使った」と数えると、
+   *   何もしていないのに配当が0.75倍になってしまう。
+   */
   const finishRound = useCallback(
-    (finished: GameState) => {
+    (finished: GameState, played = true) => {
       const winner = finished.winner;
-      const hand = winner === null ? [] : (finished.hands[winner] ?? []);
+      const hand = played && winner !== null ? (finished.hands[winner] ?? []) : [];
       const result: RoundResult = {
         winner,
         baterCom10: hand.length === 10,
@@ -412,18 +418,21 @@ export function useGame() {
     return () => clearTimeout(timer);
   }, [screen, state, finishRound]);
 
-  // 全員が降りて勝負する者がいない場合、ラウンドは成立しない
+  // 降りた結果、勝負する者が1人以下になったラウンドは成立しない。
+  // 判定は engine の walkoverWinner に任せる（server 側と同じ規則を使う）
   useEffect(() => {
     if (screen !== "PLAYING") return;
     if (state.phase === "ROUND_OVER") return;
-    const contenders = state.folded.filter((f) => !f).length;
-    if (contenders > 1) return;
+
+    const walkover = walkoverWinner(match, state.folded);
+    if (!walkover.decided) return;
+
     const timer = setTimeout(() => {
-      const lone = state.folded.findIndex((f) => !f);
-      finishRound({ ...state, phase: "ROUND_OVER", winner: lone === -1 ? null : lone });
+      // 打っていないので played=false。10枚上がりもワイルド使用も数えない
+      finishRound({ ...state, phase: "ROUND_OVER", winner: walkover.winner }, false);
     }, 700);
     return () => clearTimeout(timer);
-  }, [screen, state, finishRound]);
+  }, [screen, state, match, finishRound]);
 
   return {
     screen,

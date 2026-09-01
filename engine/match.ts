@@ -103,6 +103,35 @@ export function alivePlayers(match: MatchState): number[] {
 }
 
 /**
+ * そのラウンドを実際に打つ席。生きていて、かつ降りていない者。
+ *
+ * @param folded 添字が席番号。自分の意思で降りたか
+ */
+export function contenders(match: MatchState, folded: boolean[]): number[] {
+  return alivePlayers(match).filter((p) => folded[p] !== true);
+}
+
+/**
+ * 降りた結果、打つ人が1人以下になったラウンドの決着。
+ *
+ * - 1人だけ残ったら**その人の不戦勝**。誰も相手がいないのだから、
+ *   最後まで打たせる意味がない（実際、1人では上がれないまま山が尽きるだけ）
+ * - 0人なら決着なし
+ * - 2人以上いるなら null を返す。普通に打つ
+ *
+ * この判定を web と server の両方が持つと必ずずれるので、engine に置く。
+ */
+export function walkoverWinner(
+  match: MatchState,
+  folded: boolean[]
+): { decided: true; winner: number | null } | { decided: false } {
+  const left = contenders(match, folded);
+  if (left.length === 1) return { decided: true, winner: left[0]! };
+  if (left.length === 0) return { decided: true, winner: null };
+  return { decided: false };
+}
+
+/**
  * ラウンドの結果をマッチに反映する。
  * 上がった者以外が失点し、0になった者が脱落する。
  */

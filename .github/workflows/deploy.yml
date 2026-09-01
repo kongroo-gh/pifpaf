@@ -23,15 +23,21 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
 
       - name: 依存を入れる
         run: npm ci
 
-      # 壊れたものを公開しないため、デプロイ前に関門を通す
+      # 壊れたものを公開しないため、デプロイ前に関門を通す。
+      # ここに置くのは**決定性のあるものだけ**。server の e2e は実際に
+      # ポートを開くので、たまたま失敗したときに公開まで止まるのは割に合わない
+      # （server は ci.yml で別に検査する）。
       - name: engineのテスト
         run: npm test --workspace=engine
+
+      - name: protocolのテスト（配信のマスク）
+        run: npm test --workspace=protocol
 
       - name: ビルド（tsc --noEmit を含む）
         run: npm run build --workspace=web

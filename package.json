@@ -5,9 +5,16 @@
   "description": "Pif Paf（ブラジルのトランプゲーム）のWeb版。engine=純粋ロジック、web=React UI、将来server=オンライン対戦用の構成。",
   "workspaces": [
     "engine",
+    "protocol",
+    "server",
     "web"
   ],
   "scripts": {
-    "test:engine": "npm run test --workspace=engine"
+    "test": "npm run test --workspaces --if-present",
+    "test:engine": "npm run test --workspace=engine",
+    "test:protocol": "npm run test --workspace=protocol",
+    "test:server": "npm run test --workspace=server",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "server": "node --experimental-strip-types server/index.ts"
   }
 }

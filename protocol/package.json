@@ -1,0 +1,22 @@
+{
+  "name": "@pifpaf/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "オンライン対戦の通信仕様。web と server の両方が参照する。副作用なしの型と純粋関数だけを置く。",
+  "main": "index.ts",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pifpaf/engine": "0.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}

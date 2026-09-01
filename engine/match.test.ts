@@ -3,6 +3,8 @@ import {
   createMatch,
   settleRound,
   alivePlayers,
+  contenders,
+  walkoverWinner,
   isAlive,
   payoutMultiplier,
   payoutBreakdown,
@@ -142,5 +144,40 @@ describe("配当", () => {
     const m = winnerWith(4, 3, false);
     const b = payoutBreakdown(m, 0);
     expect((b.base + b.streakBonus) * b.wildCoef).toBeCloseTo(b.total, 2);
+  });
+});
+
+describe("walkoverWinner（降りて1人以下になったラウンド）", () => {
+  it("1人だけ残ったらその人の不戦勝", () => {
+    const m = createMatch(4);
+    expect(walkoverWinner(m, [true, false, true, true])).toEqual({ decided: true, winner: 1 });
+  });
+
+  it("全員降りたら決着なし", () => {
+    const m = createMatch(4);
+    expect(walkoverWinner(m, [true, true, true, true])).toEqual({ decided: true, winner: null });
+  });
+
+  it("2人以上残っていれば普通に打つ", () => {
+    const m = createMatch(4);
+    expect(walkoverWinner(m, [true, false, false, true])).toEqual({ decided: false });
+  });
+
+  // 脱落者は「降りた」扱いをしなくても勘定に入らない
+  it("脱落した席は数に入らない", () => {
+    const m = { ...createMatch(4), chips: [0, 0, 5, 5] };
+    expect(walkoverWinner(m, [false, false, true, false])).toEqual({ decided: true, winner: 3 });
+  });
+
+  it("生きている2人がどちらも降りていなければ打つ", () => {
+    const m = { ...createMatch(4), chips: [0, 0, 5, 5] };
+    expect(walkoverWinner(m, [false, false, false, false])).toEqual({ decided: false });
+  });
+});
+
+describe("contenders", () => {
+  it("生きていて降りていない席だけ返す", () => {
+    const m = { ...createMatch(4), chips: [3, 0, 4, 2] };
+    expect(contenders(m, [false, false, true, false])).toEqual([0, 3]);
   });
 });
