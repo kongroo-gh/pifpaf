@@ -243,6 +243,61 @@ button {
   padding: 3px 7px;
 }
 
+/* ---------- ラウンドを取ったときの祝い ---------- */
+.burst {
+  position: fixed;
+  inset: 0;
+  z-index: 77;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+}
+
+/* 中心から広がる金の輪 */
+.burst__ring {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 2px solid var(--gold-bright);
+  animation: burstRing 900ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+@keyframes burstRing {
+  0% { transform: scale(0.2); opacity: 0.9; box-shadow: 0 0 40px rgba(236, 205, 131, 0.6); }
+  100% { transform: scale(6.5); opacity: 0; box-shadow: 0 0 0 rgba(236, 205, 131, 0); }
+}
+
+/* 勝った手札が飛び散る。中央に重なった状態から放射状へ */
+.burst__card {
+  position: absolute;
+  animation: burstFly 1200ms cubic-bezier(0.15, 0.85, 0.3, 1) both;
+  filter: drop-shadow(0 12px 26px rgba(0, 0, 0, 0.75));
+}
+
+.burst__card .card {
+  box-shadow: 0 0 0 2px var(--gold-bright), 0 0 30px rgba(236, 205, 131, 0.45);
+}
+
+@keyframes burstFly {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(0.5);
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  62% {
+    transform: translate(var(--bx), var(--by)) rotate(var(--spin)) scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(var(--bx) * 1.18), calc(var(--by) * 1.18 + 40px))
+      rotate(var(--spin)) scale(0.9);
+    opacity: 0;
+  }
+}
+
 /* ---------- ルールブック ---------- */
 .rulebook {
   position: fixed;
@@ -2032,7 +2087,8 @@ button {
   /* 降り物と配札は、動きを止めると意味を成さないので出さない。
      配札は演出が省かれるだけで、進行は変わらない（すぐ本編に入る）。 */
   .moneyRain,
-  .dealing {
+  .dealing,
+  .burst {
     display: none;
   }
 }

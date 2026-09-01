@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Card, Wild } from "@pifpaf/engine";
 import { LOSS_PLAY, LOSS_FOLD, LOSS_COM10, classifyAsMelds } from "@pifpaf/engine";
 import { useGame, HUMAN, LOAN_AMOUNT } from "./game/useGame";
@@ -14,6 +14,7 @@ import { ChipStack } from "./components/ChipStack";
 import { CardFlight } from "./components/CardFlight";
 import { DealingScene } from "./components/DealingScene";
 import { RuleBook } from "./components/RuleBook";
+import { CardBurst } from "./components/CardBurst";
 
 const WAGERS = [100, 250, 500];
 
@@ -102,6 +103,13 @@ export default function App() {
     setRulesOpen(false);
   };
   const openRules = () => setRulesOpen(true);
+
+  // 自分がラウンドを取ったときの祝い。終わるまで結果パネルを待たせる
+  const humanWonRound = settlement?.state.lastWinner === HUMAN;
+  const [celebrated, setCelebrated] = useState(false);
+  useEffect(() => {
+    if (screen !== "ROUND_RESULT") setCelebrated(false);
+  }, [screen]);
 
   // 撃たれるのは破産した席だけ。結果表示のあいだに演出する。
   const showingResult = screen === "ROUND_RESULT" || screen === "MATCH_OVER";
@@ -395,7 +403,16 @@ export default function App() {
         <div className="muzzleFlash" aria-hidden="true" />
       )}
 
-      {screen === "ROUND_RESULT" && execution.done && settlement && (
+      {screen === "ROUND_RESULT" && humanWonRound && !celebrated && (
+        <CardBurst
+          cards={state.hands[HUMAN] ?? []}
+          wild={state.wild}
+          onDone={() => setCelebrated(true)}
+        />
+      )}
+
+      {screen === "ROUND_RESULT" && execution.done && settlement &&
+        (!humanWonRound || celebrated) && (
         <RoundResult
           settlement={settlement}
           winnerHand={state.winner === null ? null : (state.hands[state.winner] ?? null)}
