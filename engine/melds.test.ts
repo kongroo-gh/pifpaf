@@ -68,20 +68,36 @@ describe("isValidSequence", () => {
     expect(isValidSequence([c("a", "H", "Q"), c("b", "H", "K"), c("c", "H", "A")], wild)).toBe(true);
   });
 
-  // A は一番上。折り返さないので、A をまたぐ並びは作れない。
-  it("K-A-2 は成立しない（A の上に 2 は続かない）", () => {
+  // A は上にも下にも使えるが、またぐことだけはできない。
+  it("K-A-2 は成立しない（A をまたげない）", () => {
     expect(isValidSequence([c("a", "H", "K"), c("b", "H", "A"), c("c", "H", "2")], wild)).toBe(
       false
     );
   });
 
-  it("A-2-3 は成立しない（A は下では使えない）", () => {
-    expect(isValidSequence([c("a", "H", "A"), c("b", "H", "2"), c("c", "H", "3")], wild)).toBe(
-      false
-    );
+  it("A-2-3 は成立する（A は下でも使える）", () => {
+    expect(isValidSequence([c("a", "H", "A"), c("b", "H", "2"), c("c", "H", "3")], wild)).toBe(true);
   });
 
-  it("2-3-4 は成立する（2 が一番下）", () => {
+  it("A-2-3-4 の4枚も成立する", () => {
+    expect(
+      isValidSequence(
+        [c("a", "H", "A"), c("b", "H", "2"), c("c", "H", "3"), c("d", "H", "4")],
+        wild
+      )
+    ).toBe(true);
+  });
+
+  it("Q-K-A-2 は成立しない（Aで折り返せない）", () => {
+    expect(
+      isValidSequence(
+        [c("a", "H", "Q"), c("b", "H", "K"), c("c", "H", "A"), c("d", "H", "2")],
+        wild
+      )
+    ).toBe(false);
+  });
+
+  it("2-3-4 は成立する", () => {
     expect(isValidSequence([c("a", "H", "2"), c("b", "H", "3"), c("c", "H", "4")], wild)).toBe(true);
   });
 

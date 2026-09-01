@@ -463,8 +463,9 @@ button {
 }
 
 .rulebook__table td { color: #c5bdaf; line-height: 1.7; }
-.rulebook__table .ok { color: var(--cream); }
-.rulebook__table .ng { color: var(--blood-hot); }
+/* 表の中だけでなく本文の箇条書きでも使う（○の例／✕の例の色分け） */
+.rulebook__body .ok { color: var(--cream); }
+.rulebook__body .ng { color: var(--blood-hot); }
 
 .rulebook__badge {
   margin-left: 6px;

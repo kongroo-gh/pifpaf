@@ -14,7 +14,8 @@ export function sortedIds(cards: Card[]): string[] {
     .sort((a, b) => {
       const suitDiff = SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit);
       if (suitDiff !== 0) return suitDiff;
-      // 階段と同じ並び（2が左、Aが右）にすると、繋がりが目で追いやすい
+      // 2が左、Aが右。A は階段の両端で使えるので1列には並べきれず、
+      // どちらかに決め打つしかない（気に入らなければ手で並べ替えられる）
       return sequenceIndex(a.rank) - sequenceIndex(b.rank);
     })
     .map((c) => c.id);

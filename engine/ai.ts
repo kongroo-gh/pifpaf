@@ -5,16 +5,16 @@
 // 強さの調整（相手の捨て札を読む、ワイルドの温存判断など）は後のフェーズで行う。
 
 import type { Card, Rank, Wild } from "./types";
-import { sequenceIndex, isWildCard } from "./types";
+import { sequenceDistance, isWildCard } from "./types";
 import { classifyAsMelds } from "./melds";
 import type { GameState, GameAction } from "./gameEngine";
 
 /**
- * 階段の並び（2が下、Aが上）での距離。折り返さない。
- * K と A は隣どうしだが、A と 2 は 12 離れている。
+ * 階段の並びでの距離。types.ts の判定と同じ軸で測る。
+ * A は両端で使えるので A-2 も K-A も隣。折り返しは無いので 2 と K は遠い。
  */
 function rankDistance(a: Rank, b: Rank): number {
-  return Math.abs(sequenceIndex(a) - sequenceIndex(b));
+  return sequenceDistance(a, b);
 }
 
 /**

@@ -3,7 +3,7 @@
 // 考慮した上で行う。UIやゲーム進行から独立した純粋関数群。
 
 import type { Card, Rank, Suit, Wild } from "./types";
-import { SEQUENCE_ORDER, isWildCard } from "./types";
+import { SEQUENCE_AXES, isWildCard } from "./types";
 
 export type MeldType = "TRINCA" | "SEQUENCE";
 
@@ -85,7 +85,8 @@ function suitsSatisfyTrinca(naturalSuits: Suit[], wildCount: number, size: numbe
 
 /**
  * シーケンス：同じスートの連続ランク3枚以上。ランク重複不可。
- * Q-K-A、K-A-2 のまたぎも許可。ワイルドは任意ランク代わりとして使える。
+ * **A は上にも下にも使えるが、またげない**（Q-K-A ○ / A-2-3 ○ / K-A-2 ✕）。
+ * ワイルドは任意ランク代わりとして使える。
  */
 export function isValidSequence(cards: Card[], wild: Wild): boolean {
   if (cards.length < 3) return false;
@@ -127,14 +128,26 @@ function canFitInSomeRun(naturalRanks: Rank[], totalLen: number, _wildCount: num
 /**
  * 長さlenの「あり得る連続ランク列」を全列挙する。
  *
- * **2 が一番下、A が一番上で、折り返さない。**
- * Q-K-A は成立するが、K-A-2 や A-2-3 は成立しない。
- * 以前は循環軸を使っていたため、その2つが通ってしまっていた。
+ * **A は上にも下にも使えるが、A をまたぐことはできない。**
+ * Q-K-A も A-2-3 も成立するが、K-A-2 は成立しない。
+ *
+ * 折り返さない軸を2本（A が上／A が下）走らせ、両方の窓を集める。
+ * またぎはどちらの軸にも現れないので自然に落ちる。
+ * 以前は1本の循環軸だったため、またぎまで通っていた。
  */
 function buildRankWindows(len: number): Rank[][] {
   const windows: Rank[][] = [];
-  for (let start = 0; start + len <= SEQUENCE_ORDER.length; start++) {
-    windows.push(SEQUENCE_ORDER.slice(start, start + len));
+  const seen = new Set<string>();
+
+  for (const axis of SEQUENCE_AXES) {
+    for (let start = 0; start + len <= axis.length; start++) {
+      const window = axis.slice(start, start + len);
+      // 2本の軸は大半の窓を共有するので、重複は捨てる
+      const key = window.join(",");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      windows.push(window);
+    }
   }
   return windows;
 }

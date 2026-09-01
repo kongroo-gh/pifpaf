@@ -35,7 +35,7 @@ export function RuleBook({ onClose }: RuleBookProps) {
               <li>ジョーカー抜き52枚を<Em>2組</Em>（計104枚）。同じ札が2枚ずつある</li>
               <li>4人。各自に9枚配り、残りが山札</li>
               <li>
-                並びは 2 3 4 … K A。<Em>2 が一番下、A が一番上</Em>
+                数字の並びは 2 3 4 … K。<Em>A は一番上にも一番下にも使える</Em>
               </li>
             </ul>
           </Section>
@@ -93,7 +93,12 @@ export function RuleBook({ onClose }: RuleBookProps) {
             <ul>
               <li>同じ記号で数字が続く3枚以上</li>
               <li>
-                <Em>A をまたぐ並びは作れない。</Em>Q-K-A は良いが、K-A-2 や A-2-3 は役にならない
+                A は両端で使える。<span className="ok">A-2-3</span> も{" "}
+                <span className="ok">Q-K-A</span> も並び
+              </li>
+              <li>
+                ただし<Em>A をまたぐことはできない。</Em>
+                <span className="ng">K-A-2</span> は役にならない
               </li>
             </ul>
 

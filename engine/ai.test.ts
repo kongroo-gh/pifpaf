@@ -70,9 +70,15 @@ describe("cardAffinity", () => {
     expect(cardAffinity(c("k", "S", "K"), hand, wild)).toBeGreaterThan(0);
   });
 
-  it("A と 2 は隣ではない（折り返さないため）", () => {
+  it("A と 2 も隣どうし（A-2-3 が作れるため）", () => {
     const hand = [c("a", "S", "A"), c("two", "S", "2")];
-    expect(cardAffinity(c("a", "S", "A"), hand, wild)).toBe(0);
+    expect(cardAffinity(c("a", "S", "A"), hand, wild)).toBeGreaterThan(0);
+  });
+
+  // A をまたげないので、A 経由で 2 と K が近いことにはならない。
+  it("2 と K は隣ではない", () => {
+    const hand = [c("two", "S", "2"), c("k", "S", "K")];
+    expect(cardAffinity(c("two", "S", "2"), hand, wild)).toBe(0);
   });
 });
 

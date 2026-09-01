@@ -3,7 +3,16 @@
 // 個別ファイルへの直接importはしない。実装の置き場所を後から変えられるようにするため。
 
 export type { Card, Suit, Rank, Wild } from "./types";
-export { RANK_ORDER, SEQUENCE_ORDER, rankIndex, sequenceIndex, nextRank, isWildCard } from "./types";
+export {
+  RANK_ORDER,
+  SEQUENCE_ORDER,
+  SEQUENCE_AXES,
+  rankIndex,
+  sequenceIndex,
+  sequenceDistance,
+  nextRank,
+  isWildCard,
+} from "./types";
 
 export type { DealResult } from "./deck";
 export { createDoubleDeck, shuffle, dealGame } from "./deck";

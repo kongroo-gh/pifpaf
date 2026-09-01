@@ -37,20 +37,50 @@ export const RANK_ORDER: Rank[] = [
 ];
 
 /**
- * シーケンス（階段）で使うランクの並び。
- * **2 が一番下、A が一番上。折り返さない。**
+ * シーケンス（階段）で使うランクの並び。**軸が2本ある。**
  *
- * RANK_ORDER とは別物である点に注意。あちらは A 始まりの循環で、
- * ヴィラの「次のランク」を決めるためだけに使う（K の次は A、A の次は 2）。
- * 階段の判定にこちらを使うと A-2-3 や K-A-2 が通ってしまう。
+ * A は一番上にも一番下にも使えるが、**A をまたぐことはできない**。
+ * つまり Q-K-A も A-2-3 も成立するが、**K-A-2 は成立しない**。
+ *
+ * 1本の循環軸で判定すると、またぎ（K-A-2）まで通ってしまう。
+ * かといって A を上だけに固定すると A-2-3 が落ちる。
+ * そこで「折り返さない軸」を2本用意し、どちらかに収まるかで見る。
+ *
+ * RANK_ORDER とは別物である点に注意。あちらは循環で、
+ * ヴィラの「次のランク」を決めるためだけに使う。
  */
-export const SEQUENCE_ORDER: Rank[] = [
-  "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A",
+export const SEQUENCE_AXES: Rank[][] = [
+  // A を一番上として使う軸（…, Q, K, A）
+  ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"],
+  // A を一番下として使う軸（A, 2, 3, …）
+  ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"],
 ];
+
+/**
+ * 手札の表示・整列に使う並び。A を上とみなす側の軸。
+ *
+ * 判定用ではなく見た目用。A は両端で使えるので1列には並べきれず、
+ * どちらかに決め打つしかない（並べ替えは手で自由にできる）。
+ */
+export const SEQUENCE_ORDER: Rank[] = SEQUENCE_AXES[0]!;
 
 /** SEQUENCE_ORDER 上の位置。2 が 0、A が 12。 */
 export function sequenceIndex(rank: Rank): number {
   return SEQUENCE_ORDER.indexOf(rank);
+}
+
+/**
+ * 階段の並びで見た2つのランクの距離。近いほうの軸で測る。
+ *
+ * A は両端で使えるので、A と 2 も K と A も隣どうし（距離1）。
+ * ただし折り返しは無いので、2 と K は隣にならない（距離11）。
+ */
+export function sequenceDistance(a: Rank, b: Rank): number {
+  let best = Number.POSITIVE_INFINITY;
+  for (const axis of SEQUENCE_AXES) {
+    best = Math.min(best, Math.abs(axis.indexOf(a) - axis.indexOf(b)));
+  }
+  return best;
 }
 
 export function rankIndex(rank: Rank): number {
