@@ -1,9 +1,9 @@
 // Pif Paf ルールエンジン - ターンの状態遷移（reducerスタイル）
 // deck.ts / melds.ts と同じ方針で、副作用なし・DOM/React/通信に非依存の純粋関数のみで構成する。
 
-import type { Card, Wild } from "./types";
-import type { DealResult } from "./deck";
-import { classifyAsMelds } from "./melds";
+import type { Card, Wild } from "./types.ts";
+import type { DealResult } from "./deck.ts";
+import { classifyAsMelds } from "./melds.ts";
 
 export type Phase =
   /**

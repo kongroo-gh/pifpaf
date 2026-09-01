@@ -4,8 +4,8 @@
 // **CPU の間合い（setTimeout）もここが持つ。** Room に置くと決定性が壊れるので、
 // 「人に見せるための間」は通信側の関心事として外に出してある。
 
-import { Room } from "./room";
-import type { WsConnection } from "./ws";
+import { Room } from "./room.ts";
+import type { WsConnection } from "./ws.ts";
 import { PROTOCOL_VERSION, parseClientMessage } from "@pifpaf/protocol";
 import type { ClientMessage, ServerMessage } from "@pifpaf/protocol";
 

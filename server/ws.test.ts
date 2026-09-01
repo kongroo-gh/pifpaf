@@ -5,7 +5,7 @@
 // 一度つながらなくしたので、その再発を止める。
 
 import { describe, it, expect } from "vitest";
-import { computeAccept, encodeFrame, decodeFrame } from "./ws";
+import { computeAccept, encodeFrame, decodeFrame } from "./ws.ts";
 
 describe("ハンドシェイク", () => {
   // RFC 6455 が載せている唯一の具体例。これが合えば合言葉も手順も合っている

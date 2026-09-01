@@ -2,8 +2,8 @@
 // トリンカ（組札）とシーケンス（階段）の判定を、ヴィラによるワイルドカードを
 // 考慮した上で行う。UIやゲーム進行から独立した純粋関数群。
 
-import type { Card, Rank, Suit, Wild } from "./types";
-import { SEQUENCE_AXES, isWildCard } from "./types";
+import type { Card, Rank, Suit, Wild } from "./types.ts";
+import { SEQUENCE_AXES, isWildCard } from "./types.ts";
 
 export type MeldType = "TRINCA" | "SEQUENCE";
 

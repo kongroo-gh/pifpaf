@@ -1,7 +1,7 @@
 // Pif Paf ルールエンジン - デッキ生成 / シャッフル / 配札
 
-import type { Card, Suit, Wild } from "./types";
-import { RANK_ORDER, nextRank } from "./types";
+import type { Card, Suit, Wild } from "./types.ts";
+import { RANK_ORDER, nextRank } from "./types.ts";
 
 const SUITS: Suit[] = ["S", "H", "D", "C"];
 const CARDS_PER_PLAYER = 9;

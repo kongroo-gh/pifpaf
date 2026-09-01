@@ -26,6 +26,31 @@ export const pt: Strings = {
       "corre sempre no mesmo ritmo.",
   },
 
+  online: {
+    enter: "Jogar com outros",
+    title: "Entrar numa mesa",
+    nameLabel: "Nome",
+    namePlaceholder: "Ninguém",
+    roomLabel: "Senha",
+    roomPlaceholder: "Mesma senha, mesma mesa",
+    roomHint: "Quem digitar a mesma senha senta na mesma mesa. Os lugares vazios ficam com a CPU.",
+    join: "Sentar",
+    leave: "Sair da mesa",
+    connecting: "Conectando…",
+    reconnecting: "Caiu. Reconectando…",
+    failed: "Não dá para conectar",
+    waiting: "Esperando jogadores",
+    waitingHint: "Passe a senha para alguém, ou comece com a CPU.",
+    startWithBots: "Completar com a CPU e começar",
+    emptySeat: "vazio",
+    botSeat: "CPU",
+    offline: "desconectado",
+    theirTurn: (name) => `Vez de ${name}…`,
+    spectating: "Só assistindo (sem lugar)",
+    waitingForNext: "Esperando os outros…",
+    backToSolo: "Jogar sozinho",
+  },
+
   intro: {
     body1: "Quatro cadeiras nos fundos. O cinzeiro está cheio e ninguém abre a janela.",
     body2:

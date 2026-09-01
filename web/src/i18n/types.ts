@@ -37,6 +37,41 @@ export interface Strings {
     speedNote: string;
   };
 
+  /** オンライン対戦。単機版と違い、待ち・切断・再接続の言葉が要る */
+  online: {
+    /** イントロの ONLINE ボタンの下 */
+    enter: string;
+    title: string;
+    nameLabel: string;
+    namePlaceholder: string;
+    roomLabel: string;
+    roomPlaceholder: string;
+    roomHint: string;
+    /** ENTRAR の下 */
+    join: string;
+    /** SAIR の下 */
+    leave: string;
+    connecting: string;
+    reconnecting: string;
+    failed: string;
+    /** 卓で人を待っているとき */
+    waiting: string;
+    waitingHint: string;
+    /** COMEÇAR の下。空席を CPU で埋めて始める */
+    startWithBots: string;
+    emptySeat: string;
+    botSeat: string;
+    offline: string;
+    /** 相手の番を待っているとき */
+    theirTurn: (name: string) => string;
+    /** 自分が観戦（席が無い）とき */
+    spectating: string;
+    /** 結果画面で、まだ押していない人がいるとき */
+    waitingForNext: string;
+    /** 単機版へ戻る */
+    backToSolo: string;
+  };
+
   intro: {
     body1: string;
     body2: string;

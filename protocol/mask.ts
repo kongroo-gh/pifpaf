@@ -6,7 +6,7 @@
 
 import type { GameState, MatchState, Card } from "@pifpaf/engine";
 import { currentActor } from "@pifpaf/engine";
-import type { PlayerView, PublicGameState, SeatView } from "./view";
+import type { PlayerView, PublicGameState, SeatView } from "./view.ts";
 
 /**
  * `seat` の視点にマスクする。

@@ -2,9 +2,9 @@
 //   node --experimental-strip-types engine/sanity-check.ts
 // 本番の検証は Vitest（npm test）が担当する。こちらは目視用。
 
-import type { Card, Suit, Rank, Wild } from "./types";
-import { dealGame } from "./deck";
-import { isValidTrinca, isValidSequence, classifyAsMelds } from "./melds";
+import type { Card, Suit, Rank, Wild } from "./types.ts";
+import { dealGame } from "./deck.ts";
+import { isValidTrinca, isValidSequence, classifyAsMelds } from "./melds.ts";
 
 function c(id: string, suit: Suit, rank: Rank): Card {
   return { id, suit, rank };

@@ -7,7 +7,7 @@
 import { describe, it, expect } from "vitest";
 import { dealGame, createInitialState, createMatch, applyAction } from "@pifpaf/engine";
 import type { GameState } from "@pifpaf/engine";
-import { maskFor, maskForSpectator } from "./mask";
+import { maskFor, maskForSpectator } from "./mask.ts";
 
 /** 決まった並びのデッキを作るための、種を固定した乱数。 */
 function rng(seed: number): () => number {

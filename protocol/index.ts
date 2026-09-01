@@ -4,8 +4,8 @@
 // engine と同じく、この package は通信手段（WebSocket か何か）を知らない。
 // 実際の送受信は server/ と web/net/ が持つ。
 
-export type { SeatView, PublicGameState, PlayerView } from "./view";
-export { maskFor, maskForSpectator } from "./mask";
+export type { SeatView, PublicGameState, PlayerView } from "./view.ts";
+export { maskFor, maskForSpectator } from "./mask.ts";
 
 export type {
   RoomPhase,
@@ -13,5 +13,5 @@ export type {
   RoomInfo,
   ClientMessage,
   ServerMessage,
-} from "./messages";
-export { PROTOCOL_VERSION, parseClientMessage, sanitizeName } from "./messages";
+} from "./messages.ts";
+export { PROTOCOL_VERSION, parseClientMessage, sanitizeName } from "./messages.ts";

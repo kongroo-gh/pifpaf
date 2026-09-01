@@ -10,8 +10,8 @@
 // **既定で localhost にしか出さない。** 外に出すかどうかは運用の判断で、
 // 迷ったら閉じているほうが安全なため。公開するときは HOST=0.0.0.0 を明示する。
 
-import { createWsServer } from "./ws";
-import { Hub } from "./hub";
+import { createWsServer } from "./ws.ts";
+import { Hub } from "./hub.ts";
 
 const PORT = Number(process.env["PORT"] ?? 8787);
 const HOST = process.env["HOST"] ?? "127.0.0.1";

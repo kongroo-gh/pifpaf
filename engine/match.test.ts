@@ -11,8 +11,8 @@ import {
   LOSS_PLAY,
   LOSS_FOLD,
   LOSS_COM10,
-} from "./match";
-import type { RoundResult } from "./match";
+} from "./match.ts";
+import type { RoundResult } from "./match.ts";
 
 const round = (over: Partial<RoundResult> = {}): RoundResult => ({
   winner: 0,

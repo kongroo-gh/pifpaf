@@ -18,6 +18,7 @@ import { RuleBook } from "./components/RuleBook";
 import { useT, personaName, Rich, Kicker, Gloss } from "./i18n";
 import { SettingsButton, SettingsPanel, SettingsControls } from "./components/Settings";
 import { CardBurst } from "./components/CardBurst";
+import { OnlineTable } from "./net/OnlineTable";
 
 const WAGERS = [100, 250, 500];
 
@@ -44,6 +45,29 @@ function markRulesSeen(): void {
     window.localStorage.setItem(RULES_SEEN_KEY, "1");
   } catch {
     // 保存できなくても支障はない
+  }
+}
+
+/**
+ * オンラインかどうかは URL に持たせる（`?online=1`）。
+ * 再読み込みや共有で同じ場所に戻れるようにするため、React state には置かない。
+ */
+function onlineFromUrl(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).has("online");
+  } catch {
+    return false;
+  }
+}
+
+function setOnlineInUrl(on: boolean): void {
+  try {
+    const url = new URL(window.location.href);
+    if (on) url.searchParams.set("online", "1");
+    else url.searchParams.delete("online");
+    window.history.replaceState(null, "", url.toString());
+  } catch {
+    // 触れない環境でも、画面の切り替えだけはできる
   }
 }
 
@@ -100,6 +124,9 @@ export default function App() {
 
   const { ordered: orderedHand, reorder, sort } = useHandOrder(humanHand, gameId);
 
+  // オンライン対戦は単機版と同居させる。繋がらないときに遊べなくなるのを避けるため
+  const [online, setOnline] = useState(onlineFromUrl);
+
   // 対局中の設定は隅の歯車から開く（盤面に常時出す余地がない）
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -122,6 +149,21 @@ export default function App() {
   const showingResult = screen === "ROUND_RESULT" || screen === "MATCH_OVER";
   const execution = useExecution(settlement?.eliminated ?? [], showingResult);
 
+  if (online) {
+    return (
+      <>
+        <OnlineTable
+          onExit={() => {
+            setOnline(false);
+            setOnlineInUrl(false);
+          }}
+          onRules={openRules}
+        />
+        {rulesOpen && <RuleBook onClose={closeRules} />}
+      </>
+    );
+  }
+
   if (screen === "INTRO") {
     return (
       <>
@@ -131,6 +173,10 @@ export default function App() {
           onRules={openRules}
           speed={speed}
           onSpeed={setSpeed}
+          onOnline={() => {
+            setOnline(true);
+            setOnlineInUrl(true);
+          }}
         />
         {rulesOpen && <RuleBook onClose={closeRules} />}
       </>
@@ -894,12 +940,14 @@ function Intro({
   onRules,
   speed,
   onSpeed,
+  onOnline,
 }: {
   onStart: () => void;
   bankroll: number;
   onRules: () => void;
   speed: Speed;
   onSpeed: (s: Speed) => void;
+  onOnline: () => void;
 }) {
   const t = useT();
   return (
@@ -922,6 +970,11 @@ function Intro({
           </button>
           <button className="btn btn--rules" onClick={onRules}>
             AS REGRAS<Gloss flavor="AS REGRAS" text={t.intro.rules} />
+          </button>
+        </div>
+        <div className="intro__actions">
+          <button className="btn btn--rules" onClick={onOnline}>
+            ONLINE<Gloss flavor="ONLINE" text={t.online.enter} />
           </button>
         </div>
         {/* 卓に着く前に決めてもらう。対局中は隅の歯車から変えられる */}

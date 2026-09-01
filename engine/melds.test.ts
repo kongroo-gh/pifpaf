@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import type { Card, Rank, Wild } from "./types";
-import { isValidTrinca, isValidSequence, classifyAsMelds } from "./melds";
+import type { Card, Rank, Wild } from "./types.ts";
+import { isValidTrinca, isValidSequence, classifyAsMelds } from "./melds.ts";
 
 const c = (id: string, suit: Card["suit"], rank: Rank): Card => ({ id, suit, rank });
 const wild: Wild = { rank: "8", suit: "S" }; // ヴィラが 7♠ のとき。8♠ だけがワイルド

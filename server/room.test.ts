@@ -9,7 +9,7 @@
 // 時計を差し込む必要がない。
 
 import { describe, it, expect } from "vitest";
-import { Room, SEAT_COUNT } from "./room";
+import { Room, SEAT_COUNT } from "./room.ts";
 
 function rng(seed: number): () => number {
   let a = seed;

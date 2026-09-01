@@ -7,8 +7,8 @@
 
 import { describe, it, expect, afterEach } from "vitest";
 import type { Server } from "node:http";
-import { createWsServer } from "./ws";
-import { Hub } from "./hub";
+import { createWsServer } from "./ws.ts";
+import { Hub } from "./hub.ts";
 import { PROTOCOL_VERSION } from "@pifpaf/protocol";
 import type { ServerMessage } from "@pifpaf/protocol";
 

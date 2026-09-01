@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import type { Card, Rank, Wild } from "./types";
-import { createInitialState, applyAction, currentActor, GameState } from "./gameEngine";
+import type { Card, Rank, Wild } from "./types.ts";
+import { createInitialState, applyAction, currentActor, GameState } from "./gameEngine.ts";
 
 const c = (id: string, suit: Card["suit"], rank: Rank): Card => ({ id, suit, rank });
 const wild: Wild = { rank: "8", suit: "S" }; // ヴィラが 7♠ のとき。8♠ だけがワイルド

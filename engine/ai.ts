@@ -4,10 +4,10 @@
 // 方針は「役になりそうな札を残し、最も孤立した札を捨てる」だけの素朴なもの。
 // 強さの調整（相手の捨て札を読む、ワイルドの温存判断など）は後のフェーズで行う。
 
-import type { Card, Rank, Wild } from "./types";
-import { sequenceDistance, isWildCard } from "./types";
-import { classifyAsMelds } from "./melds";
-import type { GameState, GameAction } from "./gameEngine";
+import type { Card, Rank, Wild } from "./types.ts";
+import { sequenceDistance, isWildCard } from "./types.ts";
+import { classifyAsMelds } from "./melds.ts";
+import type { GameState, GameAction } from "./gameEngine.ts";
 
 /**
  * 階段の並びでの距離。types.ts の判定と同じ軸で測る。

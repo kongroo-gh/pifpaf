@@ -2,7 +2,7 @@
 // web/（将来はserver/）はこのバレル経由でのみengineを参照し、
 // 個別ファイルへの直接importはしない。実装の置き場所を後から変えられるようにするため。
 
-export type { Card, Suit, Rank, Wild } from "./types";
+export type { Card, Suit, Rank, Wild } from "./types.ts";
 export {
   RANK_ORDER,
   SEQUENCE_ORDER,
@@ -12,16 +12,16 @@ export {
   sequenceDistance,
   nextRank,
   isWildCard,
-} from "./types";
+} from "./types.ts";
 
-export type { DealResult } from "./deck";
-export { createDoubleDeck, shuffle, dealGame } from "./deck";
+export type { DealResult } from "./deck.ts";
+export { createDoubleDeck, shuffle, dealGame } from "./deck.ts";
 
-export type { Meld, MeldType } from "./melds";
-export { isValidTrinca, isValidSequence, classifyAsMelds } from "./melds";
+export type { Meld, MeldType } from "./melds.ts";
+export { isValidTrinca, isValidSequence, classifyAsMelds } from "./melds.ts";
 
-export type { GameState, GameAction, GameActionResult, Phase, DrawSource } from "./gameEngine";
-export { createInitialState, applyAction, currentActor, findInterceptors } from "./gameEngine";
+export type { GameState, GameAction, GameActionResult, Phase, DrawSource } from "./gameEngine.ts";
+export { createInitialState, applyAction, currentActor, findInterceptors } from "./gameEngine.ts";
 
 export {
   cardAffinity,
@@ -32,9 +32,9 @@ export {
   shouldFold,
   findBaterAction,
   decideAction,
-} from "./ai";
+} from "./ai.ts";
 
-export type { MatchState, RoundResult, RoundSettlement } from "./match";
+export type { MatchState, RoundResult, RoundSettlement } from "./match.ts";
 export {
   createMatch,
   settleRound,
@@ -48,4 +48,4 @@ export {
   LOSS_PLAY,
   LOSS_FOLD,
   LOSS_COM10,
-} from "./match";
+} from "./match.ts";

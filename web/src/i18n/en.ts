@@ -17,6 +17,31 @@ export const en: Strings = {
     speedNote: "About two seconds a turn on Normal. The deal always plays at the same pace.",
   },
 
+  online: {
+    enter: "Play with others",
+    title: "Join a table",
+    nameLabel: "Name",
+    namePlaceholder: "Nobody",
+    roomLabel: "Passphrase",
+    roomPlaceholder: "Same words, same table",
+    roomHint: "Anyone who types the same passphrase sits at the same table. Empty seats are filled by CPUs.",
+    join: "Sit down",
+    leave: "Leave the table",
+    connecting: "Connecting…",
+    reconnecting: "Dropped. Reconnecting…",
+    failed: "Cannot connect",
+    waiting: "Waiting for players",
+    waitingHint: "Give the passphrase to someone, or start with CPUs.",
+    startWithBots: "Fill the empty seats with CPUs",
+    emptySeat: "empty",
+    botSeat: "CPU",
+    offline: "disconnected",
+    theirTurn: (name) => `${name} is up…`,
+    spectating: "Watching only (no seat)",
+    waitingForNext: "Waiting for the others…",
+    backToSolo: "Play alone",
+  },
+
   intro: {
     body1: "Four chairs in the back room. The ashtray is full and nobody opens a window.",
     body2:

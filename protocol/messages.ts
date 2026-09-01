@@ -9,7 +9,7 @@
 //   （相手が本当にこの型を送ってくる保証はない）。
 
 import type { GameAction } from "@pifpaf/engine";
-import type { PlayerView } from "./view";
+import type { PlayerView } from "./view.ts";
 
 /** 通信仕様の版。合わないクライアントは弾く。 */
 export const PROTOCOL_VERSION = 1;

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import type { Card, Rank, Wild } from "./types";
-import { GameState, createInitialState, applyAction } from "./gameEngine";
-import { dealGame } from "./deck";
+import type { Card, Rank, Wild } from "./types.ts";
+import { GameState, createInitialState, applyAction } from "./gameEngine.ts";
+import { dealGame } from "./deck.ts";
 import {
   cardAffinity,
   chooseDiscard,
@@ -10,7 +10,7 @@ import {
   shouldFold,
   findBaterAction,
   decideAction,
-} from "./ai";
+} from "./ai.ts";
 
 /** 再現性のある擬似乱数（mulberry32）。シードを変えて多数の局を回すために使う。 */
 function seededRng(seed: number): () => number {
