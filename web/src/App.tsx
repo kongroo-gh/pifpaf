@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Card, Wild } from "@pifpaf/engine";
 import { LOSS_PLAY, LOSS_FOLD, LOSS_COM10, classifyAsMelds } from "@pifpaf/engine";
 import { useGame, HUMAN, LOAN_AMOUNT } from "./game/useGame";
@@ -12,8 +13,28 @@ import { MoneyRain } from "./components/MoneyRain";
 import { ChipStack } from "./components/ChipStack";
 import { CardFlight } from "./components/CardFlight";
 import { DealingScene } from "./components/DealingScene";
+import { RuleBook } from "./components/RuleBook";
 
 const WAGERS = [100, 250, 500];
+
+/** 初回だけルールブックを開く。2回目以降は自分で開いてもらう。 */
+const RULES_SEEN_KEY = "pifpaf.rulesSeen";
+
+function rulesSeen(): boolean {
+  try {
+    return window.localStorage.getItem(RULES_SEEN_KEY) === "1";
+  } catch {
+    return true; // 保存できない環境では毎回開かない
+  }
+}
+
+function markRulesSeen(): void {
+  try {
+    window.localStorage.setItem(RULES_SEEN_KEY, "1");
+  } catch {
+    // 保存できなくても支障はない
+  }
+}
 
 export default function App() {
   const game = useGame();
@@ -68,13 +89,33 @@ export default function App() {
 
   const { ordered: orderedHand, reorder, sort } = useHandOrder(humanHand, gameId);
 
+  // 初回は自動で開く。以降はボタンから
+  const [rulesOpen, setRulesOpen] = useState(() => !rulesSeen());
+  const closeRules = () => {
+    markRulesSeen();
+    setRulesOpen(false);
+  };
+  const openRules = () => setRulesOpen(true);
+
   // 撃たれるのは破産した席だけ。結果表示のあいだに演出する。
   const showingResult = screen === "ROUND_RESULT" || screen === "MATCH_OVER";
   const execution = useExecution(settlement?.eliminated ?? [], showingResult);
 
-  if (screen === "INTRO") return <Intro onStart={sitDown} bankroll={bankroll} />;
+  if (screen === "INTRO") {
+    return (
+      <>
+        <Intro onStart={sitDown} bankroll={bankroll} onRules={openRules} />
+        {rulesOpen && <RuleBook onClose={closeRules} />}
+      </>
+    );
+  }
   if (screen === "BETTING") {
-    return <Betting bankroll={bankroll} onBet={startMatch} onLoan={takeLoan} />;
+    return (
+      <>
+        <Betting bankroll={bankroll} onBet={startMatch} onLoan={takeLoan} onRules={openRules} />
+        {rulesOpen && <RuleBook onClose={closeRules} />}
+      </>
+    );
   }
 
   const humanChips = match.chips[HUMAN] ?? 0;
@@ -95,6 +136,11 @@ export default function App() {
               <strong>{wager}</strong>
             </p>
           </div>
+          <button type="button" className="rulesButton" onClick={openRules}>
+            <span className="rulesButton__mark">?</span>
+            <span className="rulesButton__label">ルール</span>
+          </button>
+
           <button
             type="button"
             className="speedToggle"
@@ -316,6 +362,8 @@ export default function App() {
 
       {/* 破産した席が撃たれる瞬間の閃光。精算パネルと重ねると文字が読めなくなるので、
           MATCH_OVER に進む前のラウンド結果中に見せきる。 */}
+      {rulesOpen && <RuleBook onClose={closeRules} />}
+
       {screen === "DEALING" && (
         <DealingScene
           vira={state.vira}
@@ -639,10 +687,12 @@ function Betting({
   bankroll,
   onBet,
   onLoan,
+  onRules,
 }: {
   bankroll: number;
   onBet: (n: number) => void;
   onLoan: () => void;
+  onRules: () => void;
 }) {
   const broke = bankroll <= 0;
 
@@ -683,6 +733,9 @@ function Betting({
                 ALL IN<small>{bankroll}</small>
               </button>
             </div>
+            <button className="btn btn--rules betting__rules" onClick={onRules}>
+              AS REGRAS<small>ルールを読む</small>
+            </button>
           </>
         )}
       </div>
@@ -771,7 +824,15 @@ function KeepBar({
   );
 }
 
-function Intro({ onStart, bankroll }: { onStart: () => void; bankroll: number }) {
+function Intro({
+  onStart,
+  bankroll,
+  onRules,
+}: {
+  onStart: () => void;
+  bankroll: number;
+  onRules: () => void;
+}) {
   return (
     <div className="intro">
       <div className="grain" aria-hidden="true" />
@@ -786,9 +847,14 @@ function Intro({ onStart, bankroll }: { onStart: () => void; bankroll: number })
           全員が7枚のチップを積む。負けるたびに減り、尽きた者から店を出られなくなる。
         </p>
         <p className="intro__warn">最後の一人になるまで、誰も帰れない。</p>
-        <button className="btn btn--start" onClick={onStart}>
-          SENTAR À MESA<small>席に着く（所持金 {bankroll}）</small>
-        </button>
+        <div className="intro__actions">
+          <button className="btn btn--start" onClick={onStart}>
+            SENTAR À MESA<small>席に着く（所持金 {bankroll}）</small>
+          </button>
+          <button className="btn btn--rules" onClick={onRules}>
+            AS REGRAS<small>ルールを読む</small>
+          </button>
+        </div>
         <p className="intro__foot">※ 演出です。実際に撃たれることはありません。</p>
       </div>
     </div>

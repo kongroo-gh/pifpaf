@@ -243,6 +243,230 @@ button {
   padding: 3px 7px;
 }
 
+/* ---------- ルールブック ---------- */
+.rulebook {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(4, 3, 3, 0.9);
+  animation: fadeIn 220ms ease both;
+}
+
+/* 卓に置かれた冊子のように、生成りの紙の上に組む */
+.rulebook__sheet {
+  width: min(680px, 100%);
+  max-height: 90vh;
+  max-height: 90dvh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(200, 162, 74, 0.5);
+  outline: 1px solid rgba(200, 162, 74, 0.16);
+  outline-offset: 6px;
+  background: linear-gradient(180deg, #1d1714, #0b0a09);
+  box-shadow: 0 40px 110px rgba(0, 0, 0, 0.9);
+  animation: verdictIn 300ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+.rulebook__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid rgba(200, 162, 74, 0.28);
+}
+
+.rulebook__kicker {
+  font-family: var(--display);
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  margin: 0 0 5px;
+}
+
+.rulebook__title {
+  font-family: var(--display);
+  font-size: 22px;
+  letter-spacing: 0.08em;
+  margin: 0;
+  color: var(--cream);
+}
+
+.rulebook__close {
+  flex-shrink: 0;
+  font-family: var(--body);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  padding: 5px 12px;
+  color: var(--smoke);
+  background: none;
+  border: 1px solid rgba(143, 136, 124, 0.35);
+  cursor: pointer;
+}
+
+.rulebook__close:hover { color: var(--gold-bright); border-color: rgba(200, 162, 74, 0.5); }
+
+.rulebook__body {
+  overflow-y: auto;
+  padding: 4px 22px 18px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.rulebook__section {
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(143, 136, 124, 0.14);
+}
+
+.rulebook__section:last-child { border-bottom: none; }
+
+.rulebook__section h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--display);
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  color: var(--gold-bright);
+  margin: 0 0 10px;
+}
+
+/* 節番号。冊子らしく囲みで置く */
+.rulebook__num {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  color: var(--gold);
+  border: 1px solid rgba(200, 162, 74, 0.45);
+}
+
+.rulebook__section h4 {
+  font-family: var(--body);
+  font-size: 13px;
+  color: var(--cream);
+  margin: 14px 0 6px;
+  padding-left: 10px;
+  border-left: 2px solid rgba(200, 162, 74, 0.5);
+}
+
+.rulebook__section p,
+.rulebook__section li {
+  font-size: 13px;
+  line-height: 1.95;
+  color: #c5bdaf;
+  margin: 0 0 8px;
+}
+
+.rulebook__section ul,
+.rulebook__section ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+.rulebook__section li { margin-bottom: 3px; }
+
+.rulebook__em { color: var(--gold-bright); font-weight: 600; }
+
+.rulebook__example {
+  padding: 8px 12px;
+  border-left: 2px solid rgba(200, 162, 74, 0.4);
+  background: rgba(200, 162, 74, 0.06);
+  font-size: 12px !important;
+}
+
+.rulebook__note {
+  font-size: 12px !important;
+  color: var(--smoke) !important;
+}
+
+.rulebook__table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 10px;
+  font-size: 12px;
+}
+
+.rulebook__table th,
+.rulebook__table td {
+  text-align: left;
+  padding: 7px 9px;
+  border-bottom: 1px solid rgba(143, 136, 124, 0.18);
+  vertical-align: top;
+}
+
+.rulebook__table th {
+  font-family: var(--display);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+  border-bottom-color: rgba(200, 162, 74, 0.35);
+}
+
+.rulebook__table td { color: #c5bdaf; line-height: 1.7; }
+.rulebook__table .ok { color: var(--cream); }
+.rulebook__table .ng { color: var(--blood-hot); }
+
+.rulebook__badge {
+  margin-left: 6px;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  padding: 1px 6px;
+  color: var(--blood-hot);
+  border: 1px solid rgba(210, 74, 52, 0.5);
+}
+
+.rulebook__foot {
+  padding: 14px 22px 18px;
+  border-top: 1px solid rgba(200, 162, 74, 0.28);
+  text-align: center;
+}
+
+/* 盤面から開くボタン */
+.rulesButton {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  background: none;
+  border: 1px solid rgba(143, 136, 124, 0.3);
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease;
+}
+
+.rulesButton:hover { border-color: rgba(200, 162, 74, 0.5); }
+
+.rulesButton__mark {
+  font-family: var(--display);
+  font-size: 14px;
+  color: var(--gold);
+}
+
+.rulesButton__label {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--smoke);
+}
+
+.intro__actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn--rules {
+  border-color: rgba(143, 136, 124, 0.4);
+  color: var(--smoke);
+}
+
+.btn--rules:hover { color: var(--gold-bright); }
+.betting__rules { margin-top: 16px; }
+
 /* ---------- 配札の演出 ---------- */
 .dealing {
   position: fixed;
@@ -1686,6 +1910,18 @@ button {
   .reveal__meld .card--sm { width: 32px; height: 46px; }
   .reveal__meld .card--sm .card__center { font-size: 12px; }
   .reveal__meld .card--sm .card__corner { font-size: 7px; }
+
+  .rulebook { padding: 10px; }
+  .rulebook__sheet { max-height: 94dvh; }
+  .rulebook__head { padding: 14px 14px 11px; }
+  .rulebook__title { font-size: 17px; }
+  .rulebook__body { padding: 2px 14px 14px; }
+  .rulebook__section h3 { font-size: 14px; }
+  .rulebook__section p, .rulebook__section li { font-size: 12px; line-height: 1.85; }
+  .rulebook__table { font-size: 11px; }
+  .rulebook__table th, .rulebook__table td { padding: 6px 6px; }
+  .rulesButton__label { display: none; }
+  .rulesButton { padding: 4px 9px; }
 
   .verdict__panel { padding: 30px 22px 26px; }
   .verdict h2 { font-size: 30px; }
