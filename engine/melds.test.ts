@@ -98,3 +98,60 @@ describe("classifyAsMelds", () => {
     expect(classifyAsMelds(hand, wild)).toBeNull();
   });
 });
+
+// 4枚組は「記号の重複が必要」（ユーザー指定）。3枚組は従来どおり全て異なる記号。
+describe("トリンカの枚数別ルール", () => {
+  it("3枚組は記号が全て異なれば成立する", () => {
+    expect(isValidTrinca([c("a", "S", "7"), c("b", "H", "7"), c("d", "D", "7")], wild)).toBe(true);
+  });
+
+  it("3枚組で記号が重複すると不成立", () => {
+    expect(isValidTrinca([c("a", "S", "7"), c("b", "S", "7"), c("d", "D", "7")], wild)).toBe(false);
+  });
+
+  it("4枚組は記号が重複していれば成立する（♠♣♥♥）", () => {
+    expect(
+      isValidTrinca(
+        [c("a", "S", "7"), c("b", "C", "7"), c("d", "H", "7"), c("e", "H", "7")],
+        wild
+      )
+    ).toBe(true);
+  });
+
+  it("4枚すべて違う記号は4枚組として認めない（♠♥♦♣）", () => {
+    expect(
+      isValidTrinca(
+        [c("a", "S", "7"), c("b", "H", "7"), c("d", "D", "7"), c("e", "C", "7")],
+        wild
+      )
+    ).toBe(false);
+  });
+
+  it("4枚組にワイルドが混じっていれば、それが重複ぶんを担える", () => {
+    // 7♠7♥7♦ + 8♠(ワイルド) → ワイルドが重複する記号の代役になる
+    expect(
+      isValidTrinca(
+        [c("a", "S", "7"), c("b", "H", "7"), c("d", "D", "7"), c("w", "S", "8")],
+        wild
+      )
+    ).toBe(true);
+  });
+
+  it("同じ記号が3枚以上は不成立（2組デッキに2枚しかない）", () => {
+    expect(
+      isValidTrinca(
+        [c("a", "S", "7"), c("b", "S", "7"), c("d", "S", "7"), c("e", "H", "7")],
+        wild
+      )
+    ).toBe(false);
+  });
+
+  it("5枚以上は不成立", () => {
+    expect(
+      isValidTrinca(
+        [c("a", "S", "7"), c("b", "H", "7"), c("d", "D", "7"), c("e", "C", "7"), c("f", "H", "7")],
+        wild
+      )
+    ).toBe(false);
+  });
+});

@@ -2,7 +2,7 @@
 // トリンカ（組札）とシーケンス（階段）の判定を、ヴィラによるワイルドカードを
 // 考慮した上で行う。UIやゲーム進行から独立した純粋関数群。
 
-import type { Card, Rank, Wild } from "./types";
+import type { Card, Rank, Suit, Wild } from "./types";
 import { RANK_ORDER, isWildCard } from "./types";
 
 export type MeldType = "TRINCA" | "SEQUENCE";
@@ -13,11 +13,18 @@ export interface Meld {
 }
 
 /**
- * トリンカ：同じランク3枚以上、異なるスート（同スート重複不可）。
- * 最大4枚（4スート）まで。ワイルドは任意のスート代わりとして使える。
+ * トリンカ：同じランクの3枚または4枚。
+ *
+ * 枚数で条件が変わる（ユーザー指定）:
+ * - **3枚組** … 記号は全て異なること（7♠7♥7♦）
+ * - **4枚組** … 記号の重複が必要（7♠7♣7♥7♥）。
+ *   7♠7♥7♦7♣ のように4種類すべて違う形は4枚組として認めない。
+ *
+ * 4枚組を作るには同じ札が2枚要るので、2組デッキであることが前提になる。
+ * ワイルドは任意の札の代役なので、混じっていれば重複ぶんを担える。
  */
 export function isValidTrinca(cards: Card[], wild: Wild): boolean {
-  if (cards.length < 3) return false;
+  if (cards.length < 3 || cards.length > 4) return false;
 
   const naturals = cards.filter((c) => !isWildCard(c, wild));
   const wildCount = cards.length - naturals.length;
@@ -25,17 +32,25 @@ export function isValidTrinca(cards: Card[], wild: Wild): boolean {
   // 仮定：全部ワイルドのトリンカは許容する（rules.md参照）。
   // ただしワイルドはヴィラと同スートの1種類＝2組デッキで2枚しかないため、
   // 3枚以上を全てワイルドで揃えることは実際には起こり得ない。
-  if (naturals.length === 0) return cards.length <= 4;
+  if (naturals.length === 0) return true;
 
   const rank = naturals[0]!.rank;
   if (!naturals.every((c) => c.rank === rank)) return false;
 
-  const suits = new Set(naturals.map((c) => c.suit));
-  if (suits.size !== naturals.length) return false; // 同スート重複不可
+  // 同じ札は2組デッキに2枚しかないので、同じ記号は2枚まで
+  const perSuit = new Map<Suit, number>();
+  for (const c of naturals) perSuit.set(c.suit, (perSuit.get(c.suit) ?? 0) + 1);
+  for (const n of perSuit.values()) if (n > 2) return false;
 
-  if (naturals.length + wildCount > 4) return false; // 4スート上限
+  if (cards.length === 3) {
+    // 3枚組は記号が全て異なること
+    return perSuit.size === naturals.length;
+  }
 
-  return true;
+  // ここから4枚組。記号の重複が要る。
+  // ワイルドが混じっていれば、それを重複ぶんに充てられるので成立する。
+  if (wildCount > 0) return true;
+  return perSuit.size < naturals.length;
 }
 
 /**
