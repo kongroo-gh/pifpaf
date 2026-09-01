@@ -17,6 +17,13 @@ import { RuleBook } from "./components/RuleBook";
 
 const WAGERS = [100, 250, 500];
 
+/**
+ * 配札の演出の速さ。CPUの速さ設定とは切り離して、常に「じっくり」で見せる。
+ * 一局に一度きりの見せ場なので、進行を速くしている人にも同じ間合いで見せたい。
+ * （CPUの手番の速さは別途ヘッダーで切り替えられる）
+ */
+const DEAL_SPEED_FACTOR = 1.5;
+
 /** 初回だけルールブックを開く。2回目以降は自分で開いてもらう。 */
 const RULES_SEEN_KEY = "pifpaf.rulesSeen";
 
@@ -58,7 +65,6 @@ export default function App() {
     viraRevealed,
     revealVira,
     finishDealing,
-    speed,
     aliveSeats,
     humanBater,
     speedLabel,
@@ -369,7 +375,7 @@ export default function App() {
           vira={state.vira}
           wild={state.wild}
           dealtSeats={aliveSeats}
-          speedFactor={speed === "FAST" ? 0.55 : speed === "SLOW" ? 1.5 : 1}
+          speedFactor={DEAL_SPEED_FACTOR}
           onRevealVira={revealVira}
           onDone={finishDealing}
         />
