@@ -2,251 +2,248 @@
 //
 // 実装の根拠は rules.md に置いてあり、こちらはその要点を卓上の言葉に直したもの。
 // ルールを変えたときは、rules.md とこの文面の両方を直すこと。
+//
+// 文面は i18n の辞書（t.rules）が持ち、ここにあるのは組み立てだけ。
+// ただし**カードの表記（7♠ や A-2-3）は訳さない**ので、そのまま書いてある。
+// 強調は訳文ごとに位置が動くため、辞書側の `*` を <Em> が開く。
+
+import { useT, useLangControl, Rich } from "../i18n";
 
 export interface RuleBookProps {
   onClose: () => void;
 }
 
 export function RuleBook({ onClose }: RuleBookProps) {
+  const t = useT();
+  const r = t.rules;
+
   return (
-    <div className="rulebook" role="dialog" aria-modal="true" aria-label="ルールブック">
+    <div className="rulebook" role="dialog" aria-modal="true" aria-label={r.title}>
       <div className="rulebook__sheet">
         <header className="rulebook__head">
           <div>
             <p className="rulebook__kicker">REGRAS DA CASA</p>
-            <h2 className="rulebook__title">この卓の決まり</h2>
+            <h2 className="rulebook__title">{r.title}</h2>
           </div>
-          <button type="button" className="rulebook__close" onClick={onClose}>
-            閉じる
-          </button>
+          <div className="rulebook__headActions">
+            {/* 読んでいる最中に言語を変えたくなるので、ここにも置く */}
+            <LanguageButton />
+            <button type="button" className="rulebook__close" onClick={onClose}>
+              {r.close}
+            </button>
+          </div>
         </header>
 
         <div className="rulebook__body">
-          <Section n="1" title="目的">
+          <Section n="1" title={r.s1.title}>
             <p>
-              9枚の手札をすべて<Em>役</Em>にして、最初に「<Em>バテル</Em>」と宣言した者がその
-              ラウンドを取る。取られた者はチップを失い、尽きた者から卓を去る。
-              最後に残った一人が場の金を持って帰る。
+              <Em text={r.s1.body} />
             </p>
           </Section>
 
-          <Section n="2" title="卓と札">
+          <Section n="2" title={r.s2.title}>
             <ul>
-              <li>ジョーカー抜き52枚を<Em>2組</Em>（計104枚）。同じ札が2枚ずつある</li>
-              <li>4人。各自に9枚配り、残りが山札</li>
               <li>
-                数字の並びは 2 3 4 … K。<Em>A は一番上にも一番下にも使える</Em>
+                <Em text={r.s2.deck} />
+              </li>
+              <li>
+                <Em text={r.s2.players} />
+              </li>
+              <li>
+                <Em text={r.s2.ranks} />
               </li>
             </ul>
           </Section>
 
-          <Section n="3" title="ヴィラとコリンガ">
+          <Section n="3" title={r.s3.title}>
             <p>
-              配り終えたら山から1枚を表にする。これが<Em>ヴィラ</Em>。
-              その<Em>次のランク</Em>で、かつ<Em>ヴィラと同じ記号</Em>の札だけがワイルド
-              （＝<Em>コリンガ</Em>）になる。
+              <Em text={r.s3.body} />
             </p>
-            <Example>
-              ヴィラが 7♠ なら、ワイルドは <Em>8♠ だけ</Em>。8♥ 8♦ 8♣ はただの札。
-            </Example>
-            <p className="rulebook__note">
-              2組デッキなので、コリンガは103枚中わずか2枚。引けたら大きい。
+            <p className="rulebook__example">
+              <Em text={r.s3.example} />
             </p>
+            <p className="rulebook__note">{r.s3.note}</p>
           </Section>
 
-          <Section n="4" title="役">
-            <h4>トリンカ（組）— 同じランク</h4>
-            <p>枚数によって、記号の条件が変わる。</p>
+          <Section n="4" title={r.s4.title}>
+            <h4>{r.s4.trincaHead}</h4>
+            <p>{r.s4.trincaLead}</p>
             <table className="rulebook__table">
               <thead>
                 <tr>
-                  <th>枚数</th>
-                  <th>記号</th>
-                  <th>例</th>
+                  <th>{r.s4.colCount}</th>
+                  <th>{r.s4.colSuits}</th>
+                  <th>{r.s4.colExample}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>3枚</td>
-                  <td>すべて違う</td>
+                  <td>{r.s4.cards(3)}</td>
+                  <td>{r.s4.suits0}</td>
+                  {/* カードの表記は言語に依存しないので、訳さずそのまま置く */}
                   <td className="ok">7♠ 7♥ 7♦</td>
                 </tr>
                 <tr>
-                  <td>4枚</td>
-                  <td>1つ重複する</td>
+                  <td>{r.s4.cards(4)}</td>
+                  <td>{r.s4.suits1}</td>
                   <td className="ok">
-                    7♠ 7♣ 7♥ 7♥ <span className="ng">／ 7♠ 7♥ 7♦ 7♣ は不可</span>
+                    7♠ 7♣ 7♥ 7♥ <span className="ng">/ 7♠ 7♥ 7♦ 7♣ {r.s4.notAllowed}</span>
                   </td>
                 </tr>
                 <tr>
-                  <td>5枚</td>
-                  <td>2つ重複する</td>
+                  <td>{r.s4.cards(5)}</td>
+                  <td>{r.s4.suits2}</td>
                   <td className="ok">7♠ 7♠ 7♣ 7♣ 7♥</td>
                 </tr>
               </tbody>
             </table>
-            <p className="rulebook__note">
-              6枚組は無い。同じランクが6枚あるなら、3枚組が2つになる。
-            </p>
+            <p className="rulebook__note">{r.s4.trincaNote}</p>
 
-            <h4>シーケンス（階段）— 同じ記号の連番</h4>
+            <h4>{r.s4.sequenceHead}</h4>
             <ul>
-              <li>同じ記号で数字が続く3枚以上</li>
+              <li>{r.s4.seqBasic}</li>
               <li>
-                A は両端で使える。<span className="ok">A-2-3</span> も{" "}
-                <span className="ok">Q-K-A</span> も並び
+                {r.s4.seqAce} <span className="ok">A-2-3</span> /{" "}
+                <span className="ok">Q-K-A</span>
               </li>
               <li>
-                ただし<Em>A をまたぐことはできない。</Em>
-                <span className="ng">K-A-2</span> は役にならない
+                <Em text={r.s4.seqNoWrap} /> <span className="ng">K-A-2</span>
               </li>
             </ul>
 
-            <p className="rulebook__note">
-              どちらの役でも、足りない札はコリンガで代用できる。
-            </p>
+            <p className="rulebook__note">{r.s4.wildNote}</p>
           </Section>
 
-          <Section n="5" title="手番">
+          <Section n="5" title={r.s5.title}>
             <ol>
               <li>
-                <Em>1枚取る</Em> — 山札の一番上か、捨て札の一番上（＝直前の誰かが捨てた札）
+                <Em text={r.s5.step1} />
               </li>
-              <li>10枚を組み替えて、上がれるか確かめる</li>
+              <li>{r.s5.step2}</li>
               <li>
-                <Em>1枚捨てる</Em> — 捨てた札は次の者から見える
+                <Em text={r.s5.step3} />
               </li>
             </ol>
-            <p className="rulebook__note">
-              捨て札から拾った札は、その手番でそのまま捨て直せない。
-              ただし上がるときに余らせるのは構わない。
-            </p>
+            <p className="rulebook__note">{r.s5.note}</p>
           </Section>
 
-          <Section n="6" title="一番手の特権">
-            <p>各ラウンドの一番手だけ、最初の手番で次のどちらかを選べる。</p>
+          <Section n="6" title={r.s6.title}>
+            <p>{r.s6.lead}</p>
             <ul>
               <li>
-                <Em>ヴィラを買う</Em> — 場のヴィラをそのまま手札に入れる
+                <Em text={r.s6.buyVira} />
               </li>
               <li>
-                <Em>引いてから決める</Em> — 山札から1枚引き、見てから取るか捨てるか決める。
-                捨てれば引き直せるが、<Em>それは一度きり</Em>
+                <Em text={r.s6.drawFirst} />
               </li>
             </ul>
           </Section>
 
-          <Section n="7" title="上がり（バテル）">
+          <Section n="7" title={r.s7.title}>
             <table className="rulebook__table">
               <thead>
                 <tr>
-                  <th>形</th>
-                  <th>内容</th>
+                  <th>{r.s7.colShape}</th>
+                  <th>{r.s7.colDetail}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>9枚</td>
-                  <td>10枚のうち9枚が役。余り1枚を捨てて上がる（3+3+3 か 4+5）</td>
+                  <td>{r.s7.nine}</td>
+                  <td>{r.s7.nineDetail}</td>
                 </tr>
                 <tr>
-                  <td>10枚</td>
-                  <td>10枚すべてが役。捨てずに上がる（3+3+4 か 5+5）</td>
+                  <td>{r.s7.ten}</td>
+                  <td>{r.s7.tenDetail}</td>
                 </tr>
               </tbody>
             </table>
-            <p className="rulebook__note">10枚で上がられた者は、失うチップが1枚増える。</p>
+            <p className="rulebook__note">{r.s7.note}</p>
           </Section>
 
-          <Section n="8" title="捨て札への割り込み">
+          <Section n="8" title={r.s8.title}>
             <p>
-              <Em>あと1枚で上がれるなら、自分の番を待たなくていい。</Em>
-              誰かが捨てた札がその1枚なら、手番を飛ばして拾い、その場で上がれる。
+              <Em text={r.s8.lead} />
             </p>
             <ul>
-              <li>拾えるのは捨てられた直後の1枚だけ</li>
-              <li>拾った札は役の一部になっていること。取ってすぐ捨てるのは認めない</li>
-              <li>捨てた本人は割り込めない。降りている者も割り込めない</li>
+              <li>{r.s8.p1}</li>
+              <li>{r.s8.p2}</li>
+              <li>{r.s8.p3}</li>
               <li>
-                <Em>複数が同時に成立したら、捨てた人の次の席から順に権利が回る。</Em>
-                見送れば次の者へ
+                <Em text={r.s8.p4} />
               </li>
             </ul>
           </Section>
 
-          <Section n="9" title="チップと勝敗">
-            <p>全員が7チップを持って始める。ラウンドを取られると減る。</p>
+          <Section n="9" title={r.s9.title}>
+            <p>{r.s9.lead}</p>
             <table className="rulebook__table">
               <thead>
                 <tr>
-                  <th>状況</th>
-                  <th>失うチップ</th>
+                  <th>{r.s9.colCase}</th>
+                  <th>{r.s9.colLoss}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>勝負して負けた</td>
+                  <td>{r.s9.lost}</td>
                   <td>2</td>
                 </tr>
                 <tr>
-                  <td>降りていた</td>
+                  <td>{r.s9.folded}</td>
                   <td>1</td>
                 </tr>
                 <tr>
-                  <td>10枚上がりを食らった</td>
+                  <td>{r.s9.com10}</td>
                   <td>3</td>
                 </tr>
               </tbody>
             </table>
             <p>
-              0になった者は<Em>破産</Em>して卓を去る。最後に残った一人がマッチの勝者。
+              <Em text={r.s9.body} />
             </p>
-            <p className="rulebook__note">
-              山札が尽きたら、捨て札がそのままの順で新しい山札になる。
-            </p>
+            <p className="rulebook__note">{r.s9.note}</p>
           </Section>
 
-          <Section n="10" title="降りる（コヘール）">
+          <Section n="10" title={r.s10.title}>
             <p>
-              ラウンドが始まる前に手札を見て、勝ち目が薄ければ<Em>降りられる</Em>。
-              失うのは1チップで済むが、そのラウンドは勝てない。
+              <Em text={r.s10.body} />
             </p>
           </Section>
 
-          <Section n="11" title="配当">
-            <p>マッチを制すれば掛け金が戻る。倍率は勝ち方で変わる。</p>
+          <Section n="11" title={r.s11.title}>
+            <p>{r.s11.lead}</p>
             <table className="rulebook__table">
               <thead>
                 <tr>
-                  <th>要素</th>
-                  <th>倍率</th>
+                  <th>{r.s11.colFactor}</th>
+                  <th>{r.s11.colRate}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>残りチップ（1枚 → 7枚）</td>
-                  <td>2.7 → 4.5 倍</td>
+                  <td>{r.s11.chips}</td>
+                  <td>{r.s11.chipsRate}</td>
                 </tr>
                 <tr>
-                  <td>連勝（2連勝目から）</td>
-                  <td>+0.4 ずつ、最大 +1.2</td>
+                  <td>{r.s11.streak}</td>
+                  <td>{r.s11.streakRate}</td>
                 </tr>
                 <tr>
-                  <td>決め手にコリンガを使った</td>
-                  <td>×0.75</td>
+                  <td>{r.s11.wild}</td>
+                  <td>{r.s11.wildRate}</td>
                 </tr>
               </tbody>
             </table>
             <p className="rulebook__note">
-              おおむね <Em>2.0〜5.7倍</Em>。コリンガ無しで上がったほうが難しいぶん、配当は高い。
-              負ければ掛け金は戻らない。
+              <Em text={r.s11.note} />
             </p>
           </Section>
         </div>
 
         <footer className="rulebook__foot">
           <button type="button" className="btn btn--again" onClick={onClose}>
-            FECHAR<small>閉じる</small>
+            FECHAR<small>{r.close}</small>
           </button>
         </footer>
       </div>
@@ -266,10 +263,22 @@ function Section({ n, title, children }: { n: string; title: string; children: R
   );
 }
 
-function Em({ children }: { children: React.ReactNode }) {
-  return <strong className="rulebook__em">{children}</strong>;
+/** 辞書の `*` を、この読み物の強調表示として開く。 */
+function Em({ text }: { text: string }) {
+  return <Rich text={text} emClass="rulebook__em" />;
 }
 
-function Example({ children }: { children: React.ReactNode }) {
-  return <p className="rulebook__example">{children}</p>;
+/** ヘッダーに置く言語切り替え。盤面のものより小さく、言語名だけ。 */
+function LanguageButton() {
+  const { t, cycleLang } = useLangControl();
+  return (
+    <button
+      type="button"
+      className="rulebook__lang"
+      onClick={cycleLang}
+      aria-label={t.lang.aria(t.meta.label)}
+    >
+      {t.meta.label}
+    </button>
+  );
 }

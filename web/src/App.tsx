@@ -14,6 +14,8 @@ import { ChipStack } from "./components/ChipStack";
 import { CardFlight } from "./components/CardFlight";
 import { DealingScene } from "./components/DealingScene";
 import { RuleBook } from "./components/RuleBook";
+import { useT, useLangControl, personaName, Rich } from "./i18n";
+import { LanguageToggle } from "./components/LanguageToggle";
 import { CardBurst } from "./components/CardBurst";
 
 const WAGERS = [100, 250, 500];
@@ -45,6 +47,7 @@ function markRulesSeen(): void {
 }
 
 export default function App() {
+  const t = useT();
   const game = useGame();
   const {
     screen,
@@ -68,7 +71,7 @@ export default function App() {
     finishDealing,
     aliveSeats,
     humanBater,
-    speedLabel,
+    speed,
     cycleSpeed,
     topDiscard,
     canTakeDiscard,
@@ -146,24 +149,26 @@ export default function App() {
             <h1>PIF PAF</h1>
             <p>
               {/* 精算するとmatch.roundは次を指すので、結果表示中は1つ戻して見せる */}
-              第{showingResult ? Math.max(1, match.round - 1) : match.round}ラウンド ／ 掛け金{" "}
-              <strong>{wager}</strong>
+              {t.topbar.round(showingResult ? Math.max(1, match.round - 1) : match.round)} ／{" "}
+              {t.topbar.wager} <strong>{wager}</strong>
             </p>
           </div>
           <button type="button" className="rulesButton" onClick={openRules}>
             <span className="rulesButton__mark">?</span>
-            <span className="rulesButton__label">ルール</span>
+            <span className="rulesButton__label">{t.topbar.rules}</span>
           </button>
 
           <button
             type="button"
             className="speedToggle"
             onClick={cycleSpeed}
-            aria-label={`CPUの速さ: ${speedLabel}。押すと切り替わる`}
+            aria-label={t.topbar.speedAria(t.speed[speed])}
           >
-            <span className="speedToggle__label">CPUの速さ</span>
-            <span className="speedToggle__value">{speedLabel}</span>
+            <span className="speedToggle__label">{t.topbar.speedCaption}</span>
+            <span className="speedToggle__value">{t.speed[speed]}</span>
           </button>
+
+          <LanguageToggle />
 
           <div className="topbar__wild">
             <span className="topbar__wildLabel">CORINGA</span>
@@ -178,19 +183,19 @@ export default function App() {
               )}
             </span>
             <span className="topbar__vira" data-vira-slot>
-              ヴィラ
+              {t.topbar.vira}
               {state.vira && viraRevealed ? (
                 <button
                   type="button"
                   className={`viraButton ${canTakeVira ? "viraButton--live" : ""}`}
                   disabled={!canTakeVira}
                   onClick={takeVira}
-                  aria-label={`ヴィラの ${describeCard(state.vira, state.wild)} を買う`}
+                  aria-label={t.topbar.buyViraAria(describeCard(state.vira, state.wild, t))}
                 >
                   <PlayingCard card={state.vira} wild={state.wild} size="sm" />
                 </button>
               ) : (
-                <span className="topbar__viraGone">買われた</span>
+                <span className="topbar__viraGone">{t.topbar.viraGone}</span>
               )}
             </span>
           </div>
@@ -221,14 +226,14 @@ export default function App() {
         <section className="table">
           <div className="table__felt">
             <div className={`pile ${canDrawStock ? "pile--live" : ""}`}>
-              <span className="pile__label">MONTE / 山札</span>
+              <span className="pile__label">MONTE / {t.table.stock}</span>
               <div className="pile__stack" data-stock-pile>
                 <button
                   type="button"
                   className="pile__button"
                   disabled={!canDrawStock}
                   onClick={drawCard}
-                  aria-label="山札から1枚引く"
+                  aria-label={t.table.drawAria}
                 >
                   <CardBack size="md" />
                 </button>
@@ -246,7 +251,7 @@ export default function App() {
             </div>
 
             <div className={`pile ${canTakeDiscard ? "pile--live" : ""}`}>
-              <span className="pile__label">DESCARTE / 捨て札</span>
+              <span className="pile__label">DESCARTE / {t.table.discard}</span>
               <div className="pile__stack" data-discard-pile>
                 {topDiscard ? (
                   <button
@@ -254,7 +259,7 @@ export default function App() {
                     className="pile__button"
                     disabled={!canTakeDiscard}
                     onClick={takeDiscard}
-                    aria-label={`捨て札の ${describeCard(topDiscard, state.wild)} を拾う`}
+                    aria-label={t.table.takeDiscardAria(describeCard(topDiscard, state.wild, t))}
                   >
                     <PlayingCard card={topDiscard} wild={state.wild} size="md" />
                   </button>
@@ -263,7 +268,7 @@ export default function App() {
                 )}
                 <span className="pile__count">{state.discard.length}</span>
               </div>
-              {canTakeDiscard && <span className="pile__hint">タップで拾う</span>}
+              {canTakeDiscard && <span className="pile__hint">{t.table.takeHint}</span>}
             </div>
           </div>
         </section>
@@ -275,7 +280,7 @@ export default function App() {
           }`}
         >
           <div className="me__header">
-            <span className="me__name">{personaOf(HUMAN).name}</span>
+            <span className="me__name">{personaName(t, HUMAN)}</span>
             <span className="me__chips">
               <ChipStack count={humanChips} />
               <strong>{humanChips}</strong>
@@ -284,7 +289,7 @@ export default function App() {
               )}
             </span>
             <button type="button" className="me__sort" onClick={sort}>
-              整列
+              {t.hand.sort}
             </button>
             <TurnBanner
               screen={screen}
@@ -335,7 +340,7 @@ export default function App() {
 
           <div className="actions">
             <button className="btn btn--draw" disabled={!canDrawStock} onClick={drawCard}>
-              COMPRAR<small>山札から引く</small>
+              COMPRAR<small>{t.actions.draw}</small>
             </button>
             <button
               className="btn btn--discard"
@@ -344,14 +349,14 @@ export default function App() {
               }
               onClick={discardSelected}
             >
-              DESCARTAR<small>選んだ札を捨てる</small>
+              DESCARTAR<small>{t.actions.discard}</small>
             </button>
             <button
               className={`btn btn--bater ${humanBater ? "btn--armed" : ""}`}
               disabled={humanBater === null}
               onClick={callBater}
             >
-              BATER!<small>{humanBater ? "上がれる" : "まだ上がれない"}</small>
+              BATER!<small>{humanBater ? t.actions.canBater : t.actions.cannotBater}</small>
             </button>
           </div>
 
@@ -451,22 +456,23 @@ function TurnBanner({
   phase: string;
   currentPlayer: number;
 }) {
-  if (folded) return <span className="turnBanner turnBanner--folded">降りた</span>;
+  const t = useT();
+  if (folded) return <span className="turnBanner turnBanner--folded">{t.turn.folded}</span>;
   if (screen !== "PLAYING" || phase === "ROUND_OVER") {
-    return <span className="turnBanner turnBanner--over">勝負あり</span>;
+    return <span className="turnBanner turnBanner--over">{t.turn.over}</span>;
   }
   if (!isHumanTurn) {
-    return <span className="turnBanner">{personaOf(currentPlayer).name} の番…</span>;
+    return <span className="turnBanner">{t.turn.waiting(personaName(t, currentPlayer))}</span>;
   }
 
   const message =
     phase === "AWAITING_FIRST_DRAW"
-      ? "先手だ。ヴィラを買うか、山札から引くか。"
+      ? t.turn.firstDraw
       : phase === "AWAITING_KEEP_DECISION"
-        ? "その札、取るか捨てるか。"
+        ? t.turn.keepDecision
         : phase === "AWAITING_DRAW"
-          ? "山札か、捨て札から1枚。"
-          : "1枚捨てろ。";
+          ? t.turn.draw
+          : t.turn.discard;
 
   return <span className="turnBanner turnBanner--mine">{message}</span>;
 }
@@ -485,30 +491,30 @@ function FoldPrompt({
   onFold: () => void;
   onPlay: () => void;
 }) {
+  const t = useT();
   return (
     <div className="panel">
       <div className="panel__box">
-        <p className="panel__kicker">A MÃO — 手札を見て決めろ</p>
-        <h2>勝負するか、降りるか</h2>
+        <p className="panel__kicker">A MÃO — {t.fold.kicker}</p>
+        <h2>{t.fold.title}</h2>
         <div className="foldPrompt__hand">
           {hand.map((c) => (
             <PlayingCard key={c.id} card={c} wild={wild} size="sm" />
           ))}
         </div>
         <p className="panel__note">
-          勝負して負ければ <strong>{LOSS_PLAY}チップ</strong>、
-          10枚上がりを食らえば <strong>{LOSS_COM10}チップ</strong> 失う。
+          <Rich text={t.fold.note(LOSS_PLAY, LOSS_COM10)} />
           <br />
-          降りれば <strong>{LOSS_FOLD}チップ</strong> で済むが、このラウンドは勝てない。
+          <Rich text={t.fold.noteFold(LOSS_FOLD)} />
           <br />
-          <span className="panel__dim">手持ち {chips} チップ</span>
+          <span className="panel__dim">{t.fold.chipsInHand(chips)}</span>
         </p>
         <div className="panel__actions">
           <button className="btn btn--keep" onClick={onPlay}>
-            JOGAR<small>勝負する</small>
+            JOGAR<small>{t.fold.play}</small>
           </button>
           <button className="btn btn--reject" onClick={onFold}>
-            CORRER<small>降りる（−{LOSS_FOLD}）</small>
+            CORRER<small>{t.fold.fold(LOSS_FOLD)}</small>
           </button>
         </div>
       </div>
@@ -522,6 +528,7 @@ function FoldPrompt({
  * 分類は engine の classifyAsMelds に任せる（web側で役を判定しない）。
  */
 function MeldReveal({ hand, wild }: { hand: Card[]; wild: Wild }) {
+  const t = useT();
   const melds = classifyAsMelds(hand, wild);
 
   // 上がった手なら必ず分類できるはずだが、
@@ -529,7 +536,7 @@ function MeldReveal({ hand, wild }: { hand: Card[]; wild: Wild }) {
   if (melds === null) {
     return (
       <div className="reveal">
-        <p className="reveal__label">上がり手</p>
+        <p className="reveal__label">{t.result.revealLabel}</p>
         <div className="reveal__meld">
           {hand.map((c) => (
             <PlayingCard key={c.id} card={c} wild={wild} size="sm" />
@@ -542,12 +549,13 @@ function MeldReveal({ hand, wild }: { hand: Card[]; wild: Wild }) {
   return (
     <div className="reveal">
       <p className="reveal__label">
-        上がり手 <span className="reveal__count">{hand.length}枚</span>
+        {t.result.revealLabel}{" "}
+        <span className="reveal__count">{t.result.revealCount(hand.length)}</span>
       </p>
       {melds.map((meld, i) => (
         <div className="reveal__group" key={i}>
           <span className="reveal__type">
-            {meld.type === "TRINCA" ? "組" : "階段"}
+            {meld.type === "TRINCA" ? t.result.trinca : t.result.sequence}
           </span>
           <div className="reveal__meld">
             {meld.cards.map((c) => (
@@ -571,19 +579,20 @@ function RoundResult({
   wild: Wild;
   onNext: () => void;
 }) {
+  const t = useT();
   const { losses, eliminated, state } = settlement;
   const winner = state.lastWinner;
 
   return (
     <div className="panel">
       <div className="panel__box">
-        <p className="panel__kicker">FIM DA RODADA — ラウンド終了</p>
+        <p className="panel__kicker">FIM DA RODADA — {t.result.kicker}</p>
         <h2>
           {winner === null
-            ? "決着つかず"
+            ? t.result.noWinner
             : winner === HUMAN
-              ? "あんたが取った"
-              : `${personaOf(winner).name} が取った`}
+              ? t.result.youWon
+              : t.result.theyWon(personaName(t, winner))}
         </h2>
 
         {winner !== null && winnerHand && (
@@ -599,15 +608,15 @@ function RoundResult({
                 key={seat}
                 className={`result__row ${isWinner ? "result__row--win" : ""} ${out ? "result__row--out" : ""}`}
               >
-                <span className="result__name">{personaOf(seat).name}</span>
+                <span className="result__name">{personaName(t, seat)}</span>
                 <span className="result__delta">
-                  {isWinner ? "取った" : loss > 0 ? `−${loss}` : "±0"}
+                  {isWinner ? t.result.took : loss > 0 ? `−${loss}` : t.result.noChange}
                 </span>
                 <span className="result__chips">
                   <ChipStack count={state.chips[seat] ?? 0} />
                   <strong>{state.chips[seat] ?? 0}</strong>
                 </span>
-                {out && <span className="result__out">破産</span>}
+                {out && <span className="result__out">{t.result.bust}</span>}
               </li>
             );
           })}
@@ -615,13 +624,13 @@ function RoundResult({
 
         {state.streak >= 2 && winner !== null && (
           <p className="result__streak">
-            {personaOf(winner).name} が <strong>{state.streak}連勝</strong>
+            <Rich text={t.result.streak(personaName(t, winner), state.streak)} />
           </p>
         )}
 
         <div className="panel__actions">
           <button className="btn btn--again" onClick={onNext}>
-            CONTINUAR<small>次のラウンドへ</small>
+            CONTINUAR<small>{t.result.next}</small>
           </button>
         </div>
       </div>
@@ -645,6 +654,7 @@ function MatchOver({
   bankroll: number;
   onBack: () => void;
 }) {
+  const t = useT();
   const winnings = Math.round(wager * payout);
 
   return (
@@ -653,27 +663,27 @@ function MatchOver({
         {won ? (
           <>
             <h2 className="verdictTitle verdictTitle--win">VOCÊ SOBREVIVEU</h2>
-            <p className="panel__lead">テーブルに残ったのはあんただけだ。</p>
+            <p className="panel__lead">{t.matchOver.winLead}</p>
 
             {detail && (
               <div className="payout">
                 <div className="payout__row">
-                  <span>残りチップ {detail.chipsLeft}</span>
-                  <span>{detail.base.toFixed(1)}倍</span>
+                  <span>{t.matchOver.chipsLeft(detail.chipsLeft)}</span>
+                  <span>{t.matchOver.times(detail.base.toFixed(1))}</span>
                 </div>
                 {detail.streakBonus > 0 && (
                   <div className="payout__row">
-                    <span>{detail.streak}連勝</span>
+                    <span>{t.matchOver.streak(detail.streak)}</span>
                     <span>+{detail.streakBonus.toFixed(1)}</span>
                   </div>
                 )}
                 <div className="payout__row">
-                  <span>{detail.clean ? "ワイルド無しの上がり" : "ワイルドを使った上がり"}</span>
+                  <span>{detail.clean ? t.matchOver.clean : t.matchOver.withWild}</span>
                   <span>{detail.clean ? "×1.0" : "×0.75"}</span>
                 </div>
                 <div className="payout__row payout__row--total">
-                  <span>配当</span>
-                  <span>{payout.toFixed(2)}倍</span>
+                  <span>{t.matchOver.payout}</span>
+                  <span>{t.matchOver.times(payout.toFixed(2))}</span>
                 </div>
               </div>
             )}
@@ -685,19 +695,19 @@ function MatchOver({
         ) : (
           <>
             <h2 className="verdictTitle verdictTitle--lose">VOCÊ ESTÁ FALIDO</h2>
-            <p className="panel__lead">チップが尽きた。掛け金は戻らない。</p>
+            <p className="panel__lead">{t.matchOver.loseLead}</p>
             <p className="payout__cash payout__cash--lost">
               {wager} → <strong>0</strong>
             </p>
           </>
         )}
 
-        <p className="panel__dim">所持金 {bankroll}</p>
+        <p className="panel__dim">{t.matchOver.bankroll(bankroll)}</p>
 
         <div className="panel__actions">
           <button className="btn btn--again" onClick={onBack}>
-            {bankroll > 0 ? "VOLTAR À MESA" : "..."}
-            <small>{bankroll > 0 ? "卓に戻る" : "一文無しだ"}</small>
+            {bankroll > 0 ? "VOLTAR À MESA" : t.matchOver.brokeTitle}
+            <small>{bankroll > 0 ? t.matchOver.back : t.matchOver.broke}</small>
           </button>
         </div>
       </div>
@@ -717,34 +727,35 @@ function Betting({
   onLoan: () => void;
   onRules: () => void;
 }) {
+  const t = useT();
   const broke = bankroll <= 0;
 
   return (
     <div className="intro">
       <div className="grain" aria-hidden="true" />
       <div className="intro__panel">
-        <p className="intro__kicker">A APOSTA — 掛け金</p>
+        <p className="intro__kicker">A APOSTA — {t.betting.kicker}</p>
         <h1 className="betting__bankroll">{bankroll}</h1>
-        <p className="intro__sub">所持金</p>
+        <p className="intro__sub">{t.betting.bankroll}</p>
         <div className="intro__rule" />
 
         {broke ? (
           <>
             <p className="intro__body">
-              一文無しだ。ファミリーが立て替えてくれるそうだが、
+              {t.betting.brokeBody1}
               <br />
-              返せなかったときのことは、聞かないほうがいい。
+              {t.betting.brokeBody2}
             </p>
             <button className="btn btn--start" onClick={onLoan}>
-              PEGAR EMPRESTADO<small>{LOAN_AMOUNT} 借りる</small>
+              PEGAR EMPRESTADO<small>{t.betting.borrow(LOAN_AMOUNT)}</small>
             </button>
           </>
         ) : (
           <>
             <p className="intro__body">
-              4人卓、持ちチップ7枚。最後まで残れば配当がつく。
+              {t.betting.body1}
               <br />
-              勝率はおよそ4分の1。配当は残りチップと連勝で 2.0〜5.7倍。
+              {t.betting.body2}
             </p>
             <div className="betting__chips">
               {WAGERS.filter((w) => w <= bankroll).map((w) => (
@@ -757,10 +768,13 @@ function Betting({
               </button>
             </div>
             <button className="btn btn--rules betting__rules" onClick={onRules}>
-              AS REGRAS<small>ルールを読む</small>
+              AS REGRAS<small>{t.betting.rules}</small>
             </button>
           </>
         )}
+
+        {/* 一文無しのときもここに来るので、条件の外に出しておく */}
+        <LanguageToggle className="intro__lang" />
       </div>
     </div>
   );
@@ -785,25 +799,26 @@ function InterceptBar({
   onTake: () => void;
   onPass: () => void;
 }) {
+  const t = useT();
   return (
     <div className="keepBar keepBar--intercept">
       <div className="keepBar__card">
         <PlayingCard card={card} wild={wild} size="md" />
       </div>
       <div className="keepBar__text">
-        <p className="keepBar__kicker">BATER NO LIXO — 手番を待たずに</p>
-        <p className="keepBar__title">その捨て札で上がれる</p>
+        <p className="keepBar__kicker">BATER NO LIXO — {t.intercept.kicker}</p>
+        <p className="keepBar__title">{t.intercept.title}</p>
         <p className="keepBar__note">
-          <span className="keepBar__noteLong">自分の番でなくても拾って上がれる。</span>
-          見送れば<strong>次の者</strong>に権利が移る。
+          <span className="keepBar__noteLong">{t.intercept.noteLong}</span>
+          <Rich text={t.intercept.note} />
         </p>
       </div>
       <div className="keepBar__actions">
         <button className="btn btn--bater btn--armed" onClick={onTake}>
-          BATER!<small>拾って上がる</small>
+          BATER!<small>{t.intercept.take}</small>
         </button>
         <button className="btn btn--reject" onClick={onPass}>
-          PASSAR<small>見送る</small>
+          PASSAR<small>{t.intercept.pass}</small>
         </button>
       </div>
     </div>
@@ -821,26 +836,27 @@ function KeepBar({
   onKeep: () => void;
   onReject: () => void;
 }) {
+  const t = useT();
   return (
     <div className="keepBar">
       <div className="keepBar__card">
         <PlayingCard card={card} wild={wild} size="md" />
       </div>
       <div className="keepBar__text">
-        <p className="keepBar__kicker">PRIMEIRA MÃO — 一番手の特権</p>
-        <p className="keepBar__title">この札を手札に入れるか</p>
+        <p className="keepBar__kicker">PRIMEIRA MÃO — {t.keep.kicker}</p>
+        <p className="keepBar__title">{t.keep.title}</p>
         <p className="keepBar__note">
           {/* 狭い画面では前半を畳む（CSSで制御） */}
-          <span className="keepBar__noteLong">下の手札と見比べて決めろ。並べ替えてもいい。</span>
-          引き直せるのは<strong>一度きり</strong>。
+          <span className="keepBar__noteLong">{t.keep.noteLong}</span>
+          <Rich text={t.keep.note} />
         </p>
       </div>
       <div className="keepBar__actions">
         <button className="btn btn--keep" onClick={onKeep}>
-          FICAR<small>手札に入れる</small>
+          FICAR<small>{t.keep.keep}</small>
         </button>
         <button className="btn btn--reject" onClick={onReject}>
-          RECUSAR<small>捨てて引き直す</small>
+          RECUSAR<small>{t.keep.reject}</small>
         </button>
       </div>
     </div>
@@ -856,6 +872,7 @@ function Intro({
   bankroll: number;
   onRules: () => void;
 }) {
+  const t = useT();
   return (
     <div className="intro">
       <div className="grain" aria-hidden="true" />
@@ -865,20 +882,21 @@ function Intro({
         <p className="intro__sub">A FAMÍLIA</p>
         <div className="intro__rule" />
         <p className="intro__body">
-          奥の部屋に、四つの椅子。灰皿は満杯で、誰も窓を開けない。
+          {t.intro.body1}
           <br />
-          全員が7枚のチップを積む。負けるたびに減り、尽きた者から店を出られなくなる。
+          {t.intro.body2}
         </p>
-        <p className="intro__warn">最後の一人になるまで、誰も帰れない。</p>
+        <p className="intro__warn">{t.intro.warn}</p>
         <div className="intro__actions">
           <button className="btn btn--start" onClick={onStart}>
-            SENTAR À MESA<small>席に着く（所持金 {bankroll}）</small>
+            SENTAR À MESA<small>{t.intro.sit(bankroll)}</small>
           </button>
           <button className="btn btn--rules" onClick={onRules}>
-            AS REGRAS<small>ルールを読む</small>
+            AS REGRAS<small>{t.intro.rules}</small>
           </button>
         </div>
-        <p className="intro__foot">※ 演出です。実際に撃たれることはありません。</p>
+        <LanguageToggle className="intro__lang" />
+        <p className="intro__foot">{t.intro.disclaimer}</p>
       </div>
     </div>
   );

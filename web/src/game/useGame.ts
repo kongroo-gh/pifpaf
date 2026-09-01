@@ -43,11 +43,7 @@ const CPU_INTERCEPT_DELAY = 1200;
 export type Speed = "FAST" | "NORMAL" | "SLOW";
 /** 待ち時間にかける倍率 */
 const SPEED_FACTOR: Record<Speed, number> = { FAST: 0.5, NORMAL: 1, SLOW: 2 };
-export const SPEED_LABEL: Record<Speed, string> = {
-  FAST: "はやい",
-  NORMAL: "ふつう",
-  SLOW: "じっくり",
-};
+// 表示名は i18n の辞書（t.speed）が持つ。ここは種別だけを扱う。
 const SPEED_KEY = "pifpaf.speed";
 
 /** 所持金まわり */
@@ -452,7 +448,6 @@ export function useGame() {
     finishDealing,
     humanBater,
     speed,
-    speedLabel: SPEED_LABEL[speed],
     cycleSpeed,
     topDiscard,
     canTakeDiscard,

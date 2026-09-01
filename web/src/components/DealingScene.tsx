@@ -12,6 +12,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Card, Wild } from "@pifpaf/engine";
 import { PlayingCard, CardBack } from "./PlayingCard";
+import { useT } from "../i18n";
+import type { Strings } from "../i18n";
 
 export type DealStep = "CUT" | "VIRA" | "DEAL" | "SETTLE" | "DONE";
 
@@ -63,6 +65,7 @@ export function DealingScene({
   onRevealVira,
   onDone,
 }: DealingSceneProps) {
+  const t = useT();
   const [step, setStep] = useState<DealStep>("CUT");
   const [anchors, setAnchors] = useState<Anchors | null>(null);
   const revealRef = useRef(onRevealVira);
@@ -145,7 +148,7 @@ export function DealingScene({
 
   return (
     <div className="dealing" aria-hidden="true">
-      <p className="dealing__caption">{captionFor(step)}</p>
+      <p className="dealing__caption">{captionFor(step, t)}</p>
 
       {/* 山札。半分に割れて、最後は山札の位置へ収まる */}
       <div
@@ -222,14 +225,14 @@ function anchorStyle(deck: Point, stock: Point, speedFactor: number): React.CSSP
   };
 }
 
-function captionFor(step: DealStep): string {
+function captionFor(step: DealStep, t: Strings): string {
   switch (step) {
     case "CUT":
-      return "山を割る";
+      return t.dealing.split;
     case "VIRA":
-      return "ヴィラをめくる";
+      return t.dealing.revealVira;
     case "DEAL":
-      return "3枚ずつ配る";
+      return t.dealing.deal;
     default:
       return "";
   }

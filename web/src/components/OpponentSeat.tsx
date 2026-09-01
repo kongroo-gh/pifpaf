@@ -1,6 +1,7 @@
 // CPU1人分の席。手札は枚数だけ見せる（オンライン化時のマスク配信を意識した形）。
 
 import type { Persona } from "../game/players";
+import { useT, personaName, personaTitle } from "../i18n";
 import { CardBack } from "./PlayingCard";
 import { BulletHoleCluster } from "./BulletHole";
 import { ChipStack } from "./ChipStack";
@@ -37,6 +38,7 @@ export function OpponentSeat({
   firing,
   receiving = false,
 }: OpponentSeatProps) {
+  const t = useT();
   const classes = [
     "seat",
     isActive ? "seat--active" : "",
@@ -63,11 +65,14 @@ export function OpponentSeat({
       </div>
 
       <div className="seat__info">
-        <div className="seat__name">{persona.name}</div>
-        <div className="seat__title">{persona.title}</div>
+        <div className="seat__name">{personaName(t, persona.index)}</div>
+        {/* 異名は訳さない。続く肩書きだけが言語で変わる */}
+        <div className="seat__title">
+          {persona.epithet} — {personaTitle(t, persona.index)}
+        </div>
       </div>
 
-      <div className="seat__chips" aria-label={`残りチップ ${chips}`}>
+      <div className="seat__chips" aria-label={t.seat.chipsAria(chips)}>
         <ChipStack count={chips} />
         <span className="seat__chipCount">{chips}</span>
         {lostChips !== undefined && lostChips > 0 && (
@@ -75,7 +80,7 @@ export function OpponentSeat({
         )}
       </div>
 
-      <div className="seat__cards" aria-label={`手札 ${handCount}枚`}>
+      <div className="seat__cards" aria-label={t.seat.handAria(handCount)}>
         {Array.from({ length: Math.min(handCount, 10) }, (_, i) => (
           <span className="seat__cardSlot" key={i}>
             <CardBack />
@@ -84,8 +89,8 @@ export function OpponentSeat({
         <span className="seat__count">{handCount}</span>
       </div>
 
-      {isActive && <div className="seat__thinking">…考えている</div>}
-      {folded && !eliminated && <div className="seat__foldTag">降りた</div>}
+      {isActive && <div className="seat__thinking">{t.seat.thinking}</div>}
+      {folded && !eliminated && <div className="seat__foldTag">{t.seat.folded}</div>}
       {eliminated && (
         <>
           <BulletHoleCluster />

@@ -8,6 +8,7 @@
 import { useRef, useState } from "react";
 import type { Card, Wild } from "@pifpaf/engine";
 import { PlayingCard, describeCard } from "./PlayingCard";
+import { useT } from "../i18n";
 
 /** これ以上動いたらタップではなくドラッグとみなす（px） */
 const DRAG_THRESHOLD = 8;
@@ -33,6 +34,7 @@ export function PlayerHand({
   onSelect,
   onReorder,
 }: PlayerHandProps) {
+  const t = useT();
   const containerRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ id: string; startX: number; startY: number; moved: boolean } | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -111,11 +113,7 @@ export function PlayerHand({
             data-card-id={card.id}
             className={`hand__slot ${draggingId === card.id ? "hand__slot--dragging" : ""}`}
             style={{ ["--i" as string]: index }}
-            aria-label={
-              describeCard(card, wild) +
-              (locked ? "（拾ったばかりで捨てられない）" : "") +
-              "。ドラッグで並べ替え"
-            }
+            aria-label={t.hand.cardAria(describeCard(card, wild, t), locked)}
             aria-pressed={selectedCardId === card.id}
             onPointerDown={(e) => handlePointerDown(e, card)}
             onPointerMove={handlePointerMove}

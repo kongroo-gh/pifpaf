@@ -6,6 +6,8 @@
 
 import type { Card, Suit, Wild } from "@pifpaf/engine";
 import { isWildCard } from "@pifpaf/engine";
+import { useT } from "../i18n";
+import type { Strings } from "../i18n";
 
 export const SUIT_GLYPH: Record<Suit, string> = { S: "♠", H: "♥", D: "♦", C: "♣" };
 const RED_SUITS: Suit[] = ["H", "D"];
@@ -20,9 +22,15 @@ export interface PlayingCardProps {
   size?: "sm" | "md";
 }
 
-/** スクリーンリーダー向けの読み上げ文。外側の操作要素の aria-label にも使う。 */
-export function describeCard(card: Card, wild: Wild): string {
-  return `${card.rank} ${SUIT_GLYPH[card.suit]}${isWildCard(card, wild) ? " コリンガ" : ""}`;
+/**
+ * スクリーンリーダー向けの読み上げ文。外側の操作要素の aria-label にも使う。
+ *
+ * 記号（♠）ではなくスート名を読ませる。記号のままだと読み上げが言語によって
+ * 崩れるうえ、無音になる環境もある。
+ */
+export function describeCard(card: Card, wild: Wild, t: Strings): string {
+  const suit = t.card.suits[card.suit];
+  return `${card.rank} ${suit}${isWildCard(card, wild) ? ` ${t.card.coringa}` : ""}`;
 }
 
 export function PlayingCard({
@@ -32,6 +40,7 @@ export function PlayingCard({
   locked = false,
   size = "md",
 }: PlayingCardProps) {
+  const t = useT();
   const isWild = isWildCard(card, wild);
   const isRed = RED_SUITS.includes(card.suit);
   const glyph = SUIT_GLYPH[card.suit];
@@ -59,7 +68,7 @@ export function PlayingCard({
         <span className="card__suit">{glyph}</span>
       </span>
       {isWild && <span className="card__wildTag">CORINGA</span>}
-      {locked && <span className="card__lockTag">拾</span>}
+      {locked && <span className="card__lockTag">{t.hand.lockTag}</span>}
     </div>
   );
 }
