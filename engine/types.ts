@@ -36,6 +36,23 @@ export const RANK_ORDER: Rank[] = [
   "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K",
 ];
 
+/**
+ * シーケンス（階段）で使うランクの並び。
+ * **2 が一番下、A が一番上。折り返さない。**
+ *
+ * RANK_ORDER とは別物である点に注意。あちらは A 始まりの循環で、
+ * ヴィラの「次のランク」を決めるためだけに使う（K の次は A、A の次は 2）。
+ * 階段の判定にこちらを使うと A-2-3 や K-A-2 が通ってしまう。
+ */
+export const SEQUENCE_ORDER: Rank[] = [
+  "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A",
+];
+
+/** SEQUENCE_ORDER 上の位置。2 が 0、A が 12。 */
+export function sequenceIndex(rank: Rank): number {
+  return SEQUENCE_ORDER.indexOf(rank);
+}
+
 export function rankIndex(rank: Rank): number {
   return RANK_ORDER.indexOf(rank);
 }

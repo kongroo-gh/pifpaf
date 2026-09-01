@@ -34,7 +34,9 @@ export function RuleBook({ onClose }: RuleBookProps) {
             <ul>
               <li>ジョーカー抜き52枚を<Em>2組</Em>（計104枚）。同じ札が2枚ずつある</li>
               <li>4人。各自に9枚配り、残りが山札</li>
-              <li>ランクは A 2 3 … K で循環。A は上にも下にも使える</li>
+              <li>
+                並びは 2 3 4 … K A。<Em>2 が一番下、A が一番上</Em>
+              </li>
             </ul>
           </Section>
 
@@ -90,7 +92,9 @@ export function RuleBook({ onClose }: RuleBookProps) {
             <h4>シーケンス（階段）— 同じ記号の連番</h4>
             <ul>
               <li>同じ記号で数字が続く3枚以上</li>
-              <li>Q-K-A、K-A-2 のまたぎも認める</li>
+              <li>
+                <Em>A をまたぐ並びは作れない。</Em>Q-K-A は良いが、K-A-2 や A-2-3 は役にならない
+              </li>
             </ul>
 
             <p className="rulebook__note">

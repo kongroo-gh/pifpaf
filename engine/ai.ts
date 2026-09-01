@@ -5,14 +5,16 @@
 // 強さの調整（相手の捨て札を読む、ワイルドの温存判断など）は後のフェーズで行う。
 
 import type { Card, Rank, Wild } from "./types";
-import { RANK_ORDER, rankIndex, isWildCard } from "./types";
+import { sequenceIndex, isWildCard } from "./types";
 import { classifyAsMelds } from "./melds";
 import type { GameState, GameAction } from "./gameEngine";
 
-/** 循環ランク上の距離。A-K間は1として扱う（K-A-2のまたぎがあるため） */
-function circularRankDistance(a: Rank, b: Rank): number {
-  const raw = Math.abs(rankIndex(a) - rankIndex(b));
-  return Math.min(raw, RANK_ORDER.length - raw);
+/**
+ * 階段の並び（2が下、Aが上）での距離。折り返さない。
+ * K と A は隣どうしだが、A と 2 は 12 離れている。
+ */
+function rankDistance(a: Rank, b: Rank): number {
+  return Math.abs(sequenceIndex(a) - sequenceIndex(b));
 }
 
 /**
@@ -35,7 +37,7 @@ export function cardAffinity(card: Card, hand: Card[], wild: Wild): number {
   // シーケンス候補：同スートでランクが近い札
   for (const other of others) {
     if (other.suit !== card.suit) continue;
-    const distance = circularRankDistance(card.rank, other.rank);
+    const distance = rankDistance(card.rank, other.rank);
     if (distance === 1) score += 8; // 隣接（5-6）
     else if (distance === 2) score += 4; // 1つ飛び（5-7。ワイルドや引きで繋がる）
   }

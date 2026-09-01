@@ -3,7 +3,7 @@
 // 考慮した上で行う。UIやゲーム進行から独立した純粋関数群。
 
 import type { Card, Rank, Suit, Wild } from "./types";
-import { RANK_ORDER, isWildCard } from "./types";
+import { SEQUENCE_ORDER, isWildCard } from "./types";
 
 export type MeldType = "TRINCA" | "SEQUENCE";
 
@@ -126,15 +126,15 @@ function canFitInSomeRun(naturalRanks: Rank[], totalLen: number, _wildCount: num
 
 /**
  * 長さlenの「あり得る連続ランク列」を全列挙する。
- * 通常の A-2-3-... に加え、K-A、K-A-2 のような循環またぎにも対応するため、
- * 末尾に "A","2" を継ぎ足した拡張ランク軸からスライドウィンドウを取る。
- * （len <= 13 の間はこの拡張軸内で同じランクが2回登場する窓は発生しない）
+ *
+ * **2 が一番下、A が一番上で、折り返さない。**
+ * Q-K-A は成立するが、K-A-2 や A-2-3 は成立しない。
+ * 以前は循環軸を使っていたため、その2つが通ってしまっていた。
  */
 function buildRankWindows(len: number): Rank[][] {
-  const extended: Rank[] = [...RANK_ORDER, "A", "2"];
   const windows: Rank[][] = [];
-  for (let start = 0; start + len <= extended.length; start++) {
-    windows.push(extended.slice(start, start + len));
+  for (let start = 0; start + len <= SEQUENCE_ORDER.length; start++) {
+    windows.push(SEQUENCE_ORDER.slice(start, start + len));
   }
   return windows;
 }

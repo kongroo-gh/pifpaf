@@ -215,12 +215,16 @@ Node.js側（WebSocket想定）に載せる。`web/` はUIとネットワーク�
 ルール判定ロジックを持たせない、という原則を崩さないこと。
 
 ## 現在の実装状況
-- `engine/types.ts`：完成。Card/Suit/Rank、循環ランク計算（`nextRank`）
+- `engine/types.ts`：完成。Card/Suit/Rank。
+  **ランクの並びが2種類ある。取り違えないこと。**
+  - `SEQUENCE_ORDER`（2〜A、折り返さない）… 階段の判定とAIの隣接判定、手札の整列
+  - `RANK_ORDER`（A始まりの循環）… ヴィラの「次のランク」を出す `nextRank` 専用
 - `engine/deck.ts`：完成。ジョーカーなし52枚×2組=104枚、Fisher-Yatesシャッフル
   （rng注入可＝テスト・再現性のため）、4人へ9枚ずつ配札、ヴィラ公開とワイルドランク決定
 - `engine/melds.ts`：完成。
   - `isValidTrinca`：同ランク異スート3〜4枚、ワイルド代用可
-  - `isValidSequence`：同スート連番3枚以上、Q-K-A・K-A-2のまたぎ対応、ワイルド代用可
+  - `isValidSequence`：同スート連番3枚以上、ワイルド代用可。
+    **階段は 2 が下・A が上で折り返さない**（Q-K-A は可、K-A-2 と A-2-3 は不可）
   - `classifyAsMelds`：手札全体を役に分類できるか全探索で判定（9〜10枚程度なら実用速度）
 - `engine/gameEngine.ts`：完成。reducerスタイルの `applyAction(state, action)`。
   不正な操作は例外を投げず `{ ok: false, error }` で返す。

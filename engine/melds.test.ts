@@ -68,8 +68,30 @@ describe("isValidSequence", () => {
     expect(isValidSequence([c("a", "H", "Q"), c("b", "H", "K"), c("c", "H", "A")], wild)).toBe(true);
   });
 
-  it("K-A-2 のまたぎは成立する", () => {
-    expect(isValidSequence([c("a", "H", "K"), c("b", "H", "A"), c("c", "H", "2")], wild)).toBe(true);
+  // A は一番上。折り返さないので、A をまたぐ並びは作れない。
+  it("K-A-2 は成立しない（A の上に 2 は続かない）", () => {
+    expect(isValidSequence([c("a", "H", "K"), c("b", "H", "A"), c("c", "H", "2")], wild)).toBe(
+      false
+    );
+  });
+
+  it("A-2-3 は成立しない（A は下では使えない）", () => {
+    expect(isValidSequence([c("a", "H", "A"), c("b", "H", "2"), c("c", "H", "3")], wild)).toBe(
+      false
+    );
+  });
+
+  it("2-3-4 は成立する（2 が一番下）", () => {
+    expect(isValidSequence([c("a", "H", "2"), c("b", "H", "3"), c("c", "H", "4")], wild)).toBe(true);
+  });
+
+  it("10-J-Q-K-A の5枚も成立する", () => {
+    expect(
+      isValidSequence(
+        [c("a", "S", "10"), c("b", "S", "J"), c("c", "S", "Q"), c("d", "S", "K"), c("e", "S", "A")],
+        wild
+      )
+    ).toBe(true);
   });
 
   it("異なるスートは不成立", () => {

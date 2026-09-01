@@ -4,7 +4,7 @@
 // だから並び順は web 側だけの関心事として、ここで持つ。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { rankIndex, type Card } from "@pifpaf/engine";
+import { sequenceIndex, type Card } from "@pifpaf/engine";
 
 const SUIT_ORDER = ["S", "H", "D", "C"];
 
@@ -14,7 +14,8 @@ export function sortedIds(cards: Card[]): string[] {
     .sort((a, b) => {
       const suitDiff = SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit);
       if (suitDiff !== 0) return suitDiff;
-      return rankIndex(a.rank) - rankIndex(b.rank);
+      // 階段と同じ並び（2が左、Aが右）にすると、繋がりが目で追いやすい
+      return sequenceIndex(a.rank) - sequenceIndex(b.rank);
     })
     .map((c) => c.id);
 }

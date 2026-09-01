@@ -65,9 +65,14 @@ describe("cardAffinity", () => {
     );
   });
 
-  it("K と A は循環上で隣接として扱われる（K-A-2のまたぎがあるため）", () => {
+  it("K と A は隣どうし（Q-K-A が作れるため）", () => {
     const hand = [c("k", "S", "K"), c("a", "S", "A")];
     expect(cardAffinity(c("k", "S", "K"), hand, wild)).toBeGreaterThan(0);
+  });
+
+  it("A と 2 は隣ではない（折り返さないため）", () => {
+    const hand = [c("a", "S", "A"), c("two", "S", "2")];
+    expect(cardAffinity(c("a", "S", "A"), hand, wild)).toBe(0);
   });
 });
 
