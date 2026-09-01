@@ -6,9 +6,13 @@ import type { Strings } from "./types";
 export const ja: Strings = {
   meta: { htmlLang: "ja", label: "日本語" },
 
-  lang: {
-    caption: "言語",
-    aria: (current) => `言語: ${current}。押すと切り替わる`,
+  settings: {
+    title: "設定",
+    open: "設定を開く",
+    close: "閉じる",
+    language: "言語",
+    speed: "CPUの速さ",
+    speedNote: "「ふつう」で1手番およそ2秒。配札の演出はこの設定によらず一定。",
   },
 
   intro: {
@@ -35,8 +39,6 @@ export const ja: Strings = {
     round: (n) => `第${n}ラウンド`,
     wager: "掛け金",
     rules: "ルール",
-    speedCaption: "CPUの速さ",
-    speedAria: (label) => `CPUの速さ: ${label}。押すと切り替わる`,
     vira: "ヴィラ",
     buyViraAria: (card) => `ヴィラの ${card} を買う`,
     viraGone: "買われた",

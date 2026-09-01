@@ -14,11 +14,12 @@ import type { Lang, Strings } from "./types";
 import { LANGS } from "./types";
 import { ja } from "./ja";
 import { en } from "./en";
+import { pt } from "./pt";
 
 export type { Lang, Strings } from "./types";
 export { LANGS } from "./types";
 
-const DICTS: Record<Lang, Strings> = { ja, en };
+const DICTS: Record<Lang, Strings> = { ja, en, pt };
 
 const LANG_KEY = "pifpaf.lang";
 
@@ -52,8 +53,6 @@ interface LanguageValue {
   lang: Lang;
   t: Strings;
   setLang: (lang: Lang) => void;
-  /** 次の言語へ。言語が増えても押すボタンは1つで済む */
-  cycleLang: () => void;
 }
 
 const LanguageContext = createContext<LanguageValue | null>(null);
@@ -70,27 +69,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const cycleLang = useCallback(() => {
-    setLangState((prev) => {
-      const i = LANGS.indexOf(prev);
-      const next = LANGS[(i + 1) % LANGS.length] ?? "ja";
-      try {
-        window.localStorage.setItem(LANG_KEY, next);
-      } catch {
-        // 同上
-      }
-      return next;
-    });
-  }, []);
-
   // 読み上げソフトと、フォント・行分けの既定を言語に合わせる
   useEffect(() => {
     document.documentElement.lang = DICTS[lang].meta.htmlLang;
   }, [lang]);
 
   const value = useMemo<LanguageValue>(
-    () => ({ lang, t: DICTS[lang], setLang, cycleLang }),
-    [lang, setLang, cycleLang]
+    () => ({ lang, t: DICTS[lang], setLang }),
+    [lang, setLang]
   );
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
@@ -122,6 +108,50 @@ export function personaName(t: Strings, seat: number): string {
 
 export function personaTitle(t: Strings, seat: number): string {
   return t.personas[seat]?.title ?? "";
+}
+
+/** 比較用に、大小文字とアクセント記号の違いを落とす。 */
+function normalize(v: string): string {
+  return v
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * ポルトガル語の装飾語に訳を添える。**同じことを言っているなら添えない。**
+ *
+ * 装飾語は全言語で共通なので、ポルトガル語で読むと訳と重なることがある
+ * （「AJUSTES — Ajustes」「FIM DA RODADA — fim da rodada」）。
+ * 辞書側を空にして回ることもできるが、言語を足すたびに同じ罠を踏むので、
+ * 突き合わせて自動で落とす。訳が空文字のときも同じ扱い。
+ */
+export function withGloss(flavor: string, gloss: string): string {
+  if (gloss === "" || normalize(flavor) === normalize(gloss)) return flavor;
+  return `${flavor} — ${gloss}`;
+}
+
+/**
+ * ボタンの下に添える小さな注釈。**見出しと同じことを言っているなら出さない。**
+ * `withGloss` と同じ理由（ポルトガル語では装飾語と訳が重なる）。
+ */
+export function Gloss({ flavor, text }: { flavor: string; text: string }) {
+  if (text === "" || normalize(flavor) === normalize(text)) return null;
+  return <small>{text}</small>;
+}
+
+/** 上の規則で見出しを描く。 */
+export function Kicker({
+  flavor,
+  gloss,
+  className,
+}: {
+  flavor: string;
+  gloss: string;
+  className: string;
+}) {
+  return <p className={className}>{withGloss(flavor, gloss)}</p>;
 }
 
 /**

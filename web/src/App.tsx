@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { Card, Wild } from "@pifpaf/engine";
 import { LOSS_PLAY, LOSS_FOLD, LOSS_COM10, classifyAsMelds } from "@pifpaf/engine";
 import { useGame, HUMAN, LOAN_AMOUNT } from "./game/useGame";
+import type { Speed } from "./game/useGame";
 import { useExecution } from "./game/useExecution";
 import { useHandOrder } from "./game/useHandOrder";
 import { PERSONAS, personaOf } from "./game/players";
@@ -14,8 +15,8 @@ import { ChipStack } from "./components/ChipStack";
 import { CardFlight } from "./components/CardFlight";
 import { DealingScene } from "./components/DealingScene";
 import { RuleBook } from "./components/RuleBook";
-import { useT, useLangControl, personaName, Rich } from "./i18n";
-import { LanguageToggle } from "./components/LanguageToggle";
+import { useT, personaName, Rich, Kicker, Gloss } from "./i18n";
+import { SettingsButton, SettingsPanel, SettingsControls } from "./components/Settings";
 import { CardBurst } from "./components/CardBurst";
 
 const WAGERS = [100, 250, 500];
@@ -72,7 +73,7 @@ export default function App() {
     aliveSeats,
     humanBater,
     speed,
-    cycleSpeed,
+    setSpeed,
     topDiscard,
     canTakeDiscard,
     canDrawStock,
@@ -99,6 +100,9 @@ export default function App() {
 
   const { ordered: orderedHand, reorder, sort } = useHandOrder(humanHand, gameId);
 
+  // 対局中の設定は隅の歯車から開く（盤面に常時出す余地がない）
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   // 初回は自動で開く。以降はボタンから
   const [rulesOpen, setRulesOpen] = useState(() => !rulesSeen());
   const closeRules = () => {
@@ -121,7 +125,13 @@ export default function App() {
   if (screen === "INTRO") {
     return (
       <>
-        <Intro onStart={sitDown} bankroll={bankroll} onRules={openRules} />
+        <Intro
+          onStart={sitDown}
+          bankroll={bankroll}
+          onRules={openRules}
+          speed={speed}
+          onSpeed={setSpeed}
+        />
         {rulesOpen && <RuleBook onClose={closeRules} />}
       </>
     );
@@ -129,7 +139,14 @@ export default function App() {
   if (screen === "BETTING") {
     return (
       <>
-        <Betting bankroll={bankroll} onBet={startMatch} onLoan={takeLoan} onRules={openRules} />
+        <Betting
+          bankroll={bankroll}
+          onBet={startMatch}
+          onLoan={takeLoan}
+          onRules={openRules}
+          speed={speed}
+          onSpeed={setSpeed}
+        />
         {rulesOpen && <RuleBook onClose={closeRules} />}
       </>
     );
@@ -153,22 +170,19 @@ export default function App() {
               {t.topbar.wager} <strong>{wager}</strong>
             </p>
           </div>
-          <button type="button" className="rulesButton" onClick={openRules}>
-            <span className="rulesButton__mark">?</span>
-            <span className="rulesButton__label">{t.topbar.rules}</span>
-          </button>
-
-          <button
-            type="button"
-            className="speedToggle"
-            onClick={cycleSpeed}
-            aria-label={t.topbar.speedAria(t.speed[speed])}
-          >
-            <span className="speedToggle__label">{t.topbar.speedCaption}</span>
-            <span className="speedToggle__value">{t.speed[speed]}</span>
-          </button>
-
-          <LanguageToggle />
+          {/* 隅にまとめた小さなボタン。盤面が狭いので文字は持たせない */}
+          <div className="topbar__tools">
+            <button
+              type="button"
+              className="iconButton"
+              onClick={openRules}
+              aria-label={t.topbar.rules}
+              title={t.topbar.rules}
+            >
+              <span className="iconButton__mark">?</span>
+            </button>
+            <SettingsButton onClick={() => setSettingsOpen(true)} />
+          </div>
 
           <div className="topbar__wild">
             <span className="topbar__wildLabel">CORINGA</span>
@@ -340,7 +354,7 @@ export default function App() {
 
           <div className="actions">
             <button className="btn btn--draw" disabled={!canDrawStock} onClick={drawCard}>
-              COMPRAR<small>{t.actions.draw}</small>
+              COMPRAR<Gloss flavor="COMPRAR" text={t.actions.draw} />
             </button>
             <button
               className="btn btn--discard"
@@ -349,14 +363,14 @@ export default function App() {
               }
               onClick={discardSelected}
             >
-              DESCARTAR<small>{t.actions.discard}</small>
+              DESCARTAR<Gloss flavor="DESCARTAR" text={t.actions.discard} />
             </button>
             <button
               className={`btn btn--bater ${humanBater ? "btn--armed" : ""}`}
               disabled={humanBater === null}
               onClick={callBater}
             >
-              BATER!<small>{humanBater ? t.actions.canBater : t.actions.cannotBater}</small>
+              BATER!<Gloss flavor="BATER!" text={humanBater ? t.actions.canBater : t.actions.cannotBater} />
             </button>
           </div>
 
@@ -382,6 +396,10 @@ export default function App() {
       {/* 破産した席が撃たれる瞬間の閃光。精算パネルと重ねると文字が読めなくなるので、
           MATCH_OVER に進む前のラウンド結果中に見せきる。 */}
       {rulesOpen && <RuleBook onClose={closeRules} />}
+
+      {settingsOpen && (
+        <SettingsPanel speed={speed} onSpeed={setSpeed} onClose={() => setSettingsOpen(false)} />
+      )}
 
       {screen === "DEALING" && (
         <DealingScene
@@ -495,7 +513,7 @@ function FoldPrompt({
   return (
     <div className="panel">
       <div className="panel__box">
-        <p className="panel__kicker">A MÃO — {t.fold.kicker}</p>
+        <Kicker flavor="A MÃO" gloss={t.fold.kicker} className="panel__kicker" />
         <h2>{t.fold.title}</h2>
         <div className="foldPrompt__hand">
           {hand.map((c) => (
@@ -511,10 +529,10 @@ function FoldPrompt({
         </p>
         <div className="panel__actions">
           <button className="btn btn--keep" onClick={onPlay}>
-            JOGAR<small>{t.fold.play}</small>
+            JOGAR<Gloss flavor="JOGAR" text={t.fold.play} />
           </button>
           <button className="btn btn--reject" onClick={onFold}>
-            CORRER<small>{t.fold.fold(LOSS_FOLD)}</small>
+            CORRER<Gloss flavor="CORRER" text={t.fold.fold(LOSS_FOLD)} />
           </button>
         </div>
       </div>
@@ -586,7 +604,7 @@ function RoundResult({
   return (
     <div className="panel">
       <div className="panel__box">
-        <p className="panel__kicker">FIM DA RODADA — {t.result.kicker}</p>
+        <Kicker flavor="FIM DA RODADA" gloss={t.result.kicker} className="panel__kicker" />
         <h2>
           {winner === null
             ? t.result.noWinner
@@ -630,7 +648,7 @@ function RoundResult({
 
         <div className="panel__actions">
           <button className="btn btn--again" onClick={onNext}>
-            CONTINUAR<small>{t.result.next}</small>
+            CONTINUAR<Gloss flavor="CONTINUAR" text={t.result.next} />
           </button>
         </div>
       </div>
@@ -707,7 +725,10 @@ function MatchOver({
         <div className="panel__actions">
           <button className="btn btn--again" onClick={onBack}>
             {bankroll > 0 ? "VOLTAR À MESA" : t.matchOver.brokeTitle}
-            <small>{bankroll > 0 ? t.matchOver.back : t.matchOver.broke}</small>
+            <Gloss
+              flavor={bankroll > 0 ? "VOLTAR À MESA" : t.matchOver.brokeTitle}
+              text={bankroll > 0 ? t.matchOver.back : t.matchOver.broke}
+            />
           </button>
         </div>
       </div>
@@ -721,11 +742,15 @@ function Betting({
   onBet,
   onLoan,
   onRules,
+  speed,
+  onSpeed,
 }: {
   bankroll: number;
   onBet: (n: number) => void;
   onLoan: () => void;
   onRules: () => void;
+  speed: Speed;
+  onSpeed: (s: Speed) => void;
 }) {
   const t = useT();
   const broke = bankroll <= 0;
@@ -734,7 +759,7 @@ function Betting({
     <div className="intro">
       <div className="grain" aria-hidden="true" />
       <div className="intro__panel">
-        <p className="intro__kicker">A APOSTA — {t.betting.kicker}</p>
+        <Kicker flavor="A APOSTA" gloss={t.betting.kicker} className="intro__kicker" />
         <h1 className="betting__bankroll">{bankroll}</h1>
         <p className="intro__sub">{t.betting.bankroll}</p>
         <div className="intro__rule" />
@@ -747,7 +772,7 @@ function Betting({
               {t.betting.brokeBody2}
             </p>
             <button className="btn btn--start" onClick={onLoan}>
-              PEGAR EMPRESTADO<small>{t.betting.borrow(LOAN_AMOUNT)}</small>
+              PEGAR EMPRESTADO<Gloss flavor="PEGAR EMPRESTADO" text={t.betting.borrow(LOAN_AMOUNT)} />
             </button>
           </>
         ) : (
@@ -764,17 +789,17 @@ function Betting({
                 </button>
               ))}
               <button className="btn btn--bet btn--allin" onClick={() => onBet(bankroll)}>
-                ALL IN<small>{bankroll}</small>
+                ALL IN<Gloss flavor="ALL IN" text={String(bankroll)} />
               </button>
             </div>
             <button className="btn btn--rules betting__rules" onClick={onRules}>
-              AS REGRAS<small>{t.betting.rules}</small>
+              AS REGRAS<Gloss flavor="AS REGRAS" text={t.betting.rules} />
             </button>
           </>
         )}
 
         {/* 一文無しのときもここに来るので、条件の外に出しておく */}
-        <LanguageToggle className="intro__lang" />
+        <SettingsControls speed={speed} onSpeed={onSpeed} />
       </div>
     </div>
   );
@@ -806,7 +831,7 @@ function InterceptBar({
         <PlayingCard card={card} wild={wild} size="md" />
       </div>
       <div className="keepBar__text">
-        <p className="keepBar__kicker">BATER NO LIXO — {t.intercept.kicker}</p>
+        <Kicker flavor="BATER NO LIXO" gloss={t.intercept.kicker} className="keepBar__kicker" />
         <p className="keepBar__title">{t.intercept.title}</p>
         <p className="keepBar__note">
           <span className="keepBar__noteLong">{t.intercept.noteLong}</span>
@@ -815,10 +840,10 @@ function InterceptBar({
       </div>
       <div className="keepBar__actions">
         <button className="btn btn--bater btn--armed" onClick={onTake}>
-          BATER!<small>{t.intercept.take}</small>
+          BATER!<Gloss flavor="BATER!" text={t.intercept.take} />
         </button>
         <button className="btn btn--reject" onClick={onPass}>
-          PASSAR<small>{t.intercept.pass}</small>
+          PASSAR<Gloss flavor="PASSAR" text={t.intercept.pass} />
         </button>
       </div>
     </div>
@@ -843,7 +868,7 @@ function KeepBar({
         <PlayingCard card={card} wild={wild} size="md" />
       </div>
       <div className="keepBar__text">
-        <p className="keepBar__kicker">PRIMEIRA MÃO — {t.keep.kicker}</p>
+        <Kicker flavor="PRIMEIRA MÃO" gloss={t.keep.kicker} className="keepBar__kicker" />
         <p className="keepBar__title">{t.keep.title}</p>
         <p className="keepBar__note">
           {/* 狭い画面では前半を畳む（CSSで制御） */}
@@ -853,10 +878,10 @@ function KeepBar({
       </div>
       <div className="keepBar__actions">
         <button className="btn btn--keep" onClick={onKeep}>
-          FICAR<small>{t.keep.keep}</small>
+          FICAR<Gloss flavor="FICAR" text={t.keep.keep} />
         </button>
         <button className="btn btn--reject" onClick={onReject}>
-          RECUSAR<small>{t.keep.reject}</small>
+          RECUSAR<Gloss flavor="RECUSAR" text={t.keep.reject} />
         </button>
       </div>
     </div>
@@ -867,10 +892,14 @@ function Intro({
   onStart,
   bankroll,
   onRules,
+  speed,
+  onSpeed,
 }: {
   onStart: () => void;
   bankroll: number;
   onRules: () => void;
+  speed: Speed;
+  onSpeed: (s: Speed) => void;
 }) {
   const t = useT();
   return (
@@ -889,13 +918,14 @@ function Intro({
         <p className="intro__warn">{t.intro.warn}</p>
         <div className="intro__actions">
           <button className="btn btn--start" onClick={onStart}>
-            SENTAR À MESA<small>{t.intro.sit(bankroll)}</small>
+            SENTAR À MESA<Gloss flavor="SENTAR À MESA" text={t.intro.sit(bankroll)} />
           </button>
           <button className="btn btn--rules" onClick={onRules}>
-            AS REGRAS<small>{t.intro.rules}</small>
+            AS REGRAS<Gloss flavor="AS REGRAS" text={t.intro.rules} />
           </button>
         </div>
-        <LanguageToggle className="intro__lang" />
+        {/* 卓に着く前に決めてもらう。対局中は隅の歯車から変えられる */}
+        <SettingsControls speed={speed} onSpeed={onSpeed} />
         <p className="intro__foot">{t.intro.disclaimer}</p>
       </div>
     </div>

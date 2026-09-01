@@ -7,7 +7,8 @@
 // ただし**カードの表記（7♠ や A-2-3）は訳さない**ので、そのまま書いてある。
 // 強調は訳文ごとに位置が動くため、辞書側の `*` を <Em> が開く。
 
-import { useT, useLangControl, Rich } from "../i18n";
+import { useT, Rich, Gloss } from "../i18n";
+import { LanguagePills } from "./Settings";
 
 export interface RuleBookProps {
   onClose: () => void;
@@ -26,8 +27,8 @@ export function RuleBook({ onClose }: RuleBookProps) {
             <h2 className="rulebook__title">{r.title}</h2>
           </div>
           <div className="rulebook__headActions">
-            {/* 読んでいる最中に言語を変えたくなるので、ここにも置く */}
-            <LanguageButton />
+            {/* 読んでいる最中が、言語を変えたくなる一番ありそうな瞬間 */}
+            <LanguagePills className="rulebook__lang" />
             <button type="button" className="rulebook__close" onClick={onClose}>
               {r.close}
             </button>
@@ -243,7 +244,7 @@ export function RuleBook({ onClose }: RuleBookProps) {
 
         <footer className="rulebook__foot">
           <button type="button" className="btn btn--again" onClick={onClose}>
-            FECHAR<small>{r.close}</small>
+            FECHAR<Gloss flavor="FECHAR" text={r.close} />
           </button>
         </footer>
       </div>
@@ -266,19 +267,4 @@ function Section({ n, title, children }: { n: string; title: string; children: R
 /** 辞書の `*` を、この読み物の強調表示として開く。 */
 function Em({ text }: { text: string }) {
   return <Rich text={text} emClass="rulebook__em" />;
-}
-
-/** ヘッダーに置く言語切り替え。盤面のものより小さく、言語名だけ。 */
-function LanguageButton() {
-  const { t, cycleLang } = useLangControl();
-  return (
-    <button
-      type="button"
-      className="rulebook__lang"
-      onClick={cycleLang}
-      aria-label={t.lang.aria(t.meta.label)}
-    >
-      {t.meta.label}
-    </button>
-  );
 }

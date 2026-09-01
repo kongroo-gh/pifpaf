@@ -41,6 +41,9 @@ const CPU_DISCARD_DELAY = 1100;
 const CPU_INTERCEPT_DELAY = 1200;
 
 export type Speed = "FAST" | "NORMAL" | "SLOW";
+
+/** 設定画面に並べる順。速い順に左から。 */
+export const SPEEDS: Speed[] = ["FAST", "NORMAL", "SLOW"];
 /** 待ち時間にかける倍率 */
 const SPEED_FACTOR: Record<Speed, number> = { FAST: 0.5, NORMAL: 1, SLOW: 2 };
 // 表示名は i18n の辞書（t.speed）が持つ。ここは種別だけを扱う。
@@ -138,18 +141,14 @@ export function useGame() {
 
   const clearPickup = useCallback(() => setPickup(null), []);
 
-  /** CPUの速度を切り替える（対局中でも変えられる） */
-  const cycleSpeed = useCallback(() => {
-    setSpeedState((prev) => {
-      const order: Speed[] = ["FAST", "NORMAL", "SLOW"];
-      const next = order[(order.indexOf(prev) + 1) % order.length]!;
-      try {
-        window.localStorage.setItem(SPEED_KEY, next);
-      } catch {
-        // 保存できなくても進行には影響しない
-      }
-      return next;
-    });
+  /** CPUの速度を決める（対局中でも変えられる）。設定画面から直接選ぶ */
+  const setSpeed = useCallback((next: Speed) => {
+    setSpeedState(next);
+    try {
+      window.localStorage.setItem(SPEED_KEY, next);
+    } catch {
+      // 保存できなくても進行には影響しない
+    }
   }, []);
 
   const persistBankroll = useCallback((v: number) => {
@@ -448,7 +447,7 @@ export function useGame() {
     finishDealing,
     humanBater,
     speed,
-    cycleSpeed,
+    setSpeed,
     topDiscard,
     canTakeDiscard,
     canDrawStock,

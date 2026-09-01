@@ -8,9 +8,13 @@ import type { Strings } from "./types";
 export const en: Strings = {
   meta: { htmlLang: "en", label: "English" },
 
-  lang: {
-    caption: "Language",
-    aria: (current) => `Language: ${current}. Press to switch`,
+  settings: {
+    title: "Settings",
+    open: "Open settings",
+    close: "Close",
+    language: "Language",
+    speed: "CPU speed",
+    speedNote: "About two seconds a turn on Normal. The deal always plays at the same pace.",
   },
 
   intro: {
@@ -39,8 +43,6 @@ export const en: Strings = {
     round: (n) => `Round ${n}`,
     wager: "Stake",
     rules: "Rules",
-    speedCaption: "CPU speed",
-    speedAria: (label) => `CPU speed: ${label}. Press to switch`,
     vira: "VIRA",
     buyViraAria: (card) => `Buy the vira, ${card}`,
     viraGone: "taken",

@@ -12,10 +12,10 @@
 // - 強調したい部分は `*` で挟む（`<Rich>` が <strong> にする）。
 //   翻訳者が訳文の中で強調位置を動かせるようにするため。
 
-export type Lang = "ja" | "en";
+export type Lang = "ja" | "en" | "pt";
 
-/** 追加順＝言語切替ボタンで回る順。 */
-export const LANGS: Lang[] = ["ja", "en"];
+/** 設定画面に並べる順。 */
+export const LANGS: Lang[] = ["ja", "en", "pt"];
 
 export interface Strings {
   meta: {
@@ -25,10 +25,16 @@ export interface Strings {
     label: string;
   };
 
-  lang: {
-    /** 切替ボタンの見出し */
-    caption: string;
-    aria: (current: string) => string;
+  settings: {
+    /** 歯車を押して開く画面の見出し */
+    title: string;
+    /** 歯車ボタンの読み上げ */
+    open: string;
+    close: string;
+    language: string;
+    speed: string;
+    /** 速さの選択肢に添える一言 */
+    speedNote: string;
   };
 
   intro: {
@@ -59,8 +65,6 @@ export interface Strings {
     round: (n: number) => string;
     wager: string;
     rules: string;
-    speedCaption: string;
-    speedAria: (label: string) => string;
     vira: string;
     buyViraAria: (card: string) => string;
     viraGone: string;
@@ -204,6 +208,9 @@ export interface Strings {
   /**
    * 席順（0が自分）。ポルトガル語の異名は players.ts が持ち、
    * ここは呼び名とその訳だけ。異名は雰囲気なので訳さない。
+   *
+   * `title` が空文字なら異名だけを出す。ポルトガル語では異名そのものが
+   * 肩書きなので、訳を並べると「O Chefe — O Chefe」になってしまうため。
    */
   personas: { name: string; title: string }[];
 

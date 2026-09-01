@@ -1,7 +1,7 @@
 // CPU1人分の席。手札は枚数だけ見せる（オンライン化時のマスク配信を意識した形）。
 
 import type { Persona } from "../game/players";
-import { useT, personaName, personaTitle } from "../i18n";
+import { useT, personaName, personaTitle, withGloss } from "../i18n";
 import { CardBack } from "./PlayingCard";
 import { BulletHoleCluster } from "./BulletHole";
 import { ChipStack } from "./ChipStack";
@@ -39,6 +39,7 @@ export function OpponentSeat({
   receiving = false,
 }: OpponentSeatProps) {
   const t = useT();
+  const title = personaTitle(t, persona.index);
   const classes = [
     "seat",
     isActive ? "seat--active" : "",
@@ -66,10 +67,9 @@ export function OpponentSeat({
 
       <div className="seat__info">
         <div className="seat__name">{personaName(t, persona.index)}</div>
-        {/* 異名は訳さない。続く肩書きだけが言語で変わる */}
-        <div className="seat__title">
-          {persona.epithet} — {personaTitle(t, persona.index)}
-        </div>
+        {/* 異名は訳さない。続く肩書きだけが言語で変わる。
+            ポルトガル語では異名がそのまま肩書きなので、withGloss が重複を落とす */}
+        <div className="seat__title">{withGloss(persona.epithet, title)}</div>
       </div>
 
       <div className="seat__chips" aria-label={t.seat.chipsAria(chips)}>

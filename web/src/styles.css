@@ -357,20 +357,11 @@ button {
   gap: 8px;
 }
 
-.rulebook__lang {
-  padding: 5px 10px;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  color: var(--gold);
-  background: none;
-  border: 1px solid rgba(200, 162, 74, 0.4);
-  cursor: pointer;
-  transition: border-color 160ms ease, color 160ms ease;
-}
-
-.rulebook__lang:hover {
-  border-color: rgba(200, 162, 74, 0.8);
-  color: var(--gold-bright);
+/* 見出しに置く言語の選択。設定画面と同じ部品だが、ここでは詰めて出す */
+.rulebook__lang .settings__choice {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  font-size: 10px;
 }
 
 .rulebook__close {
@@ -496,30 +487,41 @@ button {
   text-align: center;
 }
 
-/* 盤面から開くボタン */
-.rulesButton {
+/* ---------- 盤面の隅の小さなボタン（ルール・設定） ----------
+   盤面は狭いので文字は持たせず、記号だけにする。
+   以前は速さと言語のトグルを文字つきで並べていたが、言語が3つに増えると
+   ヘッダーに入らなくなるため、設定はこの歯車の奥へ畳んだ。 */
+.topbar__tools {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 5px 12px;
+  gap: 8px;
+}
+
+.iconButton {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
   background: none;
   border: 1px solid rgba(143, 136, 124, 0.3);
+  color: var(--smoke);
   cursor: pointer;
   transition: border-color 160ms ease, color 160ms ease;
 }
 
-.rulesButton:hover { border-color: rgba(200, 162, 74, 0.5); }
-
-.rulesButton__mark {
-  font-family: var(--display);
-  font-size: 14px;
+.iconButton:hover {
+  border-color: rgba(200, 162, 74, 0.6);
   color: var(--gold);
 }
 
-.rulesButton__label {
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  color: var(--smoke);
+.iconButton svg { width: 18px; height: 18px; }
+
+.iconButton__mark {
+  font-family: var(--display);
+  font-size: 15px;
+  line-height: 1;
+  color: var(--gold);
 }
 
 .intro__actions {
@@ -1098,44 +1100,59 @@ button {
   box-shadow: 0 0 0 2px var(--blood-hot), 0 10px 24px rgba(0, 0, 0, 0.7);
 }
 
-/* ---------- CPUの速さ切り替え ---------- */
-.speedToggle {
+/* ---------- 設定（言語・CPUの速さ） ----------
+   卓に着く前は選択肢をそのまま並べ、対局中は隅の歯車から同じものを開く。 */
+.settings {
   display: grid;
-  gap: 2px;
-  justify-items: center;
-  padding: 5px 12px;
-  border: 1px solid rgba(143, 136, 124, 0.3);
-  background: none;
-  cursor: pointer;
-  transition: border-color 160ms ease, color 160ms ease;
+  gap: 16px;
+  margin: 18px auto 0;
+  max-width: 420px;
+  text-align: left;
 }
 
-.speedToggle:hover { border-color: rgba(200, 162, 74, 0.5); }
-
-.speedToggle__label {
-  font-size: 8px;
-  letter-spacing: 0.18em;
+.settings__label {
+  margin: 0 0 7px;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
   color: var(--smoke-dim);
 }
 
-.speedToggle__value {
-  font-family: var(--display);
-  font-size: 13px;
-  letter-spacing: 0.08em;
-  color: var(--gold);
+.settings__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-/* 言語の切り替え。速さと同じ見た目だが、言語名は自国語表記なので
-   字幅が言語ごとに違う。最小幅を決めて、押すたびに隣がずれないようにする。 */
-.langToggle .speedToggle__value {
-  min-width: 4.5em;
-  font-family: inherit;
+.settings__choice {
+  flex: 1 1 auto;
+  padding: 7px 12px;
   font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--smoke);
+  background: none;
+  border: 1px solid rgba(143, 136, 124, 0.32);
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
 }
 
-/* イントロと掛け金画面では、始めるボタンの邪魔をしないよう控えめに置く */
-.intro__lang {
-  margin: 14px auto 0;
+.settings__choice:hover {
+  border-color: rgba(200, 162, 74, 0.55);
+  color: var(--cream);
+}
+
+/* 選ばれている側は塗りで示す。枠色だけだと暗い画面で見分けがつかない */
+.settings__choice--on {
+  color: var(--ink);
+  background: var(--gold);
+  border-color: var(--gold);
+}
+
+.settings__note {
+  margin: 7px 0 0;
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--smoke-dim);
 }
 
 .keepBar__actions {
@@ -1887,10 +1904,8 @@ button {
   .topbar__brand p { font-size: 9px; }
 
   .topbar__wild { padding: 5px 10px; gap: 8px; }
-  .speedToggle { padding: 3px 8px; }
-  .speedToggle__label { font-size: 7px; }
-  .speedToggle__value { font-size: 11px; }
-  .langToggle .speedToggle__value { font-size: 10px; min-width: 4em; }
+  .iconButton { width: 30px; height: 30px; }
+  .iconButton svg { width: 16px; height: 16px; }
   .topbar__wildLabel { font-size: 8px; letter-spacing: 0.12em; }
   .topbar__wildRank { font-size: 21px; }
   .topbar__vira { font-size: 8px; gap: 5px; }
@@ -2004,11 +2019,9 @@ button {
   .rulebook__section p, .rulebook__section li { font-size: 12px; line-height: 1.85; }
   .rulebook__table { font-size: 11px; }
   .rulebook__table th, .rulebook__table td { padding: 6px 6px; }
-  .rulesButton__label { display: none; }
-  /* ここまで狭いと横に並びきらないので、言語も見出しを畳んで言語名だけにする */
-  .langToggle .speedToggle__label { display: none; }
-  .langToggle .speedToggle__value { min-width: 0; }
-  .rulesButton { padding: 4px 9px; }
+  .iconButton { width: 27px; height: 27px; }
+  .iconButton svg { width: 14px; height: 14px; }
+  .iconButton__mark { font-size: 13px; }
 
   .verdict__panel { padding: 30px 22px 26px; }
   .verdict h2 { font-size: 30px; }
