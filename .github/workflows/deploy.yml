@@ -41,6 +41,10 @@ jobs:
 
       - name: ビルド（tsc --noEmit を含む）
         run: npm run build --workspace=web
+        env:
+          # Renderで発行されたWebSocket URLをRepository variableへ設定する。
+          # 例: wss://pifpaf-online-kongroo.onrender.com
+          VITE_WS_URL: ${{ vars.VITE_WS_URL }}
 
       - uses: actions/configure-pages@v5
 

@@ -44,6 +44,10 @@ export interface Strings {
     title: string;
     nameLabel: string;
     namePlaceholder: string;
+    createTitle: string;
+    createHint: string;
+    create: string;
+    joinTitle: string;
     roomLabel: string;
     roomPlaceholder: string;
     roomHint: string;
@@ -54,9 +58,16 @@ export interface Strings {
     connecting: string;
     reconnecting: string;
     failed: string;
+    retry: string;
     /** 卓で人を待っているとき */
     waiting: string;
     waitingHint: string;
+    inviteCode: string;
+    copyCode: string;
+    copied: string;
+    host: string;
+    you: string;
+    hostOnly: string;
     /** COMEÇAR の下。空席を CPU で埋めて始める */
     startWithBots: string;
     emptySeat: string;

@@ -12,7 +12,7 @@ import type { GameAction } from "@pifpaf/engine";
 import type { PlayerView } from "./view.ts";
 
 /** 通信仕様の版。合わないクライアントは弾く。 */
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 
 /** 卓の進み具合。ロビー表示に使う。 */
 export type RoomPhase =
@@ -41,6 +41,8 @@ export interface RoomSeat {
 
 export interface RoomInfo {
   roomId: string;
+  /** 卓を作った人の席。開始操作をできるのはこの席だけ */
+  hostSeat: number;
   phase: RoomPhase;
   seats: RoomSeat[];
   /** 何ラウンド目か */
@@ -50,6 +52,8 @@ export interface RoomInfo {
 /* ─────────── クライアント → サーバー ─────────── */
 
 export type ClientMessage =
+  /** 新しい卓を作る。短い接続コードはサーバーが発行する */
+  | { t: "CREATE"; version: number; name: string }
   /** 入室。席が空いていれば座る */
   | { t: "JOIN"; version: number; roomId: string; name: string; token?: string }
   /** 空席を CPU で埋めて開始する */
@@ -93,6 +97,10 @@ export function parseClientMessage(raw: unknown): ClientMessage | null {
   const m = raw as Record<string, unknown>;
 
   switch (m["t"]) {
+    case "CREATE":
+      if (typeof m["version"] !== "number" || typeof m["name"] !== "string") return null;
+      return { t: "CREATE", version: m["version"], name: sanitizeName(m["name"]) };
+
     case "JOIN":
       if (typeof m["version"] !== "number") return null;
       if (typeof m["roomId"] !== "string" || m["roomId"].length === 0) return null;

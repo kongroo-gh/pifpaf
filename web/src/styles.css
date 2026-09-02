@@ -1147,6 +1147,34 @@ button {
   color: var(--smoke-dim);
 }
 
+.lobby__choice {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(143, 136, 124, 0.28);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.lobby__choice--host {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  border-color: rgba(200, 162, 74, 0.42);
+  background: linear-gradient(120deg, rgba(200, 162, 74, 0.08), rgba(0, 0, 0, 0.18));
+}
+
+.lobby__choice strong { color: var(--cream); font-family: var(--display); letter-spacing: 0.06em; }
+.lobby__choice p { margin-top: 5px; }
+.lobby__or { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; color: var(--smoke-dim); font-size: 9px; }
+.lobby__or::before, .lobby__or::after { content: ""; height: 1px; background: rgba(143, 136, 124, 0.22); }
+
+.lobby__codeInput {
+  font-family: var(--display);
+  font-size: 22px;
+  letter-spacing: 0.3em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
 .lobby__back {
   justify-self: center;
   margin-top: 4px;
@@ -1168,6 +1196,22 @@ button {
   word-break: break-all;
 }
 
+.online__invite {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  align-items: center;
+  padding: 13px 15px;
+  margin: 8px 0 16px;
+  border: 1px solid rgba(200, 162, 74, 0.5);
+  background: rgba(200, 162, 74, 0.07);
+  text-align: left;
+}
+
+.online__invite > span { grid-column: 1 / -1; color: var(--smoke-dim); font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; }
+.online__invite > strong { font-family: var(--display); color: var(--gold-bright); font-size: 32px; letter-spacing: 0.25em; }
+.online__invite > button { color: var(--gold); background: transparent; border: 1px solid rgba(200, 162, 74, 0.4); padding: 7px 10px; cursor: pointer; }
+
 .online__seats {
   list-style: none;
   display: grid;
@@ -1178,14 +1222,32 @@ button {
 }
 
 .online__seats li {
-  padding: 6px 10px;
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 45px;
+  padding: 7px 10px;
   border: 1px solid rgba(143, 136, 124, 0.25);
   color: var(--cream);
 }
 
+.online__avatar { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: var(--gold); border: 1px solid rgba(200, 162, 74, 0.4); background: rgba(0, 0, 0, 0.25); }
+.online__seatName { font-family: var(--display); letter-spacing: 0.05em; }
+.online__seatTags { display: flex; gap: 4px; }
+.online__seatTags em { padding: 2px 5px; color: var(--gold); border: 1px solid rgba(200, 162, 74, 0.35); font-size: 8px; font-style: normal; letter-spacing: 0.1em; text-transform: uppercase; }
+
 .online__seat--empty {
   color: var(--smoke-dim);
   border-style: dashed;
+}
+.online__seat--empty .online__avatar { color: var(--smoke-dim); border-style: dashed; }
+
+@media (max-width: 520px) {
+  .lobby__choice--host { grid-template-columns: 1fr; }
+  .online__invite > strong { font-size: 27px; }
+  .online__seats li { grid-template-columns: 28px 1fr; }
+  .online__seatTags { grid-column: 2; }
 }
 
 /* ---------- 設定（言語・CPUの速さ） ----------

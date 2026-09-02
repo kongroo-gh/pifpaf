@@ -275,6 +275,13 @@ http://localhost:5173/?scene=lose   破産（精算画面）
 当初の計画どおり `server/` を足し、engine をそのまま Node 側に載せた。
 **engine は1行も書き換えていない**（足したのは規則の穴が1つだけ。後述）。
 
+### 卓の作成と参加（2026-09-02 更新）
+- ホストは `CREATE` を送り、サーバーが読み違えにくい4文字の接続コードを発行する
+- 参加者は `JOIN` と接続コードで既存の卓に入る。存在しないコードから卓は作らない
+- `RoomInfo.hostSeat` がホストを示し、ゲームを開始できるのはホストだけ
+- 待機画面にはホスト・自分・参加者・空席を明示し、コードをコピーできる
+- 通信仕様は `PROTOCOL_VERSION = 2`。旧画面は再読み込みを案内して弾く
+
 ### 動かし方
 ```
 npm run server                  # ws://127.0.0.1:8787
@@ -316,10 +323,11 @@ npm run dev --workspace=web     # イントロの ONLINE、または ?online=1
 自分の状態を `maskFor` に通せば同じ型になるので、盤面の画面を1つにできる。
 いまは単機版とオンライン版で2つあり、放っておくとずれる。
 
-### 公開先は未定（ユーザーの承認が要る）
-GitHub Pages は静的配信のみで WebSocket を置けない。行き先と費用の判断が
-必要なため、こちらでは進めていない。候補は Cloudflare Workers + Durable
-Objects（`ws.ts` が不要になる）、Fly.io / Render（いまのまま載る）。
+### 公開構成（Render + GitHub Pages）
+GitHub Pages は画面の配信に継続利用する。オンライン卓は `render.yaml` で定義した
+Render Web Serviceへ載せる方針。Renderが発行したWSS URLをGitHub Repository
+variable `VITE_WS_URL` に設定すると、Pagesビルドへ接続先が埋め込まれる。
+無料枠は15分間通信がないと休止し、最初の接続に最大約1分かかる場合がある。
 
 ### import に拡張子を明示している
 Node の ESM は拡張子を省略できないため、engine / protocol / server の

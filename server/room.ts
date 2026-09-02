@@ -61,6 +61,7 @@ const BOT_NAMES = ["Dom Vieira", "Zé Navalha", "Dona Rosa", "O Fantasma"];
 
 export class Room {
   readonly roomId: string;
+  private hostSeat = -1;
 
   private seats: Occupant[] = Array.from({ length: SEAT_COUNT }, () => null);
   private phase: RoomPhase = "WAITING";
@@ -127,6 +128,7 @@ export class Room {
 
     const fresh = this.makeToken();
     this.seats[seat] = { kind: "HUMAN", name, token: fresh, connected: true };
+    if (this.hostSeat < 0) this.hostSeat = seat;
     this.onChange();
     return { ok: true, seat, token: fresh, rejoined: false };
   }
@@ -144,6 +146,9 @@ export class Room {
     // まだ始まっていない卓なら席を空けてしまってよい
     if (this.phase === "WAITING") {
       this.seats[seat] = null;
+      if (this.hostSeat === seat) {
+        this.hostSeat = this.seats.findIndex((occupant) => occupant?.kind === "HUMAN");
+      }
       this.onChange();
       return;
     }
@@ -383,7 +388,7 @@ export class Room {
       disconnected: o !== null && o.kind === "HUMAN" && !o.connected,
       decided: this.decided[i] === true,
     }));
-    return { roomId: this.roomId, phase: this.phase, seats, round: this.match.round };
+    return { roomId: this.roomId, hostSeat: this.hostSeat, phase: this.phase, seats, round: this.match.round };
   }
 
   settlement(): RoundSettlement | null {

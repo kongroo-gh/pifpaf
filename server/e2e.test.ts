@@ -108,14 +108,15 @@ class TestClient {
 }
 
 describe("繋いで往復する", () => {
-  it("JOIN すると席とトークンが返る", async () => {
+  it("CREATE すると短いコード、席、トークンが返る", async () => {
     const url = await startServer();
     const client = await TestClient.connect(url);
 
-    client.send({ t: "JOIN", version: PROTOCOL_VERSION, roomId: "r1", name: "あ" });
+    client.send({ t: "CREATE", version: PROTOCOL_VERSION, name: "あ" });
     const joined = await client.waitFor("JOINED");
 
     expect(joined.seat).toBe(0);
+    expect(joined.roomId).toMatch(/^[A-Z2-9]{4}$/);
     expect(joined.token).toMatch(/.+/);
     client.close();
   });
@@ -124,10 +125,10 @@ describe("繋いで往復する", () => {
     const url = await startServer();
     const client = await TestClient.connect(url);
 
-    client.send({ t: "JOIN", version: PROTOCOL_VERSION + 99, roomId: "r1", name: "あ" });
+    client.send({ t: "CREATE", version: PROTOCOL_VERSION + 99, name: "あ" });
     const fatal = await client.waitFor("FATAL");
 
-    expect(fatal.reason).toContain("通信仕様");
+    expect(fatal.reason).toContain("再読み込み");
     client.close();
   });
 
@@ -138,8 +139,8 @@ describe("繋いで往復する", () => {
     client.send({ t: "なんだこれ" });
     await client.waitFor("REJECTED");
 
-    // まだ生きているので、続けて JOIN できる
-    client.send({ t: "JOIN", version: PROTOCOL_VERSION, roomId: "r1", name: "あ" });
+    // まだ生きているので、続けて卓を作れる
+    client.send({ t: "CREATE", version: PROTOCOL_VERSION, name: "あ" });
     await client.waitFor("JOINED");
     client.close();
   });
@@ -160,9 +161,9 @@ describe("繋いで往復する", () => {
     const a = await TestClient.connect(url);
     const b = await TestClient.connect(url);
 
-    a.send({ t: "JOIN", version: PROTOCOL_VERSION, roomId: "同卓", name: "あ" });
+    a.send({ t: "CREATE", version: PROTOCOL_VERSION, name: "あ" });
     const ja = await a.waitFor("JOINED");
-    b.send({ t: "JOIN", version: PROTOCOL_VERSION, roomId: "同卓", name: "い" });
+    b.send({ t: "JOIN", version: PROTOCOL_VERSION, roomId: ja.roomId, name: "い" });
     const jb = await b.waitFor("JOINED");
 
     expect(ja.seat).not.toBe(jb.seat);
@@ -180,9 +181,9 @@ describe("繋いで往復する", () => {
     const a = await TestClient.connect(url);
     const b = await TestClient.connect(url);
 
-    a.send({ t: "JOIN", version: PROTOCOL_VERSION, roomId: "秘密", name: "あ" });
-    await a.waitFor("JOINED");
-    b.send({ t: "JOIN", version: PROTOCOL_VERSION, roomId: "秘密", name: "い" });
+    a.send({ t: "CREATE", version: PROTOCOL_VERSION, name: "あ" });
+    const host = await a.waitFor("JOINED");
+    b.send({ t: "JOIN", version: PROTOCOL_VERSION, roomId: host.roomId, name: "い" });
     await b.waitFor("JOINED");
 
     a.send({ t: "START" });
@@ -210,9 +211,9 @@ describe("繋いで往復する", () => {
     const a = await TestClient.connect(url);
     const b = await TestClient.connect(url);
 
-    a.send({ t: "JOIN", version: PROTOCOL_VERSION, roomId: "順番", name: "あ" });
+    a.send({ t: "CREATE", version: PROTOCOL_VERSION, name: "あ" });
     const ja = await a.waitFor("JOINED");
-    b.send({ t: "JOIN", version: PROTOCOL_VERSION, roomId: "順番", name: "い" });
+    b.send({ t: "JOIN", version: PROTOCOL_VERSION, roomId: ja.roomId, name: "い" });
     await b.waitFor("JOINED");
 
     a.send({ t: "START" });
@@ -238,7 +239,7 @@ describe("繋いで往復する", () => {
     const url = await startServer();
     const a = await TestClient.connect(url);
 
-    a.send({ t: "JOIN", version: PROTOCOL_VERSION, roomId: "復帰", name: "あ" });
+    a.send({ t: "CREATE", version: PROTOCOL_VERSION, name: "あ" });
     const first = await a.waitFor("JOINED");
     a.send({ t: "START" });
     await a.waitFor("VIEW");
@@ -250,7 +251,7 @@ describe("繋いで往復する", () => {
     again.send({
       t: "JOIN",
       version: PROTOCOL_VERSION,
-      roomId: "復帰",
+      roomId: first.roomId,
       name: "あ",
       token: first.token,
     });
@@ -264,7 +265,7 @@ describe("繋いで往復する", () => {
     const url = await startServer();
     const a = await TestClient.connect(url);
 
-    a.send({ t: "JOIN", version: PROTOCOL_VERSION, roomId: "自動", name: "あ" });
+    a.send({ t: "CREATE", version: PROTOCOL_VERSION, name: "あ" });
     await a.waitFor("JOINED");
     a.send({ t: "START" });
     await a.waitFor("VIEW");

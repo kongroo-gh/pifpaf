@@ -42,11 +42,15 @@ export function OnlineTable({ onExit, onRules }: OnlineTableProps) {
         <div className="intro__panel">
           <p className="intro__kicker">SALA</p>
           <p className="intro__body">
-            {game.connection === "RECONNECTING" ? t.online.reconnecting : t.online.connecting}
+            {game.connection === "FAILED"
+              ? t.online.failed
+              : game.connection === "RECONNECTING"
+                ? t.online.reconnecting
+                : t.online.connecting}
           </p>
           {game.error !== null && <p className="intro__warn">{game.error}</p>}
-          <button className="btn btn--rules" onClick={() => { game.disconnect(); onExit(); }}>
-            SAIR<Gloss flavor="SAIR" text={t.online.leave} />
+          <button className="btn btn--rules" onClick={() => game.disconnect()}>
+            VOLTAR<Gloss flavor="VOLTAR" text={t.online.retry} />
           </button>
         </div>
       </div>
@@ -71,7 +75,8 @@ function Lobby({
   const [name, setName] = useState(() => loadName());
   const [roomId, setRoomId] = useState("");
 
-  const ready = roomId.trim().length > 0;
+  const ready = roomId.trim().length === 4;
+  const hasName = name.trim().length > 0;
 
   return (
     <div className="intro">
@@ -81,13 +86,7 @@ function Lobby({
         <h1 className="intro__title">PIF PAF</h1>
         <div className="intro__rule" />
 
-        <form
-          className="lobby"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (ready) game.connect(roomId.trim(), name.trim());
-          }}
-        >
+        <div className="lobby">
           <label className="lobby__field">
             <span className="lobby__label">{t.online.nameLabel}</span>
             <input
@@ -99,25 +98,44 @@ function Lobby({
             />
           </label>
 
-          <label className="lobby__field">
-            <span className="lobby__label">{t.online.roomLabel}</span>
-            <input
-              className="lobby__input"
-              value={roomId}
-              maxLength={40}
-              placeholder={t.online.roomPlaceholder}
-              onChange={(e) => setRoomId(e.target.value)}
-            />
-          </label>
+          <section className="lobby__choice lobby__choice--host">
+            <div>
+              <strong>{t.online.createTitle}</strong>
+              <p className="lobby__hint">{t.online.createHint}</p>
+            </div>
+            <button className="btn btn--start" type="button" disabled={!hasName} onClick={() => game.create(name.trim())}>
+              CRIAR<Gloss flavor="CRIAR" text={t.online.create} />
+            </button>
+          </section>
 
-          <p className="lobby__hint">{t.online.roomHint}</p>
+          <div className="lobby__or" aria-hidden="true"><span>OU</span></div>
+
+          <form className="lobby__choice" onSubmit={(e) => {
+            e.preventDefault();
+            if (ready && hasName) game.connect(roomId, name.trim());
+          }}>
+            <strong>{t.online.joinTitle}</strong>
+            <label className="lobby__field">
+              <span className="lobby__label">{t.online.roomLabel}</span>
+              <input
+                className="lobby__input lobby__codeInput"
+                value={roomId}
+                maxLength={4}
+                autoCapitalize="characters"
+                autoComplete="off"
+                placeholder={t.online.roomPlaceholder}
+                onChange={(e) => setRoomId(e.target.value.toUpperCase().replace(/[^A-Z2-9]/g, ""))}
+              />
+            </label>
+            <p className="lobby__hint">{t.online.roomHint}</p>
+            <button className="btn btn--keep" type="submit" disabled={!ready || !hasName}>
+              ENTRAR<Gloss flavor="ENTRAR" text={t.online.join} />
+            </button>
+          </form>
 
           {game.error !== null && <p className="intro__warn">{game.error}</p>}
 
           <div className="intro__actions">
-            <button className="btn btn--start" type="submit" disabled={!ready}>
-              ENTRAR<Gloss flavor="ENTRAR" text={t.online.join} />
-            </button>
             <button className="btn btn--rules" type="button" onClick={onRules}>
               AS REGRAS<Gloss flavor="AS REGRAS" text={t.intro.rules} />
             </button>
@@ -126,7 +144,7 @@ function Lobby({
           <button className="btn btn--rules lobby__back" type="button" onClick={onExit}>
             {t.online.backToSolo}
           </button>
-        </form>
+        </div>
       </div>
     </div>
   );
@@ -511,26 +529,45 @@ function WaitingPanel({ game }: { game: OnlineGame }) {
   const t = useT();
   const room = game.room!;
   const humans = room.seats.filter((s) => s.name !== null && !s.isBot);
+  const isHost = room.hostSeat === game.seat;
+  const [copied, setCopied] = useState(false);
+
+  const copyCode = () => {
+    void navigator.clipboard?.writeText(room.roomId).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    });
+  };
 
   return (
     <div className="panel">
       <div className="panel__box">
         <Kicker flavor="A SALA" gloss={t.online.waiting} className="panel__kicker" />
-        <h2 className="online__roomName">{room.roomId}</h2>
-        <ul className="online__seats">
+        <div className="online__invite">
+          <span>{t.online.inviteCode}</span>
+          <strong>{room.roomId}</strong>
+          <button type="button" onClick={copyCode}>{copied ? t.online.copied : t.online.copyCode}</button>
+        </div>
+        <ul className="online__seats" aria-label={t.online.waiting}>
           {room.seats.map((s) => (
             <li key={s.seat} className={s.name === null ? "online__seat--empty" : ""}>
-              {s.name ?? t.online.emptySeat}
+              <span className="online__avatar" aria-hidden="true">{s.name === null ? "◇" : s.seat === room.hostSeat ? "♛" : "●"}</span>
+              <span className="online__seatName">{s.name ?? t.online.emptySeat}</span>
+              <span className="online__seatTags">
+                {s.seat === room.hostSeat && <em>{t.online.host}</em>}
+                {s.seat === game.seat && <em>{t.online.you}</em>}
+              </span>
             </li>
           ))}
         </ul>
         <p className="panel__note">{t.online.waitingHint}</p>
         <p className="panel__dim">{humans.length} / 4</p>
         <div className="panel__actions">
-          <button className="btn btn--keep" onClick={game.start}>
+          <button className="btn btn--keep" onClick={game.start} disabled={!isHost}>
             COMEÇAR<Gloss flavor="COMEÇAR" text={t.online.startWithBots} />
           </button>
         </div>
+        {!isHost && <p className="panel__dim">{t.online.hostOnly}</p>}
       </div>
     </div>
   );

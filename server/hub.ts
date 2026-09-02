@@ -72,6 +72,10 @@ export class Hub {
     const member = this.members.get(conn.id);
     if (member !== undefined) member.lastSeen = Date.now();
 
+    if (msg.t === "CREATE") {
+      this.handleCreate(conn, msg);
+      return;
+    }
     if (msg.t === "JOIN") {
       this.handleJoin(conn, msg);
       return;
@@ -109,15 +113,16 @@ export class Hub {
 
   /* ───────────── 中身 ───────────── */
 
+  private handleCreate(conn: WsConnection, msg: Extract<ClientMessage, { t: "CREATE" }>): void {
+    if (!this.checkVersion(conn, msg.version) || this.members.has(conn.id)) return;
+    const roomId = this.makeRoomCode();
+    const room = new Room({ roomId, onChange: () => this.broadcast(room) });
+    this.rooms.set(roomId, room);
+    this.joinRoom(conn, room, msg.name);
+  }
+
   private handleJoin(conn: WsConnection, msg: Extract<ClientMessage, { t: "JOIN" }>): void {
-    if (msg.version !== PROTOCOL_VERSION) {
-      this.send(conn, {
-        t: "FATAL",
-        reason: `通信仕様が違います（サーバー ${PROTOCOL_VERSION} / あなた ${msg.version}）。再読み込みしてください`,
-      });
-      conn.close();
-      return;
-    }
+    if (!this.checkVersion(conn, msg.version)) return;
 
     // 同じ接続で二度 JOIN しない
     if (this.members.has(conn.id)) {
@@ -125,16 +130,19 @@ export class Hub {
       return;
     }
 
-    let room = this.rooms.get(msg.roomId);
+    const room = this.rooms.get(msg.roomId.toUpperCase());
     if (room === undefined) {
-      room = new Room({
-        roomId: msg.roomId,
-        onChange: () => this.broadcast(room!),
-      });
-      this.rooms.set(msg.roomId, room);
+      this.send(conn, { t: "FATAL", reason: "その接続コードの卓は見つかりません" });
+      return;
     }
 
-    const joined = room.join(msg.name, msg.token);
+    this.joinRoom(conn, room, msg.name, msg.token);
+  }
+
+  private joinRoom(conn: WsConnection, room: Room, name: string, token?: string): void {
+    const roomId = room.roomId;
+
+    const joined = room.join(name, token);
     if (!joined.ok) {
       this.send(conn, { t: "REJECTED", reason: joined.reason });
       return;
@@ -142,7 +150,7 @@ export class Hub {
 
     // 同じ席に別の接続が残っていたら、古いほうを切る（多重ログイン対策）
     for (const [id, m] of this.members) {
-      if (m.roomId === msg.roomId && m.seat === joined.seat && id !== conn.id) {
+      if (m.roomId === roomId && m.seat === joined.seat && id !== conn.id) {
         this.send(m.conn, { t: "FATAL", reason: "別の端末から同じ席に入りました" });
         m.conn.close();
         this.members.delete(id);
@@ -151,15 +159,15 @@ export class Hub {
 
     this.members.set(conn.id, {
       conn,
-      roomId: msg.roomId,
+      roomId,
       seat: joined.seat,
       lastSeen: Date.now(),
     });
-    this.emptySince.delete(msg.roomId);
+    this.emptySince.delete(roomId);
 
     this.send(conn, {
       t: "JOINED",
-      roomId: msg.roomId,
+      roomId,
       seat: joined.seat,
       token: joined.token,
     });
@@ -167,9 +175,30 @@ export class Hub {
     this.scheduleBot(room);
   }
 
+  private checkVersion(conn: WsConnection, version: number): boolean {
+    if (version === PROTOCOL_VERSION) return true;
+    this.send(conn, { t: "FATAL", reason: "ゲームの版が更新されています。画面を再読み込みしてください" });
+    conn.close();
+    return false;
+  }
+
+  private makeRoomCode(): string {
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    for (let attempt = 0; attempt < 100; attempt++) {
+      let code = "";
+      for (let i = 0; i < 4; i++) code += alphabet[Math.floor(Math.random() * alphabet.length)];
+      if (!this.rooms.has(code)) return code;
+    }
+    return Date.now().toString(36).slice(-6).toUpperCase();
+  }
+
   private handleRoomMessage(room: Room, member: Member, msg: ClientMessage): void {
     switch (msg.t) {
       case "START": {
+        if (room.roomInfo().hostSeat !== member.seat) {
+          this.send(member.conn, { t: "REJECTED", reason: "開始できるのはホストだけです" });
+          break;
+        }
         const r = room.start();
         if (!r.ok) this.send(member.conn, { t: "REJECTED", reason: r.reason });
         break;

@@ -46,6 +46,7 @@ describe("入退室", () => {
   it("空席に順に座る", () => {
     const room = makeRoom();
     expect(room.join("あ")).toMatchObject({ ok: true, seat: 0 });
+    expect(room.roomInfo().hostSeat).toBe(0);
     expect(room.join("い")).toMatchObject({ ok: true, seat: 1 });
     expect(room.join("う")).toMatchObject({ ok: true, seat: 2 });
     expect(room.join("え")).toMatchObject({ ok: true, seat: 3 });
@@ -85,6 +86,7 @@ describe("入退室", () => {
     if (!joined.ok) return;
     room.disconnect(joined.seat);
     expect(room.roomInfo().seats[0]!.name).toBeNull();
+    expect(room.roomInfo().hostSeat).toBe(-1);
   });
 });
 

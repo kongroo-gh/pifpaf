@@ -10,16 +10,21 @@ pifpaf/
 ├── tsconfig.base.json      # 共通の strict TypeScript 設定
 ├── CLAUDE.md               # Claude Code向けの引き継ぎコンテキスト
 ├── rules.md                # ルール仕様書（ヴィラ・役・上がり条件・実装上の仮定）
-└── engine/                 # ゲームロジック本体（UI・通信に非依存）
+├── engine/                 # ゲームロジック本体（UI・通信に非依存）
     ├── types.ts            # Card / Suit / Rank などの基本型
     ├── deck.ts              # デッキ生成・シャッフル・配札（ヴィラ／ワイルド決定含む）
     ├── melds.ts             # トリンカ・シーケンスの判定、手札の役分類
     ├── melds.test.ts        # Vitestテスト（要 npm install）
     ├── sanity-check.ts      # npm installなしでロジックを素早く確認するためのスクリプト
     ├── package.json
-    └── tsconfig.json
+│   └── tsconfig.json
+├── protocol/               # 席ごとに手札を伏せる通信仕様
+├── server/                 # 権威サーバー（WebSocket、卓、CPU代行）
+└── web/                    # React + Vite。単機版とオンライン版
 ```
-`web/`（React + Vite のUI）はまだ未着手です。次のタスクとして `CLAUDE.md` に記載しています。
+単機版は複数ラウンドのチップ制マッチとして完成しています。オンライン版も接続、
+4人卓、再接続、切断席のCPU代行まで実装済みです。詳細と最新の優先順位は
+`CLAUDE.md` を参照してください。
 
 ## なぜこの構成なのか
 「将来オンライン化前提でCPU対戦から始める」という方針のため、`engine/` は
@@ -63,19 +68,37 @@ Safari で開く。ホーム画面に追加すると、アドレスバーの無�
 
 縦・横どちらの向きにも対応済み（iPhone SE 375x667 から Pro Max まで、
 スクロールなしで手札とボタンが収まることを確認している）。
-人間1人 + CPU3人の**ワンゲームマッチ**（1ラウンドで決着。ポイント制はまだ無し）。
+人間1人 + CPU3人の**複数ラウンドマッチ**（7チップ制）。
 見た目はマフィアの酒場という設定で、負けた3人は撃たれて脱落する演出が入る
 （記号的な表現のみ）。
 
+## オンラインで遊ぶ（ローカル開発）
+
+別々のターミナルでサーバーとWebを起動し、ONLINEを選びます。ホストが卓を作ると
+4文字の接続コードが自動発行され、ほかのプレイヤーはそのコードで参加できます。
+
+```
+npm run server
+npm run dev --workspace=web
+```
+
+## iPhoneなど外出先から遊ぶ
+
+GitHub Pagesが画面、Render Web Serviceがオンライン卓を担当する。`render.yaml` から
+Render Blueprintを作成後、発行された `wss://...onrender.com` をGitHubリポジトリの
+Repository variable `VITE_WS_URL` に設定して、Pagesを再デプロイする。
+
+Render無料枠は15分間通信がないと休止する。休止後の最初の接続では、起動まで
+最大1分ほど待つ場合がある。接続後はWebSocket通信が続くため、対局中は休止しない。
+
 ## テスト
 ```
-npm test --workspace=engine     # 48件
+npm test                        # engine / protocol / server
 ```
 CPU4人に最後まで打たせる統合テストを含む（決着すること／カードが増減しないこと）。
 
 ## 次のステップ
-1. 上がった手の役を開示する（今は伏せたまま決着する）
-2. AIの強化（捨て札を見る・ワイルドの温存判断）
-3. 捨て札からのドロー（`rules.md` の仮定を解除する）
-4. ポイント制度の設計（別途ご相談）
-5. オンライン化（`server/` を足し、`engine` をNode側へ）
+1. 単機版とオンライン版の盤面を `PlayerView` に統一する
+2. 単機版の配札・札移動・勝利演出をオンライン版へ移す
+3. 公開先を決める（WebSocket対応の実行環境が必要）
+4. AIを強化する
