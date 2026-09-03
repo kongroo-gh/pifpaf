@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Card, Wild } from "@pifpaf/engine";
 import { PlayingCard } from "./PlayingCard";
+import { sfx } from "../audio";
 
 /** 飛んでいる時間（ミリ秒）。CPUの手番間隔より短くして、次の手と重ならないようにする。 */
 const FLIGHT_MS = 620;
@@ -41,6 +42,8 @@ export function CardFlight({ card, wild, seat, onDone }: CardFlightProps) {
       doneRef.current();
       return;
     }
+
+    sfx.whoosh();
 
     setFlight({
       left: from.left,

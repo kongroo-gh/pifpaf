@@ -7,6 +7,7 @@
 import type { Card, Wild } from "@pifpaf/engine";
 import { LOSS_PLAY, LOSS_FOLD, LOSS_COM10 } from "@pifpaf/engine";
 import { useT, Rich, Kicker, Gloss } from "../i18n";
+import { sfx } from "../audio";
 import { PlayingCard } from "./PlayingCard";
 
 /** ラウンド開始前。手札を見て、勝負するか降りるかを決める。 */
@@ -42,10 +43,11 @@ export function FoldPrompt({
           <span className="panel__dim">{t.fold.chipsInHand(chips)}</span>
         </p>
         <div className="panel__actions">
-          <button className="btn btn--keep" onClick={onPlay}>
+          <button className="btn btn--keep" onClick={() => { sfx.click(); onPlay(); }}>
             JOGAR<Gloss flavor="JOGAR" text={t.fold.play} />
           </button>
-          <button className="btn btn--reject" onClick={onFold}>
+          {/* 降りるとチップを1枚置く。払った音にしてある */}
+          <button className="btn btn--reject" onClick={() => { sfx.chip(); onFold(); }}>
             CORRER<Gloss flavor="CORRER" text={t.fold.fold(LOSS_FOLD)} />
           </button>
         </div>
@@ -87,7 +89,7 @@ export function InterceptBar({
         <button className="btn btn--bater btn--armed" onClick={onTake}>
           BATER!<Gloss flavor="BATER!" text={t.intercept.take} />
         </button>
-        <button className="btn btn--reject" onClick={onPass}>
+        <button className="btn btn--reject" onClick={() => { sfx.click(); onPass(); }}>
           PASSAR<Gloss flavor="PASSAR" text={t.intercept.pass} />
         </button>
       </div>
@@ -129,7 +131,7 @@ export function KeepBar({
         </p>
       </div>
       <div className="keepBar__actions">
-        <button className="btn btn--keep" onClick={onKeep}>
+        <button className="btn btn--keep" onClick={() => { sfx.card(); onKeep(); }}>
           FICAR<Gloss flavor="FICAR" text={t.keep.keep} />
         </button>
         <button className="btn btn--reject" onClick={onReject}>

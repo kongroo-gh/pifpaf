@@ -3,7 +3,8 @@
 // 位置・速さ・回転は初回描画のときに一度だけ決めて固定する。
 // 毎描画で作り直すと、再描画のたびに降り方が飛ぶため。
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { sfx } from "../audio";
 
 const PIECE_COUNT = 60;
 
@@ -34,6 +35,10 @@ function makePieces(): Piece[] {
 
 export function MoneyRain() {
   const pieces = useMemo(makePieces, []);
+
+  // 降り始めに合わせて粒を散らす。降り続けるあいだ鳴らし続けはしない
+  // （マッチ制覇は一度きりの見せ場なので、頭だけ厚くすれば足りる）
+  useEffect(() => sfx.moneyRain(), []);
 
   return (
     <div className="moneyRain" aria-hidden="true">

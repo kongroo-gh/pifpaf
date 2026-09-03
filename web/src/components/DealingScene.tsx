@@ -13,6 +13,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Card, Wild } from "@pifpaf/engine";
 import { PlayingCard, CardBack } from "./PlayingCard";
 import { useT } from "../i18n";
+import { sfx } from "../audio";
 import type { Strings } from "../i18n";
 
 export type DealStep = "CUT" | "VIRA" | "DEAL" | "SETTLE" | "DONE";
@@ -109,10 +110,14 @@ export function DealingScene({
     for (const s of order) {
       const start = at;
       timers.push(setTimeout(() => setStep(s), start));
+      if (s === "CUT") timers.push(setTimeout(() => sfx.cut(), start));
       if (s === "VIRA") {
-        // めくり終わりでコリンガを確定させる
+        // めくり終わりでコリンガを確定させる。音もそこに合わせる
         timers.push(
-          setTimeout(() => revealRef.current(), start + DURATION.VIRA * 0.75 * speedFactor)
+          setTimeout(() => {
+            revealRef.current();
+            sfx.vira();
+          }, start + DURATION.VIRA * 0.75 * speedFactor)
         );
       }
       at += DURATION[s] * speedFactor;
@@ -139,6 +144,19 @@ export function DealingScene({
       }))
     );
   }, [anchors, speedFactor]);
+
+  // 札の音は飛ぶ束に合わせる。1束3枚なので3回、わずかにずらして鳴らす。
+  // **画面の要素とは別に鳴らす**（束ごとに音を持たせると、
+  // 途中で描き直されたときに同じ束が二度鳴る）
+  useEffect(() => {
+    if (step !== "DEAL") return;
+    const timers = batches.flatMap((b) =>
+      [0, 0.055, 0.11].map((offset) =>
+        setTimeout(() => sfx.card(), b.delay + offset * 1000 * speedFactor)
+      )
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [step, batches, speedFactor]);
 
   if (anchors === null) return null;
 

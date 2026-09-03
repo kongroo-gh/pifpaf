@@ -15,6 +15,10 @@ export const en: Strings = {
     language: "Language",
     speed: "CPU speed",
     speedNote: "About two seconds a turn on Normal. The deal always plays at the same pace.",
+    sound: "Sound",
+    soundOn: "On",
+    soundOff: "Off",
+    soundNote: "The table's sounds are synthesised on your device. Nothing plays until you touch the screen.",
   },
 
   online: {

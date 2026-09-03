@@ -13,6 +13,10 @@ export const ja: Strings = {
     language: "言語",
     speed: "CPUの速さ",
     speedNote: "「ふつう」で1手番およそ2秒。配札の演出はこの設定によらず一定。",
+    sound: "効果音",
+    soundOn: "鳴らす",
+    soundOff: "消す",
+    soundNote: "卓の音は端末で作っている。最初に画面へ触れるまで鳴らない。",
   },
 
   online: {

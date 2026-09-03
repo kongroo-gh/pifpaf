@@ -24,6 +24,8 @@ import { MeldReveal } from "../components/MeldReveal";
 import { FoldPrompt, InterceptBar, KeepBar } from "../components/TablePrompts";
 import { SettingsButton, SettingsPanel, SettingsControls } from "../components/Settings";
 import { useHandOrder } from "../game/useHandOrder";
+import { useBoardSounds } from "../game/useBoardSounds";
+import { useAmbience, sfx } from "../audio";
 import { useOnlineGame, loadName } from "./useOnlineGame";
 import type { OnlineGame } from "./useOnlineGame";
 
@@ -55,6 +57,7 @@ export function OnlineTable({ onExit, onRules }: OnlineTableProps) {
  */
 function Connecting({ game }: { game: OnlineGame }) {
   const t = useT();
+  useAmbience(true);
   return (
     <div className="intro">
       <div className="grain" aria-hidden="true" />
@@ -92,6 +95,9 @@ function Lobby({
   const t = useT();
   const [name, setName] = useState(() => loadName());
   const [roomId, setRoomId] = useState("");
+
+  // 卓に着く前。単機版のイントロ・掛け金画面と同じ扱い
+  useAmbience(true);
 
   const ready = roomId.trim().length === 4;
   const hasName = name.trim().length > 0;
@@ -193,6 +199,9 @@ function Table({ game, onRules }: { game: OnlineGame; onRules: () => void }) {
   // 対局中の設定は隅の歯車から開く（単機版と同じ。盤面に常時出す余地がない）
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // 人を待っているあいだは卓に着く前と同じ。始まったら止める
+  useAmbience(room.phase === "WAITING");
+
   const mySeat = view.you;
   const iAmSeated = mySeat >= 0;
   const myTurn = game.isMyTurn;
@@ -207,6 +216,19 @@ function Table({ game, onRules }: { game: OnlineGame; onRules: () => void }) {
   const showFold = room.phase === "FOLD_DECISION" && iAmSeated &&
     room.seats[mySeat]?.decided === false;
   const showResult = room.phase === "ROUND_RESULT" || room.phase === "MATCH_OVER";
+
+  useBoardSounds({
+    live: room.phase === "PLAYING",
+    stockCount: board.stockCount,
+    discardCount: board.discardCount,
+    myTurn,
+    winner: board.winner,
+  });
+
+  // サーバーに断られた手。単機版には無い場面（あちらは押せない形にしてある）
+  useEffect(() => {
+    if (game.error !== null) sfx.deny();
+  }, [game.error]);
 
   return (
     <>

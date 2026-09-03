@@ -3,6 +3,7 @@ import type { Card, Wild } from "@pifpaf/engine";
 import { useGame, HUMAN, LOAN_AMOUNT } from "./game/useGame";
 import type { Speed } from "./game/useGame";
 import { useExecution } from "./game/useExecution";
+import { useBoardSounds } from "./game/useBoardSounds";
 import { useHandOrder } from "./game/useHandOrder";
 import { PERSONAS } from "./game/players";
 import { PlayingCard, CardBack, SUIT_GLYPH, describeCard } from "./components/PlayingCard";
@@ -20,6 +21,7 @@ import { useT, personaName, personaTitle, withGloss, Rich, Kicker, Gloss } from 
 import { SettingsButton, SettingsPanel, SettingsControls } from "./components/Settings";
 import { CardBurst } from "./components/CardBurst";
 import { OnlineTable } from "./net/OnlineTable";
+import { useAmbience, useSoundUnlock, sfx } from "./audio";
 
 const WAGERS = [100, 250, 500];
 
@@ -149,6 +151,31 @@ export default function App() {
   // 撃たれるのは破産した席だけ。結果表示のあいだに演出する。
   const showingResult = screen === "ROUND_RESULT" || screen === "MATCH_OVER";
   const execution = useExecution(settlement?.eliminated ?? [], showingResult);
+
+  // ブラウザは操作前に音を出させないので、最初のクリックで解禁する
+  useSoundUnlock();
+
+  // 卓に着く前だけ流す。オンラインは OnlineTable が自分で持つ
+  useAmbience(!online && (screen === "INTRO" || screen === "BETTING"));
+
+  useBoardSounds({
+    live: screen === "PLAYING",
+    stockCount: state.stock.length,
+    discardCount: state.discard.length,
+    myTurn: isHumanTurn,
+    winner: state.winner,
+  });
+
+  // 発砲の瞬間に合わせる。閃光と同じタイミングで鳴らないと、別のことが
+  // 起きたように見える
+  useEffect(() => {
+    if (execution.firingAt !== null) sfx.shot();
+  }, [execution.firingAt]);
+
+  // 破産して終わったとき。金が降る側（MoneyRain）と対になる
+  useEffect(() => {
+    if (screen === "MATCH_OVER" && match.winner !== HUMAN) sfx.bust();
+  }, [screen, match.winner]);
 
   if (online) {
     return (
@@ -745,11 +772,24 @@ function Betting({
             </p>
             <div className="betting__chips">
               {WAGERS.filter((w) => w <= bankroll).map((w) => (
-                <button key={w} className="btn btn--bet" onClick={() => onBet(w)}>
+                <button
+                  key={w}
+                  className="btn btn--bet"
+                  onClick={() => {
+                    sfx.chip();
+                    onBet(w);
+                  }}
+                >
                   {w}
                 </button>
               ))}
-              <button className="btn btn--bet btn--allin" onClick={() => onBet(bankroll)}>
+              <button
+                className="btn btn--bet btn--allin"
+                onClick={() => {
+                  sfx.chip();
+                  onBet(bankroll);
+                }}
+              >
                 ALL IN<Gloss flavor="ALL IN" text={String(bankroll)} />
               </button>
             </div>

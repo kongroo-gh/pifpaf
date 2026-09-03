@@ -8,6 +8,7 @@
 import { useEffect, useRef } from "react";
 import type { Card, Wild } from "@pifpaf/engine";
 import { PlayingCard } from "./PlayingCard";
+import { sfx } from "../audio";
 
 /** 飛び散ってから収まるまで */
 const BURST_MS = 1400;
@@ -32,6 +33,9 @@ export function CardBurst({ cards, wild, onDone }: CardBurstProps) {
       doneRef.current();
       return;
     }
+
+    // 音も演出のうち。出さないと決めた側では鳴らさない
+    sfx.win();
 
     const timer = setTimeout(() => doneRef.current(), BURST_MS);
     return () => clearTimeout(timer);

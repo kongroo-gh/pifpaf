@@ -24,6 +24,10 @@ export const pt: Strings = {
     speedNote:
       "Cerca de dois segundos por jogada no normal. A distribuição das cartas " +
       "corre sempre no mesmo ritmo.",
+    sound: "Som",
+    soundOn: "Ligado",
+    soundOff: "Desligado",
+    soundNote: "Os sons da mesa são sintetizados no seu aparelho. Nada toca até você tocar na tela.",
   },
 
   online: {

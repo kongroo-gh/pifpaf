@@ -12,6 +12,7 @@
 // 言語だけになり、置き場所と開き方は単機版とそのまま揃う。
 
 import { useLangControl, LANGS, Kicker, Gloss } from "../i18n";
+import { useSoundControl, sfx } from "../audio";
 import type { Lang } from "../i18n";
 import { SPEEDS } from "../game/useGame";
 import type { Speed } from "../game/useGame";
@@ -66,6 +67,12 @@ export function SettingsControls({ speed, onSpeed }: SettingsControlsProps) {
         <LanguagePills />
       </div>
 
+      <div className="settings__group">
+        <p className="settings__label">{t.settings.sound}</p>
+        <SoundPills />
+        <p className="settings__note">{t.settings.soundNote}</p>
+      </div>
+
       {showSpeed && (
         <div className="settings__group">
           <p className="settings__label">{t.settings.speed}</p>
@@ -85,6 +92,40 @@ export function SettingsControls({ speed, onSpeed }: SettingsControlsProps) {
           <p className="settings__note">{t.settings.speedNote}</p>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * 効果音の入切。
+ *
+ * **切り替えたその場で鳴らして確かめられるようにする。** 音は目に見えないので、
+ * 押しただけでは効いたのか分からない。入にしたときだけ短く1つ鳴らす。
+ */
+function SoundPills() {
+  const { t } = useLangControl();
+  const { enabled, setEnabled } = useSoundControl();
+  const choices: { on: boolean; label: string }[] = [
+    { on: true, label: t.settings.soundOn },
+    { on: false, label: t.settings.soundOff },
+  ];
+
+  return (
+    <div className="settings__choices" role="group" aria-label={t.settings.sound}>
+      {choices.map((c) => (
+        <button
+          key={String(c.on)}
+          type="button"
+          className={`settings__choice ${c.on === enabled ? "settings__choice--on" : ""}`}
+          aria-pressed={c.on === enabled}
+          onClick={() => {
+            setEnabled(c.on);
+            if (c.on) sfx.chip();
+          }}
+        >
+          {c.label}
+        </button>
+      ))}
     </div>
   );
 }
