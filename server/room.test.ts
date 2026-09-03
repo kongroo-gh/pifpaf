@@ -109,7 +109,7 @@ describe("入退室", () => {
 });
 
 describe("開始", () => {
-  it("4人そろうまで始まらない", () => {
+  it("既定では4人そろうまで始まらない", () => {
     const room = makeRoom();
     room.join("あ");
     room.join("い");
@@ -128,8 +128,28 @@ describe("開始", () => {
     expect(info.seats.every((s) => !s.isBot)).toBe(true);
   });
 
-  it("人がいなければ始められない", () => {
+  it("人が集まらなければ、CPUを呼んで埋めて始められる", () => {
+    const room = makeRoom();
+    room.join("あ");
+
+    expect(room.start(true)).toMatchObject({ ok: true });
+
+    const info = room.roomInfo();
+    expect(info.seats.filter((s) => s.isBot)).toHaveLength(3);
+    expect(info.seats[0]!.isBot).toBe(false);
+  });
+
+  it("CPUを呼んでも、席が埋まっていれば人のまま", () => {
+    const room = makeRoom();
+    joinAll(room);
+
+    expect(room.start(true)).toMatchObject({ ok: true });
+    expect(room.roomInfo().seats.every((s) => !s.isBot)).toBe(true);
+  });
+
+  it("人がいなければ、CPUを呼んでも始められない", () => {
     expect(makeRoom().start()).toMatchObject({ ok: false });
+    expect(makeRoom().start(true)).toMatchObject({ ok: false });
   });
 
   it("対局中に切断すると、降りるか否かの判断を代わりに決める", () => {

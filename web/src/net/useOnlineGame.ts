@@ -44,7 +44,8 @@ export interface OnlineGame {
   connect: (roomId: string, name: string) => void;
   disconnect: () => void;
 
-  start: () => void;
+  /** 開始する。既定は4人そろってから。人が来ないときだけ CPU を呼んで埋める */
+  start: (fillWithBots?: boolean) => void;
   setFold: (fold: boolean) => void;
   act: (action: GameAction) => void;
   next: () => void;
@@ -259,7 +260,10 @@ export function useOnlineGame(): OnlineGame {
     };
   }, []);
 
-  const start = useCallback(() => send({ t: "START" }), [send]);
+  const start = useCallback(
+    (fillWithBots = false) => send({ t: "START", fillWithBots }),
+    [send]
+  );
   const setFold = useCallback((fold: boolean) => send({ t: "FOLD", fold }), [send]);
   const act = useCallback((action: GameAction) => send({ t: "ACTION", action }), [send]);
   const next = useCallback(() => send({ t: "NEXT" }), [send]);

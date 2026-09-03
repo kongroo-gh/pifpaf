@@ -51,6 +51,8 @@ export const ja: Strings = {
     hostOnly: "ゲームの開始はホストが行います。",
     startFull: "全員そろった。始める",
     needMore: (n) => `あと ${n} 人そろうと始められる`,
+    callBots: (n) => `空席 ${n} をCPUで埋めて始める`,
+    callBotsHint: "人が集まらないなら、CPUを呼んで始められる。",
     emptySeat: "空席",
     botSeat: "CPU",
     offline: "切断中",

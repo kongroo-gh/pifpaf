@@ -199,7 +199,7 @@ export class Hub {
           this.send(member.conn, { t: "REJECTED", reason: "開始できるのはホストだけです" });
           break;
         }
-        const r = room.start();
+        const r = room.start(msg.fillWithBots === true);
         if (!r.ok) this.send(member.conn, { t: "REJECTED", reason: r.reason });
         break;
       }

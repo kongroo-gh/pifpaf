@@ -535,18 +535,32 @@ function WaitingPanel({ game }: { game: OnlineGame }) {
         </ul>
         <p className="panel__note">{t.online.waitingHint}</p>
         <p className="panel__dim">{humans.length} / 4</p>
-        {/* 卓を抜ける道はここ。始まってしまえば単機版と同じで、途中では抜けられない */}
+
+        {/* まず人を待つ。卓を抜ける道もここ
+            （始まってしまえば単機版と同じで、途中では抜けられない） */}
         <div className="panel__actions">
-          {/* 4人そろうまで押せない。ホストでも足りなければ待つ */}
-          <button className="btn btn--keep" onClick={game.start} disabled={!isHost || !full}>
+          <button className="btn btn--keep" onClick={() => game.start()} disabled={!isHost || !full}>
             COMEÇAR<Gloss flavor="COMEÇAR" text={full ? t.online.startFull : t.online.needMore(4 - humans.length)} />
           </button>
           <button className="btn btn--reject" onClick={() => game.disconnect()}>
             SAIR<Gloss flavor="SAIR" text={t.online.leave} />
           </button>
         </div>
-        {!full && <p className="panel__dim">{t.online.needMore(4 - humans.length)}</p>}
-        {full && !isHost && <p className="panel__dim">{t.online.hostOnly}</p>}
+
+        {/* 集まらなかったときの逃げ道。人を待つのが主なので、細い帯で下に置く */}
+        {!full && isHost && (
+          <>
+            <button
+              className="btn btn--rules btn--strip online__callBots"
+              onClick={() => game.start(true)}
+            >
+              CHAMAR A CPU
+              <Gloss flavor="CHAMAR A CPU" text={t.online.callBots(4 - humans.length)} />
+            </button>
+            <p className="panel__dim">{t.online.callBotsHint}</p>
+          </>
+        )}
+        {!isHost && <p className="panel__dim">{t.online.hostOnly}</p>}
       </div>
     </div>
   );

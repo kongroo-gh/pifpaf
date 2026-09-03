@@ -84,6 +84,10 @@ export interface Strings {
     startFull: string;
     /** まだ4人そろっていないとき、あと何人かを添える */
     needMore: (n: number) => string;
+    /** CHAMAR A CPU の下。人が集まらないとき、空席を CPU で埋めて始める */
+    callBots: (n: number) => string;
+    /** CPU を呼ぶ選択に添える一言 */
+    callBotsHint: string;
     emptySeat: string;
     botSeat: string;
     offline: string;

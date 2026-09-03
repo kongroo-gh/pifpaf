@@ -53,6 +53,8 @@ export const en: Strings = {
     hostOnly: "The host will start the game.",
     startFull: "Everyone's here. Start",
     needMore: (n) => `${n} more to start`,
+    callBots: (n) => `Fill ${n} empty seats with CPUs`,
+    callBotsHint: "If nobody shows up, you can call in CPUs and start.",
     emptySeat: "empty",
     botSeat: "CPU",
     offline: "disconnected",

@@ -258,6 +258,33 @@ describe("繋いで往復する", () => {
     b.close();
   });
 
+  it("集まらなければ CPU を呼んで始められる", async () => {
+    const url = await startServer();
+    const a = await TestClient.connect(url);
+    const b = await TestClient.connect(url);
+
+    a.send({ t: "CREATE", version: PROTOCOL_VERSION, name: "あ" });
+    const ja = await a.waitFor("JOINED");
+    b.send({ t: "JOIN", version: PROTOCOL_VERSION, roomId: ja.roomId, name: "い" });
+    await b.waitFor("JOINED");
+
+    // 人を待つのをやめ、空席を CPU に任せる
+    a.send({ t: "START", fillWithBots: true });
+
+    const deadline = Date.now() + 3000;
+    while (a.last("ROOM")?.room.phase === "WAITING") {
+      if (Date.now() > deadline) throw new Error("CPU を呼んでも始まらない");
+      await new Promise((r) => setTimeout(r, 20));
+    }
+
+    const seats = a.last("ROOM")!.room.seats;
+    expect(seats.filter((s) => s.isBot)).toHaveLength(2);
+    expect(seats.filter((s) => s.name !== null && !s.isBot)).toHaveLength(2);
+
+    a.close();
+    b.close();
+  });
+
   it("他人の番に打とうとすると断られる", async () => {
     const url = await startServer();
     const { clients } = await startedTable(url);

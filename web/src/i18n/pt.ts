@@ -62,6 +62,8 @@ export const pt: Strings = {
     hostOnly: "O anfitrião inicia o jogo.",
     startFull: "Todos aqui. Começar",
     needMore: (n) => `Faltam ${n} para começar`,
+    callBots: (n) => `Completar ${n} lugares com a CPU`,
+    callBotsHint: "Se ninguém aparecer, chame a CPU e comece.",
     emptySeat: "vazio",
     botSeat: "CPU",
     offline: "desconectado",

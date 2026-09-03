@@ -56,8 +56,12 @@ export type ClientMessage =
   | { t: "CREATE"; version: number; name: string }
   /** 入室。席が空いていれば座る */
   | { t: "JOIN"; version: number; roomId: string; name: string; token?: string }
-  /** 空席を CPU で埋めて開始する */
-  | { t: "START" }
+  /**
+   * 開始する。既定は4人そろってから。
+   * `fillWithBots` を立てたときだけ、空席を CPU で埋めて始める
+   * （人が集まらなかったときのホストの判断）。
+   */
+  | { t: "START"; fillWithBots?: boolean }
   /** ラウンド開始前の「降りる／勝負する」 */
   | { t: "FOLD"; fold: boolean }
   /** 対局中の手 */
@@ -116,7 +120,8 @@ export function parseClientMessage(raw: unknown): ClientMessage | null {
       };
 
     case "START":
-      return { t: "START" };
+      // 立っているときだけ CPU を呼ぶ。壊れた値は「呼ばない」に倒す
+      return { t: "START", fillWithBots: m["fillWithBots"] === true };
 
     case "FOLD":
       if (typeof m["fold"] !== "boolean") return null;
