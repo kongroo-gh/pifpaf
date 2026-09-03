@@ -15,6 +15,7 @@ import { ChipStack } from "./components/ChipStack";
 import { CardFlight } from "./components/CardFlight";
 import { DealingScene } from "./components/DealingScene";
 import { RuleBook } from "./components/RuleBook";
+import { BackButton } from "./components/BackButton";
 import { useT, personaName, personaTitle, withGloss, Rich, Kicker, Gloss } from "./i18n";
 import { SettingsButton, SettingsPanel, SettingsControls } from "./components/Settings";
 import { CardBurst } from "./components/CardBurst";
@@ -88,6 +89,7 @@ export default function App() {
     decideFold,
     advance,
     backToTable,
+    leaveTable,
     takeLoan,
     drawCard,
     takeDiscard,
@@ -181,6 +183,7 @@ export default function App() {
           onBet={startMatch}
           onLoan={takeLoan}
           onRules={openRules}
+          onBack={leaveTable}
           speed={speed}
           onSpeed={setSpeed}
         />
@@ -681,6 +684,7 @@ function Betting({
   onBet,
   onLoan,
   onRules,
+  onBack,
   speed,
   onSpeed,
 }: {
@@ -688,6 +692,7 @@ function Betting({
   onBet: (n: number) => void;
   onLoan: () => void;
   onRules: () => void;
+  onBack: () => void;
   speed: Speed;
   onSpeed: (s: Speed) => void;
 }) {
@@ -698,6 +703,8 @@ function Betting({
     <div className="intro">
       <div className="grain" aria-hidden="true" />
       <div className="intro__panel">
+        {/* まだ賭けていないので、入口へ戻れる */}
+        <BackButton onClick={onBack} />
         <Kicker flavor="A APOSTA" gloss={t.betting.kicker} className="intro__kicker" />
         <h1 className="betting__bankroll">{bankroll}</h1>
         <p className="intro__sub">{t.betting.bankroll}</p>
@@ -744,7 +751,7 @@ function Betting({
                 ALL IN<Gloss flavor="ALL IN" text={String(bankroll)} />
               </button>
             </div>
-            <button className="btn btn--rules betting__rules" onClick={onRules}>
+            <button className="btn btn--rules btn--strip betting__rules" onClick={onRules}>
               AS REGRAS<Gloss flavor="AS REGRAS" text={t.betting.rules} />
             </button>
           </>
@@ -787,19 +794,21 @@ function Intro({
           {t.intro.body2}
         </p>
         <p className="intro__warn">{t.intro.warn}</p>
-        <div className="intro__actions">
+
+        {/* 卓の選び方は2つだけ。CPUと打つか、人と打つか。同じ重さで並べる */}
+        <div className="intro__choices">
           <button className="btn btn--start" onClick={onStart}>
             SENTAR À MESA<Gloss flavor="SENTAR À MESA" text={t.intro.sit(bankroll)} />
           </button>
-          <button className="btn btn--rules" onClick={onRules}>
-            AS REGRAS<Gloss flavor="AS REGRAS" text={t.intro.rules} />
-          </button>
-        </div>
-        <div className="intro__actions">
-          <button className="btn btn--rules" onClick={onOnline}>
+          <button className="btn btn--start" onClick={onOnline}>
             ONLINE<Gloss flavor="ONLINE" text={t.online.enter} />
           </button>
         </div>
+
+        {/* 規則は選択肢ではないので、細く長く敷いて下に置く */}
+        <button className="btn btn--rules btn--strip" onClick={onRules}>
+          AS REGRAS<Gloss flavor="AS REGRAS" text={t.intro.rules} />
+        </button>
         {/* 卓に着く前に決めてもらう。対局中は隅の歯車から変えられる */}
         <SettingsControls speed={speed} onSpeed={onSpeed} />
       </div>

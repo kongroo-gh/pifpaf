@@ -279,6 +279,9 @@ export function useGame() {
     setScreen(bankroll <= 0 ? "INTRO" : "BETTING");
   }, [bankroll]);
 
+  /** 掛け金を決めるのをやめて、入口へ戻る。まだ何も賭けていないので後始末は要らない */
+  const leaveTable = useCallback(() => setScreen("INTRO"), []);
+
   /** 所持金が尽きたときの借金 */
   const takeLoan = useCallback(() => {
     persistBankroll(bankroll + LOAN_AMOUNT);
@@ -471,6 +474,7 @@ export function useGame() {
     decideFold,
     advance,
     backToTable,
+    leaveTable,
     takeLoan,
     drawCard,
     takeDiscard,

@@ -6,6 +6,10 @@ import type { Strings } from "./types";
 export const ja: Strings = {
   meta: { htmlLang: "ja", label: "日本語" },
 
+  nav: {
+    back: "戻る",
+  },
+
   settings: {
     title: "設定",
     open: "設定を開く",
@@ -53,7 +57,6 @@ export const ja: Strings = {
     theirTurn: (name) => `${name} の番…`,
     spectating: "見ているだけ（席が無い）",
     waitingForNext: "ほかの人を待っている…",
-    backToSolo: "一人で打つ",
   },
 
   intro: {

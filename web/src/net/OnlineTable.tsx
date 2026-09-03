@@ -23,6 +23,7 @@ import { OpponentSeat } from "../components/OpponentSeat";
 import { MeldReveal } from "../components/MeldReveal";
 import { FoldPrompt, InterceptBar, KeepBar } from "../components/TablePrompts";
 import { SettingsButton, SettingsPanel, SettingsControls } from "../components/Settings";
+import { BackButton } from "../components/BackButton";
 import { useHandOrder } from "../game/useHandOrder";
 import { useBoardSounds } from "../game/useBoardSounds";
 import { useAmbience, sfx } from "../audio";
@@ -62,6 +63,8 @@ function Connecting({ game }: { game: OnlineGame }) {
     <div className="intro">
       <div className="grain" aria-hidden="true" />
       <div className="intro__panel">
+        {/* 繋ぎに行くのをやめて、卓の入口へ戻る */}
+        <BackButton onClick={() => game.disconnect()} />
         <Kicker flavor="A SALA" gloss={t.online.title} className="intro__kicker" />
         <h1 className="intro__title">PIF PAF</h1>
         <div className="intro__rule" />
@@ -106,6 +109,8 @@ function Lobby({
     <div className="intro">
       <div className="grain" aria-hidden="true" />
       <div className="intro__panel">
+        {/* まだ卓に着いていないので、メインメニューへ戻れる */}
+        <BackButton onClick={onExit} />
         <Kicker flavor="A SALA" gloss={t.online.title} className="intro__kicker" />
         <h1 className="intro__title">PIF PAF</h1>
         <div className="intro__rule" />
@@ -159,15 +164,10 @@ function Lobby({
 
           {game.error !== null && <p className="intro__warn">{game.error}</p>}
 
-          {/* 単機版のイントロと同じ並び。規則と、ひとつ戻る道 */}
-          <div className="intro__actions">
-            <button className="btn btn--rules" type="button" onClick={onRules}>
-              AS REGRAS<Gloss flavor="AS REGRAS" text={t.intro.rules} />
-            </button>
-            <button className="btn btn--rules" type="button" onClick={onExit}>
-              VOLTAR<Gloss flavor="VOLTAR" text={t.online.backToSolo} />
-            </button>
-          </div>
+          {/* 規則は単機版のイントロと同じく、細く長く敷く。戻る道は隅のボタン */}
+          <button className="btn btn--rules btn--strip" type="button" onClick={onRules}>
+            AS REGRAS<Gloss flavor="AS REGRAS" text={t.intro.rules} />
+          </button>
         </div>
 
         {/* 卓に着く前に決めてもらう。単機版のイントロ・掛け金画面と同じ位置。

@@ -15,6 +15,10 @@ import type { Strings } from "./types";
 export const pt: Strings = {
   meta: { htmlLang: "pt-BR", label: "Português" },
 
+  nav: {
+    back: "Voltar",
+  },
+
   settings: {
     title: "Ajustes",
     open: "Abrir os ajustes",
@@ -64,7 +68,6 @@ export const pt: Strings = {
     theirTurn: (name) => `Vez de ${name}…`,
     spectating: "Só assistindo (sem lugar)",
     waitingForNext: "Esperando os outros…",
-    backToSolo: "Jogar sozinho",
   },
 
   intro: {

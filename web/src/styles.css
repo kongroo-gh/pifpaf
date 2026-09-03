@@ -64,6 +64,7 @@ button {
 }
 
 .intro__panel {
+  position: relative; /* 隅の戻るボタンの基準 */
   max-width: 620px;
   text-align: center;
   padding: 48px 40px 36px;
@@ -510,13 +511,58 @@ button {
   flex-wrap: wrap;
 }
 
+/* 卓の選び方は2つだけ。同じ幅・同じ重さで並べて、二択であることを形で示す */
+.intro__choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.intro__choices .btn { width: 100%; }
+
 .btn--rules {
   border-color: rgba(143, 136, 124, 0.4);
   color: var(--smoke);
 }
 
 .btn--rules:hover { color: var(--gold-bright); }
+
+/* 選択肢ではないものは、細く長く敷いて主役から外す */
+.btn--strip {
+  width: 100%;
+  padding: 8px 16px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+}
+
+.btn--strip small { font-size: 8px; }
+
 .betting__rules { margin-top: 16px; }
+
+/* ---------- 隅の戻る ----------
+   卓の外の画面にだけ置く。見出しの邪魔をしないよう薄く、
+   押せる範囲は見た目より広く取る。 */
+.backButton {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-family: var(--body);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--smoke-dim);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  transition: color 160ms ease;
+}
+
+.backButton:hover { color: var(--gold-bright); }
+.backButton__arrow { font-size: 14px; line-height: 1; }
 
 /* ---------- 配札の演出 ---------- */
 .dealing {
@@ -2132,7 +2178,20 @@ button {
   .verdict__sub { font-size: 12px; margin-bottom: 22px; }
 
   .intro { min-height: 100dvh; }
-  .intro__panel { padding: 34px 22px 28px; }
+  .intro__panel { padding: 34px 18px 26px; }
+
+  /* 二択は横並びのまま。長い見出し（SENTAR À MESA）が折り返さないよう字を詰める */
+  .intro__choices { gap: 8px; }
+  .intro__choices .btn {
+    padding: 12px 6px;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+  }
+  .intro__choices .btn small { font-size: 8px; letter-spacing: 0.02em; }
+
+  .btn--strip { padding: 7px 10px; font-size: 10px; letter-spacing: 0.14em; }
+
+  .backButton { top: 8px; left: 8px; font-size: 10px; padding: 7px 10px; }
   .intro__body { font-size: 13px; line-height: 1.9; }
 }
 

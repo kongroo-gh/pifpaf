@@ -25,6 +25,12 @@ export interface Strings {
     label: string;
   };
 
+  /** 画面のあいだを行き来する言葉 */
+  nav: {
+    /** 隅の戻るボタン。一つ前の画面へ */
+    back: string;
+  };
+
   settings: {
     /** 歯車を押して開く画面の見出し */
     title: string;
@@ -87,8 +93,6 @@ export interface Strings {
     spectating: string;
     /** 結果画面で、まだ押していない人がいるとき */
     waitingForNext: string;
-    /** 単機版へ戻る */
-    backToSolo: string;
   };
 
   intro: {
