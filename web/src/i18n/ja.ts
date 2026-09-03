@@ -204,7 +204,7 @@ export const ja: Strings = {
   ],
 
   rules: {
-    title: "この卓の決まり",
+    title: "ルール",
     close: "閉じる",
 
     s1: {

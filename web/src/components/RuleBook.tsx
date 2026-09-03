@@ -27,11 +27,9 @@ export function RuleBook({ onClose }: RuleBookProps) {
             <h2 className="rulebook__title">{r.title}</h2>
           </div>
           <div className="rulebook__headActions">
-            {/* 読んでいる最中が、言語を変えたくなる一番ありそうな瞬間 */}
+            {/* 読んでいる最中が、言語を変えたくなる一番ありそうな瞬間。
+                閉じるは下の FECHAR に一本化した（右上と左下で重複していた） */}
             <LanguagePills className="rulebook__lang" />
-            <button type="button" className="rulebook__close" onClick={onClose}>
-              {r.close}
-            </button>
           </div>
         </header>
 

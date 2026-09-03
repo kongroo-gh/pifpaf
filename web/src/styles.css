@@ -343,7 +343,7 @@ button {
   color: var(--cream);
 }
 
-/* ヘッダー右肩。言語と閉じるを並べる */
+/* ヘッダー右肩。いまは言語の選択だけ（閉じるは下の FECHAR に一本化した） */
 .rulebook__headActions {
   display: flex;
   align-items: center;
@@ -356,20 +356,6 @@ button {
   padding: 4px 8px;
   font-size: 10px;
 }
-
-.rulebook__close {
-  flex-shrink: 0;
-  font-family: var(--body);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  padding: 5px 12px;
-  color: var(--smoke);
-  background: none;
-  border: 1px solid rgba(143, 136, 124, 0.35);
-  cursor: pointer;
-}
-
-.rulebook__close:hover { color: var(--gold-bright); border-color: rgba(200, 162, 74, 0.5); }
 
 .rulebook__body {
   overflow-y: auto;
