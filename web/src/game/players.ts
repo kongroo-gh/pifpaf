@@ -18,7 +18,3 @@ export const PERSONAS: Persona[] = [
   { index: 2, epithet: "A Navalha", isHuman: false },
   { index: 3, epithet: "A Viúva", isHuman: false },
 ];
-
-export function personaOf(index: number): Persona {
-  return PERSONAS[index] ?? PERSONAS[0]!;
-}

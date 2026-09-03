@@ -4,21 +4,25 @@
 // 「上がれるか」の判定すら自前ではしない（`BATER` は押して断られたら断られたまま）。
 // 単機版が engine を直に叩いていたところが、まるごと通信に置き換わっている。
 //
-// 見た目の部品（カード・手札・席）は単機版と同じものを使い回す。
-// 器だけが違う。
+// **通信の都合以外は単機版と同じ器を使う。** 席・採否バー・割り込みバー・
+// 降りる判断・上がり手の公開・設定はすべて `components/` の共有部品で、
+// ここで組み直さない。写しを置くと、片方だけ直したときに同じ場面の
+// 見え方が静かにずれる（実際にそうなっていた）。
 //
 // **まだ載せていないもの**: 配札の演出、札が飛ぶ演出、勝ちの祝い。
 // どれも単機版では `GameState`（全員の手札）を前提に組んであるため、
 // 先に「盤面の型を PlayerView に揃える」整理をしないと持ってこられない。
 
 import { useEffect, useState } from "react";
-import type { Card } from "@pifpaf/engine";
-import { classifyAsMelds } from "@pifpaf/engine";
-import type { PlayerView, RoomSeat } from "@pifpaf/protocol";
-import { useT, Gloss, Kicker } from "../i18n";
+import type { PlayerView } from "@pifpaf/protocol";
+import { useT, Gloss, Kicker, Rich } from "../i18n";
 import { PlayingCard, CardBack, SUIT_GLYPH, describeCard } from "../components/PlayingCard";
 import { PlayerHand } from "../components/PlayerHand";
 import { ChipStack } from "../components/ChipStack";
+import { OpponentSeat } from "../components/OpponentSeat";
+import { MeldReveal } from "../components/MeldReveal";
+import { FoldPrompt, InterceptBar, KeepBar } from "../components/TablePrompts";
+import { SettingsButton, SettingsPanel, SettingsControls } from "../components/Settings";
 import { useHandOrder } from "../game/useHandOrder";
 import { useOnlineGame, loadName } from "./useOnlineGame";
 import type { OnlineGame } from "./useOnlineGame";
@@ -30,37 +34,51 @@ export interface OnlineTableProps {
 
 export function OnlineTable({ onExit, onRules }: OnlineTableProps) {
   const game = useOnlineGame();
-  const t = useT();
 
   if (game.connection === "IDLE") {
     return <Lobby game={game} onExit={onExit} onRules={onRules} />;
   }
 
   if (game.view === null || game.room === null) {
-    return (
-      <div className="intro">
-        <div className="intro__panel">
-          <p className="intro__kicker">SALA</p>
-          <p className="intro__body">
-            {game.connection === "FAILED"
-              ? t.online.failed
-              : game.connection === "RECONNECTING"
-                ? t.online.reconnecting
-                : t.online.connecting}
-          </p>
-          {game.error !== null && <p className="intro__warn">{game.error}</p>}
+    return <Connecting game={game} />;
+  }
+
+  return <Table game={game} onRules={onRules} />;
+}
+
+/* ───────────── 入室前 ───────────── */
+
+/**
+ * 繋ぎに行っているあいだの画面。
+ * 単機版のイントロと同じ器（grain・見出し・罫）にしてある。
+ * 別仕立てにすると、繋ぐ数秒だけ知らない画面に飛ばされたように見える。
+ */
+function Connecting({ game }: { game: OnlineGame }) {
+  const t = useT();
+  return (
+    <div className="intro">
+      <div className="grain" aria-hidden="true" />
+      <div className="intro__panel">
+        <Kicker flavor="A SALA" gloss={t.online.title} className="intro__kicker" />
+        <h1 className="intro__title">PIF PAF</h1>
+        <div className="intro__rule" />
+        <p className="intro__body">
+          {game.connection === "FAILED"
+            ? t.online.failed
+            : game.connection === "RECONNECTING"
+              ? t.online.reconnecting
+              : t.online.connecting}
+        </p>
+        {game.error !== null && <p className="intro__warn">{game.error}</p>}
+        <div className="intro__actions">
           <button className="btn btn--rules" onClick={() => game.disconnect()}>
             VOLTAR<Gloss flavor="VOLTAR" text={t.online.retry} />
           </button>
         </div>
       </div>
-    );
-  }
-
-  return <Table game={game} onExit={onExit} onRules={onRules} />;
+    </div>
+  );
 }
-
-/* ───────────── 入室前 ───────────── */
 
 function Lobby({
   game,
@@ -135,16 +153,20 @@ function Lobby({
 
           {game.error !== null && <p className="intro__warn">{game.error}</p>}
 
+          {/* 単機版のイントロと同じ並び。規則と、ひとつ戻る道 */}
           <div className="intro__actions">
             <button className="btn btn--rules" type="button" onClick={onRules}>
               AS REGRAS<Gloss flavor="AS REGRAS" text={t.intro.rules} />
             </button>
+            <button className="btn btn--rules" type="button" onClick={onExit}>
+              VOLTAR<Gloss flavor="VOLTAR" text={t.online.backToSolo} />
+            </button>
           </div>
-
-          <button className="btn btn--rules lobby__back" type="button" onClick={onExit}>
-            {t.online.backToSolo}
-          </button>
         </div>
+
+        {/* 卓に着く前に決めてもらう。単機版のイントロ・掛け金画面と同じ位置。
+            CPUの速さはサーバーが持つので、ここでは言語だけ */}
+        <SettingsControls />
       </div>
     </div>
   );
@@ -152,15 +174,7 @@ function Lobby({
 
 /* ───────────── 卓 ───────────── */
 
-function Table({
-  game,
-  onExit,
-  onRules,
-}: {
-  game: OnlineGame;
-  onExit: () => void;
-  onRules: () => void;
-}) {
+function Table({ game, onRules }: { game: OnlineGame; onRules: () => void }) {
   const t = useT();
   const view = game.view!;
   const room = game.room!;
@@ -175,6 +189,9 @@ function Table({
   const [selected, setSelected] = useState<string | null>(null);
   // 盤面が変わったら選択を落とす。古い札を選んだまま捨てようとしないように
   useEffect(() => setSelected(null), [board.phase, board.actor]);
+
+  // 対局中の設定は隅の歯車から開く（単機版と同じ。盤面に常時出す余地がない）
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const mySeat = view.you;
   const iAmSeated = mySeat >= 0;
@@ -200,10 +217,14 @@ function Table({
           <div className="topbar__brand">
             <h1>PIF PAF</h1>
             <p>
-              {t.topbar.round(room.round)} ／ <span className="online__room">{room.roomId}</span>
+              {/* 精算するとサーバーの round は次を指すので、結果表示中は1つ戻して見せる
+                  （単機版も同じ扱いをしている） */}
+              {t.topbar.round(showResult ? Math.max(1, room.round - 1) : room.round)} ／{" "}
+              <span className="online__room">{room.roomId}</span>
             </p>
           </div>
 
+          {/* 単機版と同じ2つだけ。卓を抜ける道は、待機中と決着後のパネルに置いてある */}
           <div className="topbar__tools">
             <button
               type="button"
@@ -214,18 +235,7 @@ function Table({
             >
               <span className="iconButton__mark">?</span>
             </button>
-            <button
-              type="button"
-              className="iconButton"
-              onClick={() => {
-                game.disconnect();
-                onExit();
-              }}
-              aria-label={t.online.leave}
-              title={t.online.leave}
-            >
-              <span className="iconButton__mark">×</span>
-            </button>
+            <SettingsButton onClick={() => setSettingsOpen(true)} />
           </div>
 
           <div className="topbar__wild">
@@ -234,7 +244,7 @@ function Table({
               {board.wild.rank}
               {SUIT_GLYPH[board.wild.suit]}
             </span>
-            <span className="topbar__vira">
+            <span className="topbar__vira" data-vira-slot>
               {t.topbar.vira}
               {board.vira !== null ? (
                 <button
@@ -256,21 +266,32 @@ function Table({
         <section className="opponents">
           {room.seats
             .filter((s) => s.seat !== mySeat)
-            .map((s) => (
-              <OnlineSeat
-                key={s.seat}
-                seat={s}
-                view={view}
-                active={board.actor === s.seat && room.phase === "PLAYING"}
-              />
-            ))}
+            .map((s) => {
+              const info = board.seats[s.seat];
+              return (
+                <OpponentSeat
+                  key={s.seat}
+                  seat={s.seat}
+                  name={s.name ?? t.online.emptySeat}
+                  // 単機版が肩書きを置く行。オンラインでは席の素性を出す
+                  title={s.disconnected ? t.online.offline : s.isBot ? t.online.botSeat : ""}
+                  handCount={info?.handCount ?? 0}
+                  chips={info?.chips ?? 0}
+                  lostChips={showResult ? game.settlement?.losses[s.seat] : undefined}
+                  folded={info?.folded === true}
+                  isActive={board.actor === s.seat && room.phase === "PLAYING"}
+                  eliminated={info?.out === true}
+                  survived={view.match.winner === s.seat}
+                />
+              );
+            })}
         </section>
 
         <section className="table">
           <div className="table__felt">
             <div className={`pile ${canDrawStock ? "pile--live" : ""}`}>
               <span className="pile__label">MONTE / {t.table.stock}</span>
-              <div className="pile__stack">
+              <div className="pile__stack" data-stock-pile>
                 <button
                   type="button"
                   className="pile__button"
@@ -295,7 +316,7 @@ function Table({
 
             <div className={`pile ${canTakeDiscard ? "pile--live" : ""}`}>
               <span className="pile__label">DESCARTE / {t.table.discard}</span>
-              <div className="pile__stack">
+              <div className="pile__stack" data-discard-pile>
                 {board.topDiscard !== null ? (
                   <button
                     type="button"
@@ -316,7 +337,7 @@ function Table({
           </div>
         </section>
 
-        <section className="me">
+        <section className="me" {...(iAmSeated ? { "data-seat": mySeat } : {})}>
           <div className="me__header">
             <span className="me__name">
               {iAmSeated ? (room.seats[mySeat]?.name ?? "?") : t.online.spectating}
@@ -325,6 +346,9 @@ function Table({
               <span className="me__chips">
                 <ChipStack count={board.seats[mySeat]?.chips ?? 0} />
                 <strong>{board.seats[mySeat]?.chips ?? 0}</strong>
+                {showResult && (game.settlement?.losses[mySeat] ?? 0) > 0 && (
+                  <span className="seat__chipLoss">−{game.settlement?.losses[mySeat]}</span>
+                )}
               </span>
             )}
             <button type="button" className="me__sort" onClick={sort}>
@@ -334,57 +358,21 @@ function Table({
           </div>
 
           {intercepting && board.topDiscard !== null && (
-            <div className="keepBar keepBar--intercept">
-              <div className="keepBar__card">
-                <PlayingCard card={board.topDiscard} wild={board.wild} size="md" />
-              </div>
-              <div className="keepBar__text">
-                <Kicker
-                  flavor="BATER NO LIXO"
-                  gloss={t.intercept.kicker}
-                  className="keepBar__kicker"
-                />
-                <p className="keepBar__title">{t.intercept.title}</p>
-              </div>
-              <div className="keepBar__actions">
-                <button
-                  className="btn btn--bater btn--armed"
-                  onClick={() => game.act({ type: "INTERCEPT" })}
-                >
-                  BATER!<Gloss flavor="BATER!" text={t.intercept.take} />
-                </button>
-                <button
-                  className="btn btn--reject"
-                  onClick={() => game.act({ type: "PASS_INTERCEPT" })}
-                >
-                  PASSAR<Gloss flavor="PASSAR" text={t.intercept.pass} />
-                </button>
-              </div>
-            </div>
+            <InterceptBar
+              card={board.topDiscard}
+              wild={board.wild}
+              onTake={() => game.act({ type: "INTERCEPT" })}
+              onPass={() => game.act({ type: "PASS_INTERCEPT" })}
+            />
           )}
 
           {deciding && board.pendingCard !== null && (
-            <div className="keepBar">
-              <div className="keepBar__card">
-                <PlayingCard card={board.pendingCard} wild={board.wild} size="md" />
-              </div>
-              <div className="keepBar__text">
-                <Kicker
-                  flavor="PRIMEIRA MÃO"
-                  gloss={t.keep.kicker}
-                  className="keepBar__kicker"
-                />
-                <p className="keepBar__title">{t.keep.title}</p>
-              </div>
-              <div className="keepBar__actions">
-                <button className="btn btn--keep" onClick={() => game.act({ type: "KEEP" })}>
-                  FICAR<Gloss flavor="FICAR" text={t.keep.keep} />
-                </button>
-                <button className="btn btn--reject" onClick={() => game.act({ type: "REJECT" })}>
-                  RECUSAR<Gloss flavor="RECUSAR" text={t.keep.reject} />
-                </button>
-              </div>
-            </div>
+            <KeepBar
+              card={board.pendingCard}
+              wild={board.wild}
+              onKeep={() => game.act({ type: "KEEP" })}
+              onReject={() => game.act({ type: "REJECT" })}
+            />
           )}
 
           <PlayerHand
@@ -430,63 +418,24 @@ function Table({
         </section>
       </div>
 
-      {showFold && <FoldPrompt game={game} view={view} />}
+      {showFold && (
+        <FoldPrompt
+          hand={board.hand}
+          wild={board.wild}
+          chips={board.seats[mySeat]?.chips ?? 0}
+          onPlay={() => game.setFold(false)}
+          onFold={() => game.setFold(true)}
+        />
+      )}
       {showResult && <ResultPanel game={game} view={view} />}
       {room.phase === "WAITING" && <WaitingPanel game={game} />}
+
+      {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
     </>
   );
 }
 
 /* ───────────── 部品 ───────────── */
-
-function OnlineSeat({
-  seat,
-  view,
-  active,
-}: {
-  seat: RoomSeat;
-  view: PlayerView;
-  active: boolean;
-}) {
-  const t = useT();
-  const info = view.game.seats[seat.seat];
-  const label =
-    seat.name === null ? t.online.emptySeat : seat.isBot ? `${seat.name}（${t.online.botSeat}）` : seat.name;
-
-  const classes = [
-    "seat",
-    active ? "seat--active" : "",
-    info?.folded === true ? "seat--folded" : "",
-    info?.out === true ? "seat--eliminated" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  return (
-    <div className={classes}>
-      <div className="seat__info">
-        <div className="seat__name">{label}</div>
-        {seat.disconnected && <div className="seat__title">{t.online.offline}</div>}
-      </div>
-
-      <div className="seat__chips" aria-label={t.seat.chipsAria(info?.chips ?? 0)}>
-        <ChipStack count={info?.chips ?? 0} />
-        <span className="seat__chipCount">{info?.chips ?? 0}</span>
-      </div>
-
-      <div className="seat__cards" aria-label={t.seat.handAria(info?.handCount ?? 0)}>
-        {Array.from({ length: Math.min(info?.handCount ?? 0, 10) }, (_, i) => (
-          <span className="seat__cardSlot" key={i}>
-            <CardBack />
-          </span>
-        ))}
-        <span className="seat__count">{info?.handCount ?? 0}</span>
-      </div>
-
-      {info?.folded === true && <div className="seat__foldTag">{t.seat.folded}</div>}
-    </div>
-  );
-}
 
 function StatusBanner({ game }: { game: OnlineGame }) {
   const t = useT();
@@ -562,37 +511,16 @@ function WaitingPanel({ game }: { game: OnlineGame }) {
         </ul>
         <p className="panel__note">{t.online.waitingHint}</p>
         <p className="panel__dim">{humans.length} / 4</p>
+        {/* 卓を抜ける道はここ。始まってしまえば単機版と同じで、途中では抜けられない */}
         <div className="panel__actions">
           <button className="btn btn--keep" onClick={game.start} disabled={!isHost}>
             COMEÇAR<Gloss flavor="COMEÇAR" text={t.online.startWithBots} />
           </button>
+          <button className="btn btn--reject" onClick={() => game.disconnect()}>
+            SAIR<Gloss flavor="SAIR" text={t.online.leave} />
+          </button>
         </div>
         {!isHost && <p className="panel__dim">{t.online.hostOnly}</p>}
-      </div>
-    </div>
-  );
-}
-
-function FoldPrompt({ game, view }: { game: OnlineGame; view: PlayerView }) {
-  const t = useT();
-  return (
-    <div className="panel">
-      <div className="panel__box">
-        <Kicker flavor="A MÃO" gloss={t.fold.kicker} className="panel__kicker" />
-        <h2>{t.fold.title}</h2>
-        <div className="foldPrompt__hand">
-          {view.game.hand.map((c) => (
-            <PlayingCard key={c.id} card={c} wild={view.game.wild} size="sm" />
-          ))}
-        </div>
-        <div className="panel__actions">
-          <button className="btn btn--keep" onClick={() => game.setFold(false)}>
-            JOGAR<Gloss flavor="JOGAR" text={t.fold.play} />
-          </button>
-          <button className="btn btn--reject" onClick={() => game.setFold(true)}>
-            CORRER<Gloss flavor="CORRER" text={t.fold.fold(1)} />
-          </button>
-        </div>
       </div>
     </div>
   );
@@ -603,6 +531,7 @@ function ResultPanel({ game, view }: { game: OnlineGame; view: PlayerView }) {
   const room = game.room!;
   const revealed = view.game.revealedHand;
   const winner = view.match.lastWinner;
+  const over = room.phase === "MATCH_OVER";
 
   return (
     <div className="panel">
@@ -616,7 +545,7 @@ function ResultPanel({ game, view }: { game: OnlineGame; view: PlayerView }) {
               : t.result.theyWon(room.seats[winner]?.name ?? "?")}
         </h2>
 
-        {revealed !== null && <MeldReveal cards={revealed.cards} view={view} />}
+        {revealed !== null && <MeldReveal hand={revealed.cards} wild={view.game.wild} />}
 
         <ul className="result__list">
           {room.seats.map((s) => {
@@ -642,10 +571,24 @@ function ResultPanel({ game, view }: { game: OnlineGame; view: PlayerView }) {
           })}
         </ul>
 
-        {room.phase === "MATCH_OVER" ? (
-          <p className="panel__lead">
-            {view.match.winner === view.you ? t.matchOver.winLead : t.matchOver.loseLead}
+        {view.match.streak >= 2 && winner !== null && (
+          <p className="result__streak">
+            <Rich text={t.result.streak(room.seats[winner]?.name ?? "?", view.match.streak)} />
           </p>
+        )}
+
+        {over ? (
+          <>
+            <p className="panel__lead">
+              {view.match.winner === view.you ? t.matchOver.winLead : t.matchOver.loseLead}
+            </p>
+            {/* 決着したらここが唯一の出口。単機版の VOLTAR À MESA と同じ位置・同じ見出し */}
+            <div className="panel__actions">
+              <button className="btn btn--again" onClick={() => game.disconnect()}>
+                VOLTAR À MESA<Gloss flavor="VOLTAR À MESA" text={t.online.retry} />
+              </button>
+            </div>
+          </>
         ) : (
           <div className="panel__actions">
             <button className="btn btn--again" onClick={game.next}>
@@ -654,46 +597,6 @@ function ResultPanel({ game, view }: { game: OnlineGame; view: PlayerView }) {
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-/** 上がり手を役ごとに見せる。分類は engine に任せる（web で役を判定しない）。 */
-function MeldReveal({ cards, view }: { cards: Card[]; view: PlayerView }) {
-  const t = useT();
-  const melds = classifyAsMelds(cards, view.game.wild);
-
-  if (melds === null) {
-    return (
-      <div className="reveal">
-        <p className="reveal__label">{t.result.revealLabel}</p>
-        <div className="reveal__meld">
-          {cards.map((c) => (
-            <PlayingCard key={c.id} card={c} wild={view.game.wild} size="sm" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="reveal">
-      <p className="reveal__label">
-        {t.result.revealLabel}{" "}
-        <span className="reveal__count">{t.result.revealCount(cards.length)}</span>
-      </p>
-      {melds.map((meld, i) => (
-        <div className="reveal__group" key={i}>
-          <span className="reveal__type">
-            {meld.type === "TRINCA" ? t.result.trinca : t.result.sequence}
-          </span>
-          <div className="reveal__meld">
-            {meld.cards.map((c) => (
-              <PlayingCard key={c.id} card={c} wild={view.game.wild} size="sm" />
-            ))}
-          </div>
-        </div>
-      ))}
     </div>
   );
 }

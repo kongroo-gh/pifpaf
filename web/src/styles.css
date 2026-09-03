@@ -1175,11 +1175,6 @@ button {
   text-transform: uppercase;
 }
 
-.lobby__back {
-  justify-self: center;
-  margin-top: 4px;
-}
-
 /* 合言葉は他人に伝えるものなので、読み違えないよう大きく出す */
 .online__room {
   font-family: var(--display);

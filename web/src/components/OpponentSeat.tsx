@@ -1,13 +1,21 @@
-// CPU1人分の席。手札は枚数だけ見せる（オンライン化時のマスク配信を意識した形）。
+// 相手1人分の席。手札は枚数だけ見せる（オンライン化時のマスク配信を意識した形）。
+//
+// **単機版とオンライン版で同じものを使う。** 席の中身は呼び出し側が組み立てて渡す
+// （単機版は persona と i18n から、オンライン版は RoomSeat と SeatView から）。
+// ここに persona を持ち込むと、オンライン版だけ別の見た目に育ってずれていく。
 
-import type { Persona } from "../game/players";
-import { useT, personaName, personaTitle, withGloss } from "../i18n";
+import { useT } from "../i18n";
 import { CardBack } from "./PlayingCard";
 import { BulletHoleCluster } from "./BulletHole";
 import { ChipStack } from "./ChipStack";
 
 export interface OpponentSeatProps {
-  persona: Persona;
+  /** 席番号。演出が位置を実測するための data-seat に入る */
+  seat: number;
+  /** 表示名 */
+  name: string;
+  /** 名前の下の小さな行。単機版は肩書き、オンライン版はCPU／切断中 */
+  title?: string;
   handCount: number;
   isActive: boolean;
   /** 残りチップ（掛け金）。0で破産 */
@@ -21,13 +29,15 @@ export interface OpponentSeatProps {
   /** マッチ勝者か */
   survived: boolean;
   /** 発砲の瞬間だけ true にしてフラッシュさせる */
-  firing: boolean;
+  firing?: boolean;
   /** いま捨て札から札を受け取ったところか（飛んできた札の着地先） */
   receiving?: boolean;
 }
 
 export function OpponentSeat({
-  persona,
+  seat,
+  name,
+  title = "",
   handCount,
   isActive,
   chips,
@@ -35,11 +45,10 @@ export function OpponentSeat({
   folded = false,
   eliminated,
   survived,
-  firing,
+  firing = false,
   receiving = false,
 }: OpponentSeatProps) {
   const t = useT();
-  const title = personaTitle(t, persona.index);
   const classes = [
     "seat",
     isActive ? "seat--active" : "",
@@ -53,7 +62,7 @@ export function OpponentSeat({
     .join(" ");
 
   return (
-    <div className={classes} data-seat={persona.index}>
+    <div className={classes} data-seat={seat}>
       <div className="seat__avatar" aria-hidden="true">
         {/* 中折れ帽のシルエット */}
         <svg viewBox="0 0 64 64">
@@ -66,10 +75,8 @@ export function OpponentSeat({
       </div>
 
       <div className="seat__info">
-        <div className="seat__name">{personaName(t, persona.index)}</div>
-        {/* 異名は訳さない。続く肩書きだけが言語で変わる。
-            ポルトガル語では異名がそのまま肩書きなので、withGloss が重複を落とす */}
-        <div className="seat__title">{withGloss(persona.epithet, title)}</div>
+        <div className="seat__name">{name}</div>
+        {title !== "" && <div className="seat__title">{title}</div>}
       </div>
 
       <div className="seat__chips" aria-label={t.seat.chipsAria(chips)}>

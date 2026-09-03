@@ -1,11 +1,15 @@
 // 設定（言語とCPUの速さ）。
 //
 // 置き方が2通りある。
-// - 卓に着く前（イントロ・掛け金画面）は、選択肢をそのまま並べる。
+// - 卓に着く前（イントロ・掛け金画面・オンラインの入口）は、選択肢をそのまま並べる。
 //   最初に決めてもらいたいものなので、開く操作を挟まない。
 // - 対局中は隅の歯車から開く。盤面は既に窮屈で、常時出しておく余地がない。
 //
 // どちらも同じ `SettingsControls` を使う。並べ方が違うだけで中身は同じ。
+//
+// **速さは任意**。オンライン卓ではCPUをサーバーが動かしているので、
+// ここで速さを出すと効かない設定を見せることになる。`speed` を渡さなければ
+// 言語だけになり、置き場所と開き方は単機版とそのまま揃う。
 
 import { useLangControl, LANGS, Kicker, Gloss } from "../i18n";
 import type { Lang } from "../i18n";
@@ -23,8 +27,9 @@ const LANG_LABEL: Record<Lang, string> = {
 };
 
 export interface SettingsControlsProps {
-  speed: Speed;
-  onSpeed: (s: Speed) => void;
+  /** CPUの速さ。両方渡したときだけ速さの欄を出す（オンライン卓では省く） */
+  speed?: Speed;
+  onSpeed?: (s: Speed) => void;
 }
 
 /**
@@ -52,6 +57,7 @@ export function LanguagePills({ className = "" }: { className?: string }) {
 
 export function SettingsControls({ speed, onSpeed }: SettingsControlsProps) {
   const { t } = useLangControl();
+  const showSpeed = speed !== undefined && onSpeed !== undefined;
 
   return (
     <div className="settings">
@@ -60,23 +66,25 @@ export function SettingsControls({ speed, onSpeed }: SettingsControlsProps) {
         <LanguagePills />
       </div>
 
-      <div className="settings__group">
-        <p className="settings__label">{t.settings.speed}</p>
-        <div className="settings__choices" role="group" aria-label={t.settings.speed}>
-          {SPEEDS.map((s) => (
-            <button
-              key={s}
-              type="button"
-              className={`settings__choice ${s === speed ? "settings__choice--on" : ""}`}
-              aria-pressed={s === speed}
-              onClick={() => onSpeed(s)}
-            >
-              {t.speed[s]}
-            </button>
-          ))}
+      {showSpeed && (
+        <div className="settings__group">
+          <p className="settings__label">{t.settings.speed}</p>
+          <div className="settings__choices" role="group" aria-label={t.settings.speed}>
+            {SPEEDS.map((s) => (
+              <button
+                key={s}
+                type="button"
+                className={`settings__choice ${s === speed ? "settings__choice--on" : ""}`}
+                aria-pressed={s === speed}
+                onClick={() => onSpeed(s)}
+              >
+                {t.speed[s]}
+              </button>
+            ))}
+          </div>
+          <p className="settings__note">{t.settings.speedNote}</p>
         </div>
-        <p className="settings__note">{t.settings.speedNote}</p>
-      </div>
+      )}
     </div>
   );
 }
