@@ -97,7 +97,6 @@ export interface Strings {
     sit: (bankroll: number) => string;
     /** AS REGRAS の下 */
     rules: string;
-    disclaimer: string;
   };
 
   betting: {

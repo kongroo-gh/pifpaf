@@ -6,7 +6,6 @@
 
 import { useT } from "../i18n";
 import { CardBack } from "./PlayingCard";
-import { BulletHoleCluster } from "./BulletHole";
 import { ChipStack } from "./ChipStack";
 
 export interface OpponentSeatProps {
@@ -24,12 +23,10 @@ export interface OpponentSeatProps {
   lostChips?: number;
   /** このラウンドを降りたか */
   folded?: boolean;
-  /** 破産して「撃たれた」状態か */
+  /** チップが尽きて脱落したか */
   eliminated: boolean;
   /** マッチ勝者か */
   survived: boolean;
-  /** 発砲の瞬間だけ true にしてフラッシュさせる */
-  firing?: boolean;
   /** いま捨て札から札を受け取ったところか（飛んできた札の着地先） */
   receiving?: boolean;
 }
@@ -45,7 +42,6 @@ export function OpponentSeat({
   folded = false,
   eliminated,
   survived,
-  firing = false,
   receiving = false,
 }: OpponentSeatProps) {
   const t = useT();
@@ -55,7 +51,6 @@ export function OpponentSeat({
     folded ? "seat--folded" : "",
     eliminated ? "seat--eliminated" : "",
     survived ? "seat--survived" : "",
-    firing ? "seat--firing" : "",
     receiving ? "seat--receiving" : "",
   ]
     .filter(Boolean)
@@ -98,12 +93,7 @@ export function OpponentSeat({
 
       {isActive && <div className="seat__thinking">{t.seat.thinking}</div>}
       {folded && !eliminated && <div className="seat__foldTag">{t.seat.folded}</div>}
-      {eliminated && (
-        <>
-          <BulletHoleCluster />
-          <div className="seat__stamp">ELIMINADO</div>
-        </>
-      )}
+      {eliminated && <div className="seat__stamp">ELIMINADO</div>}
       {survived && <div className="seat__stamp seat__stamp--gold">SOBREVIVEU</div>}
     </div>
   );

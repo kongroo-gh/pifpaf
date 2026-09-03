@@ -65,7 +65,6 @@ export const en: Strings = {
     warn: "Nobody leaves until one is left.",
     sit: (bankroll) => `Take a seat (purse ${bankroll})`,
     rules: "Read the rules",
-    disclaimer: "* It's staging. Nobody actually gets shot.",
   },
 
   betting: {

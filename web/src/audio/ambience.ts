@@ -57,7 +57,7 @@ export function startAmbience(): void {
   bus.gain.value = 0;
   bus.connect(out);
   // 画面が切り替わった瞬間に鳴り出すと驚くので、4秒かけて立ち上げる。
-  // 銃声や上がりの刺しより十数dB下に置く（これは背景であって聞かせる音ではない）
+  // 上がりの刺しや金貨より十数dB下に置く（これは背景であって聞かせる音ではない）
   bus.gain.linearRampToValueAtTime(0.85, ctx.currentTime + 4);
 
   const parts = [drone(ctx, bus), tritone(ctx, bus), crackle(ctx, bus)];

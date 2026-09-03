@@ -129,13 +129,6 @@ button {
   margin: 0 0 30px;
 }
 
-.intro__foot {
-  margin: 22px 0 0;
-  font-size: 11px;
-  color: var(--smoke-dim);
-  letter-spacing: 0.06em;
-}
-
 /* ---------- 盤面 ---------- */
 .app {
   min-height: 100%;
@@ -1416,7 +1409,7 @@ button {
   50% { opacity: 1; }
 }
 
-/* 撃たれた席 */
+/* チップが尽きて脱落した席 */
 .seat--eliminated {
   filter: grayscale(1) brightness(0.45);
   border-color: rgba(139, 26, 20, 0.5);
@@ -1425,16 +1418,6 @@ button {
 .seat--survived {
   border-color: var(--gold);
   box-shadow: 0 0 40px rgba(200, 162, 74, 0.25);
-}
-
-.seat--firing {
-  animation: shot 240ms steps(2, end) 2;
-}
-
-@keyframes shot {
-  0% { background: rgba(255, 236, 190, 0.9); transform: translateX(0); }
-  40% { transform: translateX(-6px) translateY(2px); }
-  100% { background: transparent; transform: translateX(0); }
 }
 
 .seat__stamp,
@@ -1466,18 +1449,6 @@ button {
 @keyframes stamp {
   0% { transform: translate(-50%, -50%) rotate(-13deg) scale(2.6); opacity: 0; }
   100% { transform: translate(-50%, -50%) rotate(-13deg) scale(1); opacity: 0.92; }
-}
-
-.bulletHole {
-  position: absolute;
-  pointer-events: none;
-  z-index: 4;
-  animation: hole 220ms ease-out both;
-}
-
-@keyframes hole {
-  0% { transform: scale(0); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
 }
 
 /* ---------- テーブル中央 ---------- */
@@ -1629,7 +1600,7 @@ button {
   border: 1px solid rgba(200, 162, 74, 0.22);
   background: linear-gradient(180deg, rgba(26, 22, 19, 0.85), rgba(12, 10, 9, 0.95));
   /* overflow は切らない。採否バーをこの枠の外（上）に浮かせるため。
-     スタンプと銃痕は元々この枠に収まるので、クリップは不要だった。 */
+     スタンプは元々この枠に収まるので、クリップは不要だった。 */
   transition: filter 700ms ease;
 }
 
@@ -1894,21 +1865,6 @@ button {
   padding: 15px 34px;
   border-color: var(--gold);
   color: var(--gold-bright);
-}
-
-/* ---------- 発砲フラッシュ ---------- */
-.muzzleFlash {
-  position: fixed;
-  inset: 0;
-  z-index: 70;
-  pointer-events: none;
-  background: radial-gradient(circle at 50% 45%, rgba(255, 240, 205, 0.75), rgba(255, 170, 80, 0.2) 35%, transparent 65%);
-  animation: flash 240ms steps(3, end) forwards;
-}
-
-@keyframes flash {
-  0% { opacity: 1; }
-  100% { opacity: 0; }
 }
 
 /* ---------- 金が降る（勝ったとき） ---------- */
@@ -2242,7 +2198,6 @@ button {
   .intro__body { font-size: 11px; line-height: 1.7; margin-bottom: 10px; }
   .intro__rule { margin: 12px auto; }
   .intro__warn { margin-bottom: 14px; font-size: 11px; }
-  .intro__foot { display: none; }
 }
 
 /* タッチ端末では hover の持ち上げが誤作動するので、選択時とドラッグ中だけ動かす */

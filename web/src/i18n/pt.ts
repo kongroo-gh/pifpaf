@@ -74,7 +74,6 @@ export const pt: Strings = {
     warn: "Ninguém vai embora até sobrar um.",
     sit: (bankroll) => `Sentar (caixa ${bankroll})`,
     rules: "Ler as regras",
-    disclaimer: "* É encenação. Ninguém leva tiro de verdade.",
   },
 
   betting: {

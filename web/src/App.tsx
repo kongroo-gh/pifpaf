@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import type { Card, Wild } from "@pifpaf/engine";
 import { useGame, HUMAN, LOAN_AMOUNT } from "./game/useGame";
 import type { Speed } from "./game/useGame";
-import { useExecution } from "./game/useExecution";
 import { useBoardSounds } from "./game/useBoardSounds";
 import { useHandOrder } from "./game/useHandOrder";
 import { PERSONAS } from "./game/players";
@@ -11,7 +10,6 @@ import { PlayerHand } from "./components/PlayerHand";
 import { OpponentSeat } from "./components/OpponentSeat";
 import { MeldReveal } from "./components/MeldReveal";
 import { FoldPrompt, InterceptBar, KeepBar } from "./components/TablePrompts";
-import { BulletHoleCluster } from "./components/BulletHole";
 import { MoneyRain } from "./components/MoneyRain";
 import { ChipStack } from "./components/ChipStack";
 import { CardFlight } from "./components/CardFlight";
@@ -148,9 +146,7 @@ export default function App() {
     if (screen !== "ROUND_RESULT") setCelebrated(false);
   }, [screen]);
 
-  // 撃たれるのは破産した席だけ。結果表示のあいだに演出する。
   const showingResult = screen === "ROUND_RESULT" || screen === "MATCH_OVER";
-  const execution = useExecution(settlement?.eliminated ?? [], showingResult);
 
   // ブラウザは操作前に音を出させないので、最初のクリックで解禁する
   useSoundUnlock();
@@ -165,12 +161,6 @@ export default function App() {
     myTurn: isHumanTurn,
     winner: state.winner,
   });
-
-  // 発砲の瞬間に合わせる。閃光と同じタイミングで鳴らないと、別のことが
-  // 起きたように見える
-  useEffect(() => {
-    if (execution.firingAt !== null) sfx.shot();
-  }, [execution.firingAt]);
 
   // 破産して終わったとき。金が降る側（MoneyRain）と対になる
   useEffect(() => {
@@ -227,12 +217,13 @@ export default function App() {
   }
 
   const humanChips = match.chips[HUMAN] ?? 0;
-  const humanShot = execution.shot.has(HUMAN);
+  // 脱落はチップが尽きたことそのもの。オンライン版の `SeatView.out` と同じ見方
+  const humanOut = humanChips <= 0;
   const humanWonMatch = match.winner === HUMAN;
 
   return (
     <>
-      <div className={`app ${humanShot ? "app--dead" : ""}`}>
+      <div className={`app ${humanOut ? "app--dead" : ""}`}>
         <div className="grain" aria-hidden="true" />
 
         <header className="topbar">
@@ -308,9 +299,8 @@ export default function App() {
                 state.phase !== "ROUND_OVER"
               }
               receiving={pickup?.seat === persona.index}
-              eliminated={execution.shot.has(persona.index)}
+              eliminated={(match.chips[persona.index] ?? 0) <= 0}
               survived={match.winner === persona.index}
-              firing={execution.firingAt === persona.index}
             />
           ))}
         </section>
@@ -367,7 +357,7 @@ export default function App() {
 
         <section
           data-seat={HUMAN}
-          className={`me ${humanShot ? "me--eliminated" : ""} ${humanWonMatch ? "me--survived" : ""} ${
+          className={`me ${humanOut ? "me--eliminated" : ""} ${humanWonMatch ? "me--survived" : ""} ${
             pickup?.seat === HUMAN ? "me--receiving" : ""
           }`}
         >
@@ -452,12 +442,7 @@ export default function App() {
             </button>
           </div>
 
-          {humanShot && (
-            <>
-              <BulletHoleCluster />
-              <div className="me__stamp">FALIDO</div>
-            </>
-          )}
+          {humanOut && <div className="me__stamp">FALIDO</div>}
         </section>
       </div>
 
@@ -471,8 +456,6 @@ export default function App() {
         />
       )}
 
-      {/* 破産した席が撃たれる瞬間の閃光。精算パネルと重ねると文字が読めなくなるので、
-          MATCH_OVER に進む前のラウンド結果中に見せきる。 */}
       {rulesOpen && <RuleBook onClose={closeRules} />}
 
       {settingsOpen && (
@@ -500,10 +483,6 @@ export default function App() {
         />
       )}
 
-      {screen === "ROUND_RESULT" && execution.firingAt !== null && (
-        <div className="muzzleFlash" aria-hidden="true" />
-      )}
-
       {screen === "ROUND_RESULT" && humanWonRound && !celebrated && (
         <CardBurst
           cards={state.hands[HUMAN] ?? []}
@@ -512,8 +491,7 @@ export default function App() {
         />
       )}
 
-      {screen === "ROUND_RESULT" && execution.done && settlement &&
-        (!humanWonRound || celebrated) && (
+      {screen === "ROUND_RESULT" && settlement && (!humanWonRound || celebrated) && (
         <RoundResult
           settlement={settlement}
           winnerHand={state.winner === null ? null : (state.hands[state.winner] ?? null)}
@@ -851,7 +829,6 @@ function Intro({
         </div>
         {/* 卓に着く前に決めてもらう。対局中は隅の歯車から変えられる */}
         <SettingsControls speed={speed} onSpeed={onSpeed} />
-        <p className="intro__foot">{t.intro.disclaimer}</p>
       </div>
     </div>
   );

@@ -61,7 +61,6 @@ export const ja: Strings = {
     warn: "最後の一人になるまで、誰も帰れない。",
     sit: (bankroll) => `席に着く（所持金 ${bankroll}）`,
     rules: "ルールを読む",
-    disclaimer: "※ 演出です。実際に撃たれることはありません。",
   },
 
   betting: {

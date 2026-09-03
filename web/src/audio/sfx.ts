@@ -3,6 +3,8 @@
 // 卓の設定はマフィアの酒場の奥の部屋。**乾いていて、短く、余韻を引かない。**
 // 華やかな音（金貨・上がり）だけが例外で、そこだけ倍音を足して光らせる。
 //
+// 銃声は無い。撃たれる演出ごと外してある（CLAUDE.md「見た目の方針」）。
+//
 // どの関数も「鳴らせないなら黙って何もしない」。呼ぶ側が
 // 音の可否を気にしなくてよいようにしてある（画面の条件分岐が増えるため）。
 
@@ -13,7 +15,7 @@ function vary(base: number, spread: number): number {
   return base * (1 + (Math.random() * 2 - 1) * spread);
 }
 
-/** 雑音を帯域で削って鳴らす。札・銃・チップの芯はすべてこれ。 */
+/** 雑音を帯域で削って鳴らす。札・チップ・金貨の芯はすべてこれ。 */
 function burst(
   peak: number,
   attack: number,
@@ -173,15 +175,7 @@ export function moneyRain(seconds = 2.4, count = 22): void {
   for (let i = 0; i < count; i += 1) coin(Math.random() * seconds);
 }
 
-/** 銃声。低い突きと、乾いた破裂と、短い残り。 */
-export function shot(): void {
-  burst(0.85, 0.001, 0.16, { type: "lowpass", from: 6000, to: 260 });
-  tone(70, "sine", 0.6, 0.002, 0.2, 0, 34);
-  // 部屋の返り。奥の部屋なので短い
-  burst(0.12, 0.03, 0.34, { type: "bandpass", from: 900, to: 300, q: 0.5 }, 0.05);
-}
-
-/** 破産。下へ落ちていく低い音。 */
+/** 破産して脱落した。下へ落ちていく低い音。 */
 export function bust(): void {
   tone(180, "sawtooth", 0.16, 0.02, 0.9, 0, 55);
   burst(0.07, 0.05, 0.6, { type: "lowpass", from: 700, to: 180 });
