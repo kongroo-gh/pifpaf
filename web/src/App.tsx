@@ -49,29 +49,6 @@ function markRulesSeen(): void {
   }
 }
 
-/**
- * オンラインかどうかは URL に持たせる（`?online=1`）。
- * 再読み込みや共有で同じ場所に戻れるようにするため、React state には置かない。
- */
-function onlineFromUrl(): boolean {
-  try {
-    return new URLSearchParams(window.location.search).has("online");
-  } catch {
-    return false;
-  }
-}
-
-function setOnlineInUrl(on: boolean): void {
-  try {
-    const url = new URL(window.location.href);
-    if (on) url.searchParams.set("online", "1");
-    else url.searchParams.delete("online");
-    window.history.replaceState(null, "", url.toString());
-  } catch {
-    // 触れない環境でも、画面の切り替えだけはできる
-  }
-}
-
 export default function App() {
   const t = useT();
   const game = useGame();
@@ -125,8 +102,13 @@ export default function App() {
 
   const { ordered: orderedHand, reorder, sort } = useHandOrder(humanHand, gameId);
 
-  // オンライン対戦は単機版と同居させる。繋がらないときに遊べなくなるのを避けるため
-  const [online, setOnline] = useState(onlineFromUrl);
+  // オンライン対戦は単機版と同居させる。繋がらないときに遊べなくなるのを避けるため。
+  //
+  // **入口は必ずイントロ。** 以前は `?online=1` を URL に書いて起動時に読んでいたが、
+  // 書き込みが `history.replaceState` なのでアドレスに残り、一度オンラインを覗くと
+  // 以後ずっとロビーが入口になっていた（URL が保たれる置き方では特に）。
+  // どこから入ってもまず卓の外に立つ、という形に戻した。
+  const [online, setOnline] = useState(false);
 
   // 対局中の設定は隅の歯車から開く（盤面に常時出す余地がない）
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -170,13 +152,7 @@ export default function App() {
   if (online) {
     return (
       <>
-        <OnlineTable
-          onExit={() => {
-            setOnline(false);
-            setOnlineInUrl(false);
-          }}
-          onRules={openRules}
-        />
+        <OnlineTable onExit={() => setOnline(false)} onRules={openRules} />
         {rulesOpen && <RuleBook onClose={closeRules} />}
       </>
     );
@@ -191,10 +167,7 @@ export default function App() {
           onRules={openRules}
           speed={speed}
           onSpeed={setSpeed}
-          onOnline={() => {
-            setOnline(true);
-            setOnlineInUrl(true);
-          }}
+          onOnline={() => setOnline(true)}
         />
         {rulesOpen && <RuleBook onClose={closeRules} />}
       </>

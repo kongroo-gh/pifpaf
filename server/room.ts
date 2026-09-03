@@ -57,8 +57,6 @@ export type JoinResult =
 
 export type ActResult = { ok: true } | { ok: false; reason: string };
 
-const BOT_NAMES = ["Dom Vieira", "Zé Navalha", "Dona Rosa", "O Fantasma"];
-
 export class Room {
   readonly roomId: string;
   private hostSeat = -1;
@@ -172,15 +170,23 @@ export class Room {
     this.onChange();
   }
 
-  /** 空席を CPU で埋めて開始する。 */
+  /**
+   * 開始する。**4人そろうまで始まらない。**
+   *
+   * 以前は空席を CPU で埋めていたが、それではオンライン卓が人数の足りない
+   * ままCPU戦になり、単機版と区別がつかなくなる。オンラインは人と打つ場、
+   * CPUと打つなら単機版、という切り分けにした（2026-09-03・ユーザー指示）。
+   *
+   * 席を埋める仕組み（`Occupant` の `BOT`）は消していない。
+   * 「一旦」という指示なので、戻すときに1か所で済むように残してある。
+   */
   start(): ActResult {
     if (this.phase !== "WAITING") return { ok: false, reason: "すでに始まっています" };
-    if (!this.seats.some((o) => o !== null)) return { ok: false, reason: "人がいません" };
 
-    for (let i = 0; i < SEAT_COUNT; i++) {
-      if (this.seats[i] === null) {
-        this.seats[i] = { kind: "BOT", name: BOT_NAMES[i] ?? `CPU ${i}` };
-      }
+    const humans = this.seats.filter((o) => o !== null && o.kind === "HUMAN").length;
+    if (humans === 0) return { ok: false, reason: "人がいません" };
+    if (humans < SEAT_COUNT) {
+      return { ok: false, reason: `あと ${SEAT_COUNT - humans} 人そろってから始まります` };
     }
 
     this.match = createMatch(SEAT_COUNT, this.startingChips);

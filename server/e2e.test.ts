@@ -107,6 +107,38 @@ class TestClient {
   }
 }
 
+/**
+ * 4人そろえて START まで進めた卓を返す。
+ * オンライン卓は4人そろわないと始まらないので、対局中を試すテストはここを通る。
+ * 返すのは全クライアントと、ホスト（[0]）の JOINED。
+ */
+async function startedTable(
+  url: string
+): Promise<{ clients: TestClient[]; host: Extract<ServerMessage, { t: "JOINED" }> }> {
+  const clients = await Promise.all([0, 1, 2, 3].map(() => TestClient.connect(url)));
+  const [a, b, c, d] = clients as [TestClient, TestClient, TestClient, TestClient];
+
+  a.send({ t: "CREATE", version: PROTOCOL_VERSION, name: "あ" });
+  const host = await a.waitFor("JOINED");
+  for (const [client, name] of [
+    [b, "い"],
+    [c, "う"],
+    [d, "え"],
+  ] as const) {
+    client.send({ t: "JOIN", version: PROTOCOL_VERSION, roomId: host.roomId, name });
+    await client.waitFor("JOINED");
+  }
+
+  a.send({ t: "START" });
+  // START が通ると FOLD_DECISION に移る。ここまで来て初めて「始まった」
+  const deadline = Date.now() + 3000;
+  while (a.last("ROOM")?.room.phase !== "FOLD_DECISION") {
+    if (Date.now() > deadline) throw new Error("START しても始まらない");
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  return { clients, host };
+}
+
 describe("繋いで往復する", () => {
   it("CREATE すると短いコード、席、トークンが返る", async () => {
     const url = await startServer();
@@ -206,7 +238,7 @@ describe("繋いで往復する", () => {
     b.close();
   });
 
-  it("他人の番に打とうとすると断られる", async () => {
+  it("4人そろわないと START しても始まらない", async () => {
     const url = await startServer();
     const a = await TestClient.connect(url);
     const b = await TestClient.connect(url);
@@ -217,33 +249,40 @@ describe("繋いで往復する", () => {
     await b.waitFor("JOINED");
 
     a.send({ t: "START" });
-    await a.waitFor("VIEW");
-
-    a.send({ t: "FOLD", fold: false });
-    b.send({ t: "FOLD", fold: false });
-    await new Promise((r) => setTimeout(r, 200));
-
-    const view = a.last("VIEW")!.view;
-    // 自分の番でないほうから打たせる
-    const impostor = view.game.actor === ja.seat ? b : a;
-    impostor.send({ t: "ACTION", action: { type: "DRAW" } });
-
-    const rejected = await impostor.waitFor("REJECTED");
-    expect(rejected.reason).toContain("番ではありません");
+    const rejected = await a.waitFor("REJECTED");
+    expect(rejected.reason).toContain("そろ");
+    // 断られただけで、卓はまだ人を待っている
+    expect(a.last("ROOM")!.room.phase).toBe("WAITING");
 
     a.close();
     b.close();
   });
 
+  it("他人の番に打とうとすると断られる", async () => {
+    const url = await startServer();
+    const { clients } = await startedTable(url);
+    // clients の添字が席番号（CREATE は席0、以降 JOIN 順）
+    const [a] = clients as [TestClient];
+
+    for (const client of clients) client.send({ t: "FOLD", fold: false });
+    await new Promise((r) => setTimeout(r, 200));
+
+    const view = a.last("VIEW")!.view;
+    // 自分の番でないところから打たせる
+    const impostor = clients[(view.game.actor + 1) % 4]!;
+    impostor.send({ t: "ACTION", action: { type: "DRAW" } });
+
+    const rejected = await impostor.waitFor("REJECTED");
+    expect(rejected.reason).toContain("番ではありません");
+
+    for (const client of clients) client.close();
+  });
+
   it("トークンを持って入り直すと同じ席に戻る", async () => {
     const url = await startServer();
-    const a = await TestClient.connect(url);
-
-    a.send({ t: "CREATE", version: PROTOCOL_VERSION, name: "あ" });
-    const first = await a.waitFor("JOINED");
-    a.send({ t: "START" });
-    await a.waitFor("VIEW");
-    a.close();
+    const { clients, host } = await startedTable(url);
+    // 対局が始まってから切れる。始まっていれば席は空かず、トークンで戻れる
+    clients[0]!.close();
 
     await new Promise((r) => setTimeout(r, 150));
 
@@ -251,33 +290,32 @@ describe("繋いで往復する", () => {
     again.send({
       t: "JOIN",
       version: PROTOCOL_VERSION,
-      roomId: first.roomId,
+      roomId: host.roomId,
       name: "あ",
-      token: first.token,
+      token: host.token,
     });
     const back = await again.waitFor("JOINED");
 
-    expect(back.seat).toBe(first.seat);
+    expect(back.seat).toBe(host.seat);
     again.close();
+    for (const client of clients.slice(1)) client.close();
   });
 
-  it("CPU が勝手に打ち進めて、盤面が届き続ける", async () => {
+  it("切れた席は CPU が代わりに打ち、盤面が届き続ける", async () => {
     const url = await startServer();
-    const a = await TestClient.connect(url);
+    const { clients } = await startedTable(url);
+    const observer = clients[0]!;
 
-    a.send({ t: "CREATE", version: PROTOCOL_VERSION, name: "あ" });
-    await a.waitFor("JOINED");
-    a.send({ t: "START" });
-    await a.waitFor("VIEW");
+    // 観戦役以外を切ってCPUに任せ、観戦役は降りて見ているだけにする
+    for (const client of clients.slice(1)) client.close();
+    observer.send({ t: "FOLD", fold: true });
 
-    a.send({ t: "FOLD", fold: true }); // 降りて CPU に任せる
-
-    const before = a.received.filter((m) => m.t === "VIEW").length;
+    const before = observer.received.filter((m) => m.t === "VIEW").length;
     await new Promise((r) => setTimeout(r, 2500));
-    const after = a.received.filter((m) => m.t === "VIEW").length;
+    const after = observer.received.filter((m) => m.t === "VIEW").length;
 
-    // CPU が打つたびに配られるので、増えている
+    // CPU（切れた席）が打つたびに配られるので、増えている
     expect(after).toBeGreaterThan(before);
-    a.close();
+    observer.close();
   });
 });

@@ -501,6 +501,8 @@ function WaitingPanel({ game }: { game: OnlineGame }) {
   const room = game.room!;
   const humans = room.seats.filter((s) => s.name !== null && !s.isBot);
   const isHost = room.hostSeat === game.seat;
+  // 4人そろうまで始められない（オンラインは人と打つ場。CPU戦は単機版）
+  const full = humans.length >= 4;
   const [copied, setCopied] = useState(false);
 
   const copyCode = () => {
@@ -535,14 +537,16 @@ function WaitingPanel({ game }: { game: OnlineGame }) {
         <p className="panel__dim">{humans.length} / 4</p>
         {/* 卓を抜ける道はここ。始まってしまえば単機版と同じで、途中では抜けられない */}
         <div className="panel__actions">
-          <button className="btn btn--keep" onClick={game.start} disabled={!isHost}>
-            COMEÇAR<Gloss flavor="COMEÇAR" text={t.online.startWithBots} />
+          {/* 4人そろうまで押せない。ホストでも足りなければ待つ */}
+          <button className="btn btn--keep" onClick={game.start} disabled={!isHost || !full}>
+            COMEÇAR<Gloss flavor="COMEÇAR" text={full ? t.online.startFull : t.online.needMore(4 - humans.length)} />
           </button>
           <button className="btn btn--reject" onClick={() => game.disconnect()}>
             SAIR<Gloss flavor="SAIR" text={t.online.leave} />
           </button>
         </div>
-        {!isHost && <p className="panel__dim">{t.online.hostOnly}</p>}
+        {!full && <p className="panel__dim">{t.online.needMore(4 - humans.length)}</p>}
+        {full && !isHost && <p className="panel__dim">{t.online.hostOnly}</p>}
       </div>
     </div>
   );

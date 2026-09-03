@@ -74,8 +74,10 @@ export interface Strings {
     host: string;
     you: string;
     hostOnly: string;
-    /** COMEÇAR の下。空席を CPU で埋めて始める */
-    startWithBots: string;
+    /** COMEÇAR の下。4人そろったら始める */
+    startFull: string;
+    /** まだ4人そろっていないとき、あと何人かを添える */
+    needMore: (n: number) => string;
     emptySeat: string;
     botSeat: string;
     offline: string;

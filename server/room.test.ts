@@ -1,15 +1,17 @@
 // 卓の検査。
 //
-// 見るのは主に3つ。
+// 見るのは主に4つ。
 //   1. **他人の番に打てないこと**（ここが緩いと対戦にならない）
 //   2. 配られる盤面に他人の手札が混ざらないこと
 //   3. 人が抜けても卓が止まらないこと
+//   4. **4人そろうまで始まらないこと**（オンラインはCPU戦の場ではない）
 //
 // CPU は自分で動かないので、テストは `stepBot()` を回すだけで進む。
 // 時計を差し込む必要がない。
 
 import { describe, it, expect } from "vitest";
 import { Room, SEAT_COUNT } from "./room.ts";
+import type { JoinResult } from "./room.ts";
 
 function rng(seed: number): () => number {
   let a = seed;
@@ -42,6 +44,20 @@ function runBots(room: Room, limit = 500): number {
   return n;
 }
 
+/** 4人ぶん座らせる。**開始には全席が要る**ので、ほとんどのテストがこれで前提を整える。 */
+function joinAll(room: Room, names = ["あ", "い", "う", "え"]): number[] {
+  const joined: JoinResult[] = names.map((n) => room.join(n));
+  for (const j of joined) {
+    if (!j.ok) throw new Error("4人ぶん席が無い");
+  }
+  return joined.map((j) => (j as Extract<JoinResult, { ok: true }>).seat);
+}
+
+/** 与えた席全員に同じ降りる／勝負するを決めさせる。PLAYING まで進めるのに使う。 */
+function foldAll(room: Room, seats: number[], fold: boolean): void {
+  for (const s of seats) room.setFold(s, fold);
+}
+
 describe("入退室", () => {
   it("空席に順に座る", () => {
     const room = makeRoom();
@@ -60,24 +76,26 @@ describe("入退室", () => {
 
   it("始まった卓には入れない", () => {
     const room = makeRoom();
-    room.join("あ");
-    room.start();
+    joinAll(room);
+    expect(room.start()).toMatchObject({ ok: true });
     expect(room.join("い")).toMatchObject({ ok: false });
   });
 
   it("トークンが合えば元の席に戻れる", () => {
     const room = makeRoom();
-    const joined = room.join("あ");
-    expect(joined.ok).toBe(true);
-    if (!joined.ok) return;
-
+    const first = room.join("あ");
+    room.join("い");
+    room.join("う");
+    room.join("え");
+    if (!first.ok) return;
     room.start();
-    room.disconnect(joined.seat);
-    expect(room.roomInfo().seats[joined.seat]!.disconnected).toBe(true);
 
-    const back = room.join("あ", joined.token);
-    expect(back).toMatchObject({ ok: true, seat: joined.seat, rejoined: true });
-    expect(room.roomInfo().seats[joined.seat]!.disconnected).toBe(false);
+    room.disconnect(first.seat);
+    expect(room.roomInfo().seats[first.seat]!.disconnected).toBe(true);
+
+    const back = room.join("あ", first.token);
+    expect(back).toMatchObject({ ok: true, seat: first.seat, rejoined: true });
+    expect(room.roomInfo().seats[first.seat]!.disconnected).toBe(false);
   });
 
   it("始まる前に抜けたら席は空く", () => {
@@ -91,41 +109,49 @@ describe("入退室", () => {
 });
 
 describe("開始", () => {
-  it("空席は CPU が埋める", () => {
+  it("4人そろうまで始まらない", () => {
     const room = makeRoom();
     room.join("あ");
+    room.join("い");
+    room.join("う");
+
+    expect(room.start()).toMatchObject({ ok: false });
+    expect(room.currentPhase()).toBe("WAITING");
+  });
+
+  it("4人そろえば始まる。CPUで埋めた席は無い", () => {
+    const room = makeRoom();
+    joinAll(room);
     expect(room.start()).toMatchObject({ ok: true });
 
     const info = room.roomInfo();
-    expect(info.seats.filter((s) => s.isBot)).toHaveLength(3);
-    expect(info.seats[0]!.isBot).toBe(false);
+    expect(info.seats.every((s) => !s.isBot)).toBe(true);
   });
 
   it("人がいなければ始められない", () => {
     expect(makeRoom().start()).toMatchObject({ ok: false });
   });
 
-  it("開始直後は降りるかを決める場面で、CPU は決め終えている", () => {
+  it("対局中に切断すると、降りるか否かの判断を代わりに決める", () => {
     const room = makeRoom();
-    room.join("あ");
+    const seats = joinAll(room);
     room.start();
 
-    expect(room.currentPhase()).toBe("FOLD_DECISION");
+    room.disconnect(seats[0]!);
     const info = room.roomInfo();
-    expect(info.seats[0]!.decided).toBe(false);
-    expect(info.seats.slice(1).every((s) => s.decided)).toBe(true);
+    expect(info.seats[seats[0]!]!.decided).toBe(true);
+    expect(seats.slice(1).every((s) => info.seats[s]!.decided === false)).toBe(true);
   });
 });
 
 describe("手番の検査", () => {
   it("自分の番でなければ断る", () => {
     const room = makeRoom();
-    const me = room.join("あ");
-    if (!me.ok) return;
+    const seats = joinAll(room);
     room.start();
-    room.setFold(me.seat, false);
+    foldAll(room, seats, false);
 
-    const actor = room.viewFor(me.seat).game.actor;
+    const actor = room.viewFor(seats[0]!).game.actor;
     const notMe = (actor + 1) % SEAT_COUNT;
 
     expect(room.act(notMe, { type: "DRAW" })).toMatchObject({
@@ -136,39 +162,34 @@ describe("手番の検査", () => {
 
   it("engine が断った手はそのまま断る", () => {
     const room = makeRoom();
-    const me = room.join("あ");
-    if (!me.ok) return;
+    const seats = joinAll(room);
     room.start();
-    room.setFold(me.seat, false);
-    runBots(room);
+    foldAll(room, seats, false);
 
-    const view = room.viewFor(me.seat);
-    if (view.game.actor !== me.seat) return; // CPU の番なら検査を飛ばす
+    const actor = room.viewFor(seats[0]!).game.actor;
+    const view = room.viewFor(actor);
 
     // 引く前に捨てようとする
-    const result = room.act(me.seat, { type: "DISCARD", cardId: view.game.hand[0]!.id });
+    const result = room.act(actor, { type: "DISCARD", cardId: view.game.hand[0]!.id });
     expect(result.ok).toBe(false);
   });
 
   it("決める場面が終わる前には打てない", () => {
     const room = makeRoom();
-    const me = room.join("あ");
-    if (!me.ok) return;
+    const seats = joinAll(room);
     room.start();
-    expect(room.act(me.seat, { type: "DRAW" })).toMatchObject({ ok: false });
+    expect(room.act(seats[0]!, { type: "DRAW" })).toMatchObject({ ok: false });
   });
 });
 
 describe("配る盤面", () => {
   it("他人の手札は混ざらない", () => {
     const room = makeRoom();
-    const a = room.join("あ");
-    const b = room.join("い");
-    if (!a.ok || !b.ok) return;
+    const seats = joinAll(room);
     room.start();
 
-    const viewA = room.viewFor(a.seat);
-    const viewB = room.viewFor(b.seat);
+    const viewA = room.viewFor(seats[0]!);
+    const viewB = room.viewFor(seats[1]!);
 
     const idsA = new Set(viewA.game.hand.map((c) => c.id));
     const idsB = viewB.game.hand.map((c) => c.id);
@@ -177,12 +198,12 @@ describe("配る盤面", () => {
     for (const id of idsB) expect(idsA.has(id)).toBe(false);
 
     // 相手の枚数だけは見える
-    expect(viewA.game.seats[b.seat]!.handCount).toBe(9);
+    expect(viewA.game.seats[seats[1]!]!.handCount).toBe(9);
   });
 
   it("席を持たない接続にはどの手札も見せない", () => {
     const room = makeRoom();
-    room.join("あ");
+    joinAll(room);
     room.start();
 
     const view = room.viewFor(-1);
@@ -193,20 +214,20 @@ describe("配る盤面", () => {
 
   it("ラウンドが終わるまで勝者の手札は開かない", () => {
     const room = makeRoom();
-    const me = room.join("あ");
-    if (!me.ok) return;
+    const seats = joinAll(room);
     room.start();
-    expect(room.viewFor(me.seat).game.revealedHand).toBeNull();
+    expect(room.viewFor(seats[0]!).game.revealedHand).toBeNull();
   });
 });
 
 describe("卓が止まらないこと", () => {
-  it("人が降りれば CPU だけでラウンドが終わる", () => {
+  it("残り全員が切断していれば、1人が降りるだけで決着する", () => {
     const room = makeRoom();
-    const me = room.join("あ");
-    if (!me.ok) return;
+    const seats = joinAll(room);
     room.start();
-    room.setFold(me.seat, true);
+    // 自分以外を切断してCPU任せにする
+    for (const s of seats.slice(1)) room.disconnect(s);
+    room.setFold(seats[0]!, true);
 
     runBots(room);
     // 降りた本人は結果を待つ側。CPU 同士で決着している
@@ -215,28 +236,25 @@ describe("卓が止まらないこと", () => {
 
   it("通信が切れた席は CPU が代わりに打つ", () => {
     const room = makeRoom();
-    const me = room.join("あ");
-    if (!me.ok) return;
+    const seats = joinAll(room);
     room.start();
-    room.setFold(me.seat, false);
-    room.disconnect(me.seat);
+    foldAll(room, seats, false);
 
-    // 自分の番でも CPU が引き受けるので、進み続ける
+    // ちょうどその席の番になったところで切る
+    const actor = room.viewFor(seats[0]!).game.actor;
+    room.disconnect(actor);
+
+    // 自分の番でも CPU が代わりに打つので、少なくとも1手は進む
     const steps = runBots(room);
     expect(steps).toBeGreaterThan(0);
-    expect(room.currentPhase()).not.toBe("PLAYING");
   });
 
   it("全員が降りたら決着なしで畳む", () => {
     const room = makeRoom();
-    const a = room.join("あ");
-    const b = room.join("い");
-    const c = room.join("う");
-    const d = room.join("え");
-    if (!a.ok || !b.ok || !c.ok || !d.ok) return;
+    const seats = joinAll(room);
     room.start();
 
-    for (const s of [a, b, c, d]) room.setFold(s.seat, true);
+    for (const s of seats) room.setFold(s, true);
 
     expect(room.currentPhase()).not.toBe("PLAYING");
     const settled = room.settlement();
@@ -246,11 +264,10 @@ describe("卓が止まらないこと", () => {
 
   it("誰も繋がっていなければ結果画面で待たない", () => {
     const room = makeRoom();
-    const me = room.join("あ");
-    if (!me.ok) return;
+    const seats = joinAll(room);
     room.start();
-    room.setFold(me.seat, false);
-    room.disconnect(me.seat);
+    foldAll(room, seats, false);
+    for (const s of seats) room.disconnect(s);
     runBots(room);
 
     // 待つ相手がいないので、結果で止まらず次のラウンドへ進んでいる
@@ -259,12 +276,11 @@ describe("卓が止まらないこと", () => {
 });
 
 describe("マッチが終わるまで回る", () => {
-  it("CPU 4人でマッチが決着する", () => {
+  it("卓が丸ごと放棄されても、CPUだけで決着まで進む", () => {
     const room = makeRoom(7);
-    const me = room.join("見物");
-    if (!me.ok) return;
+    const seats = joinAll(room);
     room.start();
-    room.disconnect(me.seat); // 全席を CPU に任せる
+    for (const s of seats) room.disconnect(s); // 全席をCPUに任せる
 
     // 1マッチはおよそ6ラウンド × 40手。余裕を持って上限を置く
     let steps = 0;
