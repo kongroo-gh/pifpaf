@@ -1292,6 +1292,18 @@ button {
   text-align: left;
 }
 
+/* 対局中の設定窓。
+   閉じるを設定の並びから離す。**間を空けないと4つめの設定に見える**
+   （選択肢と同じ幅・同じ高さで真下に付くため）。細い罫で区切って、
+   選ぶものと窓を閉じる操作を分ける。 */
+.panel--settings .panel__actions {
+  /* 罫は選択肢と同じ幅で引く。窓いっぱいに引くと設定の並びより広くなって揃わない */
+  max-width: 420px;
+  margin: 22px auto 0;
+  padding-top: 20px;
+  border-top: 1px solid rgba(200, 162, 74, 0.16);
+}
+
 .settings__label {
   margin: 0 0 7px;
   font-size: 9px;
