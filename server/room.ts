@@ -114,6 +114,10 @@ export class Room {
         (o) => o !== null && o.kind === "HUMAN" && o.token === token
       );
       if (seat >= 0) {
+        // 畳んだ卓には戻れない。一戦は終わっている
+        if (this.phase === "CLOSED") {
+          return { ok: false, reason: "この卓はもう畳まれています" };
+        }
         const o = this.seats[seat] as Extract<Occupant, { kind: "HUMAN" }>;
         o.connected = true;
         o.name = name;
@@ -137,9 +141,14 @@ export class Room {
   }
 
   /**
-   * 接続が切れた。**席は空けない。**
-   * 対局中に席を消すと残りの人が続けられなくなるので、席は残したまま
-   * CPU が代わりに打つ（`isBotControlled`）。戻ってくれば操作を取り戻せる。
+   * 人が抜けた。**対局中なら、そこで卓を畳む**（2026-09-04・ユーザー指示）。
+   *
+   * 以前は席を残したまま CPU が代わりに打っていた。卓が止まらない利点はあるが、
+   * 相手が入れ替わったことに気づかないまま CPU と打ち続けることになり、
+   * 人と打ちに来た意味が消える。**抜けたら一戦は終わり**にした。
+   *
+   * まだ始まっていない卓は別で、席を空けるだけ（人待ちに戻る）。
+   * 決着後も畳まない（もう打つものが無いので、結果を読んでいる人の邪魔をしない）。
    */
   disconnect(seat: number): void {
     const o = this.seats[seat];
@@ -156,22 +165,10 @@ export class Room {
       return;
     }
 
-    // **その人を待っている最中に切れると、卓が永久に止まる。**
-    // 抜けた席は CPU 扱いになるので、待っていたものをここで肩代わりする。
-    if (this.phase === "FOLD_DECISION" && !this.decided[seat] && isAlive(this.match, seat)) {
-      this.folded[seat] = shouldFold(this.state.hands[seat] ?? [], this.state.wild);
-      this.decided[seat] = true;
-      this.onChange();
-      this.maybeStartPlay();
-      return;
+    // 打っている最中に抜けられたら、そこで終わり。誰も代役を立てない
+    if (this.phase !== "MATCH_OVER" && this.phase !== "CLOSED") {
+      this.phase = "CLOSED";
     }
-
-    if (this.phase === "ROUND_RESULT") {
-      this.onChange();
-      this.maybeAdvance();
-      return;
-    }
-
     this.onChange();
   }
 
@@ -358,11 +355,7 @@ export class Room {
 
   /* ───────────── CPU ───────────── */
 
-  /**
-   * CPU が打つべき局面か。
-   * 人が座っていても、つながっていない席は CPU が代わりに打つ
-   * （待っても進まないので、卓が止まるほうが害が大きい）。
-   */
+  /** CPU が打つべき局面か。 */
   needsBotStep(): boolean {
     if (this.phase !== "PLAYING") return false;
     return this.isBotControlled(currentActor(this.state));
@@ -478,10 +471,15 @@ export class Room {
     return this.rng === undefined ? dealGame(SEAT_COUNT) : dealGame(SEAT_COUNT, this.rng);
   }
 
+  /**
+   * CPU が打つ席か。**CPU として座っている席だけ。**
+   * 切れている人の代役は立てない（抜けられた時点で卓を畳むので、
+   * そもそも「切れた人の番」という場面が来ない）。
+   */
   private isBotControlled(seat: number): boolean {
     const o = this.seats[seat];
     if (o === null || o === undefined) return true;
-    return o.kind === "BOT" || !o.connected;
+    return o.kind === "BOT";
   }
 
   private isConnected(seat: number): boolean {

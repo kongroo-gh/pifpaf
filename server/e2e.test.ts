@@ -305,14 +305,26 @@ describe("繋いで往復する", () => {
     for (const client of clients) client.close();
   });
 
-  it("トークンを持って入り直すと同じ席に戻る", async () => {
+  it("対局中に1人抜けたら、残った人の画面に「畳んだ」が届く", async () => {
     const url = await startServer();
     const { clients, host } = await startedTable(url);
-    // 対局が始まってから切れる。始まっていれば席は空かず、トークンで戻れる
+    const watcher = clients[1]!;
+
     clients[0]!.close();
 
-    await new Promise((r) => setTimeout(r, 150));
+    const deadline = Date.now() + 3000;
+    while (watcher.last("ROOM")?.room.phase !== "CLOSED") {
+      if (Date.now() > deadline) {
+        throw new Error(`畳まれない（phase=${watcher.last("ROOM")?.room.phase}）`);
+      }
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    // 抜けた人が誰かは残った画面から見える（席は消さない）
+    const seat = watcher.last("ROOM")!.room.seats[host.seat]!;
+    expect(seat.disconnected).toBe(true);
+    expect(seat.name).not.toBeNull();
 
+    // 畳んだ卓には、トークンを持っていても戻れない
     const again = await TestClient.connect(url);
     again.send({
       t: "JOIN",
@@ -321,20 +333,26 @@ describe("繋いで往復する", () => {
       name: "あ",
       token: host.token,
     });
-    const back = await again.waitFor("JOINED");
+    const refused = await again.waitFor("REJECTED");
+    expect(refused.reason).toContain("畳まれ");
 
-    expect(back.seat).toBe(host.seat);
     again.close();
     for (const client of clients.slice(1)) client.close();
   });
 
   it("打つ人が CPU だけになったら、対戦を見せずに結果まで飛ぶ", async () => {
     const url = await startServer();
-    const { clients } = await startedTable(url);
-    const observer = clients[0]!;
+    // 人が集まらないので CPU を呼んだ卓。観戦役は降りて見ているだけにする
+    const observer = await TestClient.connect(url);
+    observer.send({ t: "CREATE", version: PROTOCOL_VERSION, name: "あ" });
+    await observer.waitFor("JOINED");
+    observer.send({ t: "START", fillWithBots: true });
 
-    // 観戦役以外を切ってCPUに任せ、観戦役は降りて見ているだけにする
-    for (const client of clients.slice(1)) client.close();
+    const started = Date.now() + 3000;
+    while (observer.last("ROOM")?.room.phase !== "FOLD_DECISION") {
+      if (Date.now() > started) throw new Error("START しても始まらない");
+      await new Promise((r) => setTimeout(r, 20));
+    }
 
     const before = observer.received.filter((m) => m.t === "VIEW").length;
     observer.send({ t: "FOLD", fold: true });

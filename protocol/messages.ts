@@ -25,7 +25,12 @@ export type RoomPhase =
   /** ラウンドの結果を見せている */
   | "ROUND_RESULT"
   /** マッチが決着した */
-  | "MATCH_OVER";
+  | "MATCH_OVER"
+  /**
+   * 人が抜けたので卓を畳んだ（2026-09-04・ユーザー指示）。
+   * 抜けた席を CPU が引き継ぐことはしない。一戦はここで終わり。
+   */
+  | "CLOSED";
 
 export interface RoomSeat {
   seat: number;

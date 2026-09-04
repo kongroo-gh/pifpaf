@@ -54,6 +54,11 @@ export function OnlineTable({ onExit, onRules }: OnlineTableProps) {
     return <Lobby game={game} onExit={onExit} onRules={onRules} />;
   }
 
+  // 人が抜けて畳まれた卓。盤面はもう動かないので、理由だけ見せて入口へ帰す
+  if (game.room?.phase === "CLOSED") {
+    return <TableClosed game={game} onExit={onExit} />;
+  }
+
   if (game.view === null || game.room === null) {
     return <Connecting game={game} />;
   }
@@ -91,6 +96,44 @@ function Connecting({ game }: { game: OnlineGame }) {
         <div className="intro__actions">
           <button className="btn btn--rules" onClick={() => game.disconnect()}>
             VOLTAR<Gloss flavor="VOLTAR" text={t.online.retry} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 人が抜けて卓が畳まれたときの画面。
+ *
+ * **盤面は見せない。** もう1手も進まないので、残しておくと「自分の番を待っている」
+ * ように見えてしまう。`Connecting` と同じ器にして、理由と出口だけを置く。
+ */
+function TableClosed({ game, onExit }: { game: OnlineGame; onExit: () => void }) {
+  const t = useT();
+  const left = (game.room?.seats ?? [])
+    .filter((s) => s.name !== null && !s.isBot && s.disconnected)
+    .map((s) => s.name)
+    .filter((n): n is string => n !== null);
+
+  return (
+    <div className="app app--intro">
+      <div className="grain" aria-hidden="true" />
+      <div className="intro">
+        <Kicker flavor="MESA DESFEITA" gloss={t.online.closed} className="intro__kicker" />
+        <h1 className="intro__title">PIF PAF</h1>
+        <div className="intro__rule" />
+        {left.length > 0 && <p className="intro__body">{t.online.closedBy(left)}</p>}
+        <p className="intro__warn">{t.online.closedNote}</p>
+        <div className="intro__actions">
+          <button
+            className="btn btn--rules"
+            onClick={() => {
+              game.disconnect();
+              onExit();
+            }}
+          >
+            VOLTAR<Gloss flavor="VOLTAR" text={t.online.closedBack} />
           </button>
         </div>
       </div>
@@ -495,7 +538,7 @@ function Table({
           warning={t.leave.warnOnline}
           onLeave={() => {
             setLeaveOpen(false);
-            // 卓との縁を切ってから入口へ戻す。席は残り、CPU が代わりに打つ
+            // 卓との縁を切ってから入口へ戻す。**卓はここで畳まれる**（代役は立たない）
             game.disconnect();
             onExit();
           }}

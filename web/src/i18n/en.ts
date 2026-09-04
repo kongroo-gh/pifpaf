@@ -16,7 +16,7 @@ export const en: Strings = {
     open: "Leave the table",
     title: "Leave the table",
     warnSolo: (wager) => `Walk out now and the *${wager}* you staked stays on the table.`,
-    warnOnline: "The CPU takes your seat. Come back with the same code and it is yours again.",
+    warnOnline: "Walking out breaks up the table. The match ends for everyone at it.",
     confirm: "Walk out",
     cancel: "Keep playing",
   },
@@ -68,6 +68,10 @@ export const en: Strings = {
     theirTurn: (name) => `${name} is up…`,
     spectating: "Watching only (no seat)",
     waitingForNext: "Waiting for the others…",
+    closed: "Table broken up",
+    closedBy: (names) => `${names.join(", ")} walked out.`,
+    closedNote: "Nobody takes over an empty seat. This one ends here.",
+    closedBack: "Back to the main menu",
   },
 
   intro: {

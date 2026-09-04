@@ -82,7 +82,8 @@ describe("入退室", () => {
     expect(room.join("い")).toMatchObject({ ok: false });
   });
 
-  it("トークンが合えば元の席に戻れる", () => {
+  it("畳まれた卓にはトークンでも戻れない", () => {
+    // 抜けた時点で一戦は終わっている。戻る先が無い
     const room = makeRoom();
     const first = room.join("あ");
     room.join("い");
@@ -92,11 +93,10 @@ describe("入退室", () => {
     room.start();
 
     room.disconnect(first.seat);
-    expect(room.roomInfo().seats[first.seat]!.disconnected).toBe(true);
+    expect(room.currentPhase()).toBe("CLOSED");
 
     const back = room.join("あ", first.token);
-    expect(back).toMatchObject({ ok: true, seat: first.seat, rejoined: true });
-    expect(room.roomInfo().seats[first.seat]!.disconnected).toBe(false);
+    expect(back.ok).toBe(false);
   });
 
   it("始まる前に抜けたら席は空く", () => {
@@ -153,15 +153,33 @@ describe("開始", () => {
     expect(makeRoom().start(true)).toMatchObject({ ok: false });
   });
 
-  it("対局中に切断すると、降りるか否かの判断を代わりに決める", () => {
+  it("対局中に1人抜けたら、その場で卓を畳む", () => {
+    // 抜けた席を CPU が引き継ぐことはしない（2026-09-04・ユーザー指示）。
+    // 相手が入れ替わったことに気づかないまま CPU と打ち続けるほうが害が大きい
     const room = makeRoom();
     const seats = joinAll(room);
     room.start();
+    expect(room.currentPhase()).toBe("FOLD_DECISION");
 
     room.disconnect(seats[0]!);
-    const info = room.roomInfo();
-    expect(info.seats[seats[0]!]!.decided).toBe(true);
-    expect(seats.slice(1).every((s) => info.seats[s]!.decided === false)).toBe(true);
+    expect(room.currentPhase()).toBe("CLOSED");
+    // 抜けた人は残りの画面から見えるので、席は消さない
+    expect(room.roomInfo().seats[seats[0]!]!.disconnected).toBe(true);
+    expect(room.roomInfo().seats[seats[0]!]!.name).not.toBeNull();
+  });
+
+  it("決着したあとに抜けても畳まない。結果を読んでいる人の邪魔をしない", () => {
+    const room = makeRoom();
+    const seats = joinAll(room);
+    room.start();
+    // 1人だけ勝負すれば不戦勝。全員が次へ進まなければ ROUND_RESULT のまま
+    room.setFold(seats[0]!, false);
+    foldAll(room, seats.slice(1), true);
+    expect(room.currentPhase()).toBe("ROUND_RESULT");
+
+    // ラウンドの結果はまだ対局中なので、ここで抜ければ畳む
+    room.disconnect(seats[1]!);
+    expect(room.currentPhase()).toBe("CLOSED");
   });
 });
 
@@ -242,32 +260,32 @@ describe("配る盤面", () => {
 });
 
 describe("卓が止まらないこと", () => {
-  it("残り全員が切断していれば、1人が降りるだけで決着する", () => {
-    const room = makeRoom();
-    const seats = joinAll(room);
-    room.start();
-    // 自分以外を切断してCPU任せにする
-    for (const s of seats.slice(1)) room.disconnect(s);
-    room.setFold(seats[0]!, true);
-
-    runBots(room);
-    // 降りた本人は結果を待つ側。CPU 同士で決着している
-    expect(["ROUND_RESULT", "MATCH_OVER", "FOLD_DECISION"]).toContain(room.currentPhase());
-  });
-
-  it("通信が切れた席は CPU が代わりに打つ", () => {
+  it("自分の番の人が切れても、卓は止まらずに畳まれる", () => {
+    // 昔は CPU が代役を立てて続けていた。いまは畳むので、
+    // 「その人を待ったまま永久に止まる」形にならないことを見る
     const room = makeRoom();
     const seats = joinAll(room);
     room.start();
     foldAll(room, seats, false);
 
-    // ちょうどその席の番になったところで切る
     const actor = room.viewFor(seats[0]!).game.actor;
     room.disconnect(actor);
 
-    // 自分の番でも CPU が代わりに打つので、少なくとも1手は進む
-    const steps = runBots(room);
-    expect(steps).toBeGreaterThan(0);
+    expect(room.currentPhase()).toBe("CLOSED");
+    expect(room.needsBotStep()).toBe(false);
+    expect(runBots(room)).toBe(0);
+  });
+
+  it("畳まれた卓では、もう何も受け付けない", () => {
+    const room = makeRoom();
+    const seats = joinAll(room);
+    room.start();
+    room.disconnect(seats[3]!);
+    expect(room.currentPhase()).toBe("CLOSED");
+
+    expect(room.setFold(seats[0]!, false).ok).toBe(false);
+    expect(room.next(seats[0]!).ok).toBe(false);
+    expect(room.act(seats[0]!, { type: "DRAW", from: "STOCK" }).ok).toBe(false);
   });
 
   it("全員が降りたら決着なしで畳む", () => {
@@ -283,29 +301,42 @@ describe("卓が止まらないこと", () => {
     expect(settled!.state.lastWinner).toBeNull();
   });
 
-  it("誰も繋がっていなければ結果画面で待たない", () => {
+  it("人がいない卓（CPUだけ）は結果画面で待たない", () => {
+    // 人が抜ければ卓ごと畳むので、「切れた人を待って止まる」場面はもう来ない。
+    // 残るのは CPU だけの卓で、そこは誰も待たずに回り続ける
     const room = makeRoom();
-    const seats = joinAll(room);
-    room.start();
-    foldAll(room, seats, false);
-    for (const s of seats) room.disconnect(s);
-    runBots(room);
+    room.join("あ");
+    room.start(true);
+    room.setFold(0, true);
+    room.runOutRound();
+    expect(room.currentPhase()).toBe("ROUND_RESULT");
 
-    // 待つ相手がいないので、結果で止まらず次のラウンドへ進んでいる
-    expect(room.currentPhase()).not.toBe("ROUND_RESULT");
+    // 見ている人が抜ければ畳まれ、止まったままにはならない
+    room.disconnect(0);
+    expect(room.currentPhase()).toBe("CLOSED");
   });
 });
 
 describe("マッチが終わるまで回る", () => {
-  it("卓が丸ごと放棄されても、CPUだけで決着まで進む", () => {
+  it("CPUだけの卓は、決着まで止まらずに回る", () => {
+    // 人が抜けた席を CPU が引き継ぐことはもう無いので、
+    // 「CPU だけの卓」は CHAMAR A CPU で呼んだ席が残った場合にできる。
+    // 呼んだ本人が降り続けても、engine が止まらないことを見る
     const room = makeRoom(7);
-    const seats = joinAll(room);
-    room.start();
-    for (const s of seats) room.disconnect(s); // 全席をCPUに任せる
+    room.join("あ");
+    room.start(true);
 
     // 1マッチはおよそ6ラウンド × 40手。余裕を持って上限を置く
     let steps = 0;
     while (room.currentPhase() !== "MATCH_OVER" && steps < 5000) {
+      if (room.currentPhase() === "FOLD_DECISION") {
+        if (room.roomInfo().seats[0]!.decided === false) room.setFold(0, true);
+        continue;
+      }
+      if (room.currentPhase() === "ROUND_RESULT") {
+        room.next(0);
+        continue;
+      }
       // 進める手が無いのに終わっていないなら、卓が止まっている
       if (!room.needsBotStep()) break;
       room.stepBot();

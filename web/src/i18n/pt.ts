@@ -23,7 +23,7 @@ export const pt: Strings = {
     open: "Deixar a mesa",
     title: "Deixar a mesa",
     warnSolo: (wager) => `Se sair agora, os *${wager}* apostados ficam na mesa.`,
-    warnOnline: "A CPU assume o seu lugar. Volte com a mesma senha e ele é seu de novo.",
+    warnOnline: "Sair desfaz a mesa. A partida acaba para todos que estão nela.",
     confirm: "Sair",
     cancel: "Ficar",
   },
@@ -75,6 +75,10 @@ export const pt: Strings = {
     theirTurn: (name) => `Vez de ${name}…`,
     spectating: "Só assistindo (sem lugar)",
     waitingForNext: "Esperando os outros…",
+    closed: "Mesa desfeita",
+    closedBy: (names) => `${names.join(", ")} saiu da mesa.`,
+    closedNote: "Ninguém assume o lugar vazio. Esta acaba aqui.",
+    closedBack: "Voltar ao menu",
   },
 
   intro: {

@@ -109,6 +109,14 @@ export interface Strings {
     spectating: string;
     /** 結果画面で、まだ押していない人がいるとき */
     waitingForNext: string;
+    /** 人が抜けて卓を畳んだとき。MESA DESFEITA の続き */
+    closed: string;
+    /** 誰が抜けたか。**連ね方が言語ごとに違う**ので配列で渡す */
+    closedBy: (names: string[]) => string;
+    /** 一戦が終わったことの念押し */
+    closedNote: string;
+    /** VOLTAR の下。行き先はメインメニュー */
+    closedBack: string;
   };
 
   intro: {

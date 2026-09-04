@@ -14,7 +14,7 @@ export const ja: Strings = {
     open: "卓を降りる",
     title: "卓を降りる",
     warnSolo: (wager) => `途中で降りれば、賭けた *${wager}* は卓に置いていくことになる。`,
-    warnOnline: "空いた席はCPUが引き継ぐ。同じ合言葉で入り直せば戻れる。",
+    warnOnline: "抜ければ卓は畳まれる。この一戦は、残った人のぶんも含めて終わる。",
     confirm: "降りる",
     cancel: "続ける",
   },
@@ -66,6 +66,10 @@ export const ja: Strings = {
     theirTurn: (name) => `${name} の番…`,
     spectating: "見ているだけ（席が無い）",
     waitingForNext: "ほかの人を待っている…",
+    closed: "卓が畳まれた",
+    closedBy: (names) => `${names.join("、")} が卓を抜けた。`,
+    closedNote: "抜けた席をCPUが引き継ぐことはしない。この一戦はここで終わり。",
+    closedBack: "メインメニューへ",
   },
 
   intro: {
