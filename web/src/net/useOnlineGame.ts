@@ -89,11 +89,20 @@ export function saveName(name: string): void {
 }
 
 /**
+ * 本番の繋ぎ先。`render.yaml` の `name` から決まる Render の URL。
+ *
+ * **ここを既定に焼いてあるので、卓を動かすのに要る手作業は
+ * 「Render で Blueprint からサービスを作る」だけ**。GitHub の変数設定は要らない。
+ * 別名で立てたときや他所へ移したときだけ `VITE_WS_URL` で差し替える。
+ */
+const RENDER_WS_URL = "wss://pifpaf-online-kongroo.onrender.com";
+
+/**
  * 繋ぎ先。
  *
  * 開発中は vite の隣で server を立てるので localhost:8787。
- * 本番の行き先は決まっていない（GitHub Pages は静的配信しかできず
- * WebSocket を置けない）。`VITE_WS_URL` で差せるようにしてある。
+ * 本番は Render。GitHub Pages は静的配信しかできず WebSocket を置けないので、
+ * 画面と卓は別の場所に居る。
  */
 export function serverUrl(): string {
   const configured = import.meta.env["VITE_WS_URL"];
@@ -101,9 +110,7 @@ export function serverUrl(): string {
 
   if (import.meta.env.DEV) return "ws://127.0.0.1:8787";
 
-  // 同じ場所から配信されている前提の既定。置き場所が決まったら差し替える
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${window.location.host}`;
+  return RENDER_WS_URL;
 }
 
 export function useOnlineGame(): OnlineGame {

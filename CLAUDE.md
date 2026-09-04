@@ -454,10 +454,18 @@ persona を持ち込むとオンライン版だけ別の見た目に育つ（単
 2つの盤面はまだ残っている。
 
 ### 公開構成（Render + GitHub Pages）
-GitHub Pages は画面の配信に継続利用する。オンライン卓は `render.yaml` で定義した
-Render Web Serviceへ載せる方針。Renderが発行したWSS URLをGitHub Repository
-variable `VITE_WS_URL` に設定すると、Pagesビルドへ接続先が埋め込まれる。
-無料枠は15分間通信がないと休止し、最初の接続に最大約1分かかる場合がある。
+GitHub Pages が画面、Render Web Service が卓。**画面と卓は別の場所に居る**
+（Pages は静的配信しかできず WebSocket を置けない）。
+
+繋ぎ先は `useOnlineGame.ts` の `RENDER_WS_URL` に焼いてある。
+`render.yaml` の `name` から URL が決まるので、**手作業は「Render で Blueprint から
+サービスを作る」だけ**。GitHub の変数設定は要らない。
+別名で立てたときや他所へ移したときだけ、Repository variable `VITE_WS_URL` で
+差し替える（`deploy.yml` が渡していて、空なら焼いた既定に落ちる）。
+
+無料枠は15分間通信がないと休止する。休止後の最初の接続は失敗しうるが、
+`useOnlineGame` が待ち時間を倍にしながら繋ぎ直すので、
+1分ほどで自然につながる（画面は「卓との通信を戻しています…」のまま待つ）。
 
 ### import に拡張子を明示している
 Node の ESM は拡張子を省略できないため、engine / protocol / server の

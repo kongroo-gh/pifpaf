@@ -70,7 +70,6 @@ export function SettingsControls({ speed, onSpeed }: SettingsControlsProps) {
       <div className="settings__group">
         <p className="settings__label">{t.settings.sound}</p>
         <SoundPills />
-        <p className="settings__note">{t.settings.soundNote}</p>
       </div>
 
       {showSpeed && (
@@ -89,7 +88,6 @@ export function SettingsControls({ speed, onSpeed }: SettingsControlsProps) {
               </button>
             ))}
           </div>
-          <p className="settings__note">{t.settings.speedNote}</p>
         </div>
       )}
     </div>

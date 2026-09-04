@@ -39,14 +39,10 @@ export interface Strings {
     close: string;
     language: string;
     speed: string;
-    /** 速さの選択肢に添える一言 */
-    speedNote: string;
     /** 効果音の入切 */
     sound: string;
     soundOn: string;
     soundOff: string;
-    /** 効果音の選択肢に添える一言 */
-    soundNote: string;
   };
 
   /** オンライン対戦。単機版と違い、待ち・切断・再接続の言葉が要る */

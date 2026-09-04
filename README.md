@@ -84,12 +84,16 @@ npm run dev --workspace=web
 
 ## iPhoneなど外出先から遊ぶ
 
-GitHub Pagesが画面、Render Web Serviceがオンライン卓を担当する。`render.yaml` から
-Render Blueprintを作成後、発行された `wss://...onrender.com` をGitHubリポジトリの
-Repository variable `VITE_WS_URL` に設定して、Pagesを再デプロイする。
+GitHub Pagesが画面、Render Web Serviceがオンライン卓を担当する。
 
-Render無料枠は15分間通信がないと休止する。休止後の最初の接続では、起動まで
-最大1分ほど待つ場合がある。接続後はWebSocket通信が続くため、対局中は休止しない。
+**要る手作業は「Renderで `render.yaml` からBlueprintを作る」だけ。**
+サービス名 `pifpaf-online-kongroo` から決まる `wss://pifpaf-online-kongroo.onrender.com`
+を接続先の既定として焼いてあるので、GitHubの変数設定は要らない。
+別名で立てた場合や他所へ移した場合だけ、Repository variable `VITE_WS_URL` を設定する。
+
+Render無料枠は15分間通信がないと休止する。休止後の最初の接続は失敗しうるが、
+待ち時間を倍にしながら繋ぎ直すので1分ほどで自然につながる。
+接続後はWebSocket通信が続くため、対局中は休止しない。
 
 ## テスト
 ```
