@@ -233,15 +233,24 @@ export class Hub {
    * 打ったあとに `onChange` → `broadcast` が走り、必要ならまた自分を予約する。
    */
   private scheduleBot(room: Room): void {
-    if (this.botTimers.has(room.roomId)) return;
     if (!room.needsBotStep()) return;
 
     // 打っているのが CPU だけになった卓は、間合いを置いて見せる相手がいない。
-    // 待たせるだけなので決着まで飛ばし、結果だけを配る（単機版と同じ扱い）
+    // 待たせるだけなので決着まで飛ばし、結果だけを配る（単機版と同じ扱い）。
+    //
+    // **保留中の間合いより先に見る。** 前の局の予約が残っているうちに次の局が
+    // 始まると、その予約が消えるまで飛ばせず、1手ぶん間合い付きで漏れる
     if (room.runsOnBotsAlone()) {
+      const pending = this.botTimers.get(room.roomId);
+      if (pending !== undefined) {
+        clearTimeout(pending);
+        this.botTimers.delete(room.roomId);
+      }
       room.runOutRound();
       return;
     }
+
+    if (this.botTimers.has(room.roomId)) return;
 
     const timer = setTimeout(() => {
       this.botTimers.delete(room.roomId);

@@ -363,6 +363,70 @@ describe("CPUだけになった対局は見せない", () => {
     expect(room.runsOnBotsAlone()).toBe(false);
   });
 
+  it("脱落した人の前でも、CPU同士の応酬は飛ばし、結果だけを見せる", () => {
+    // 破産したあとも席には座ったまま。降りた人と同じで、もう手は出せない。
+    // 「生きている人がいるか」で判定していた頃は、破産した人だけが1手ずつ
+    // （900ms × 80手 ＝ 約70秒）CPU同士の対戦を見せられていた。
+    const room = makeRoom(5);
+    room.join("あ");
+    room.start(true);
+
+    let forced = 0; // 脱落したあとに1手ずつ見せられた手数
+    let deadResults = 0; // 脱落したあとに見せられた結果の数
+    for (let guard = 0; guard < 20000; guard += 1) {
+      const phase = room.currentPhase();
+      if (phase === "MATCH_OVER") break;
+      const dead = room.viewFor(0).match.chips[0] === 0;
+
+      if (phase === "FOLD_DECISION") {
+        if (room.roomInfo().seats[0]!.decided === false) room.setFold(0, false);
+        continue;
+      }
+      if (phase === "ROUND_RESULT") {
+        if (dead) {
+          deadResults += 1;
+          // 押すまで次は配られない。破産した人の前で局が飛ばないこと
+          const round = room.roomInfo().round;
+          expect(room.currentPhase()).toBe("ROUND_RESULT");
+          expect(room.roomInfo().round).toBe(round);
+        }
+        room.next(0);
+        continue;
+      }
+      if (phase !== "PLAYING") break;
+
+      if (room.runsOnBotsAlone()) {
+        room.runOutRound();
+        continue;
+      }
+      if (room.needsBotStep()) {
+        if (dead) forced += 1;
+        room.stepBot();
+        continue;
+      }
+      // 自分の番。勝ち筋は問わないので、引いて捨てるだけ
+      const g = room.viewFor(0).game;
+      if (g.actor !== 0) break;
+      if (g.phase === "AWAITING_FIRST_DRAW" || g.phase === "AWAITING_DRAW") {
+        room.act(0, { type: "DRAW", from: "STOCK" });
+      } else if (g.phase === "AWAITING_DISCARD") {
+        room.act(0, { type: "DISCARD", cardId: g.hand[0]!.id });
+      } else if (g.phase === "AWAITING_KEEP_DECISION") {
+        room.act(0, { type: "REJECT" });
+      } else if (g.phase === "AWAITING_INTERCEPT") {
+        room.act(0, { type: "PASS_INTERCEPT" });
+      } else {
+        break;
+      }
+    }
+
+    // この種では人が破産して終わる。そこまで行っていないと検査にならない
+    expect(room.currentPhase()).toBe("MATCH_OVER");
+    expect(room.viewFor(0).match.chips[0]).toBe(0);
+    expect(deadResults).toBeGreaterThan(0);
+    expect(forced).toBe(0);
+  });
+
   it("誰も見ていない卓では飛ばさない", () => {
     const room = makeRoom();
     const seats = joinAll(room);

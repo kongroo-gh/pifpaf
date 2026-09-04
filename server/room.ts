@@ -345,8 +345,11 @@ export class Room {
   private maybeAdvance(): void {
     if (this.phase !== "ROUND_RESULT") return;
 
+    // **脱落した人も待つ。** 繋がっている以上は結果を見ているので、
+    // 勝手に次を配ると読む間もなく流れていく（CONTINUAR は全員に出ている）。
+    // 生きている人だけを待っていた頃は、破産した人の前で局が飛んでいた。
     const waitingOn = this.humanSeats().filter(
-      (i) => this.isConnected(i) && isAlive(this.match, i) && !this.readyForNext.has(i)
+      (i) => this.isConnected(i) && !this.readyForNext.has(i)
     );
     if (waitingOn.length > 0) return;
 
@@ -368,14 +371,18 @@ export class Room {
   /**
    * 打っているのが CPU だけになった対局か。（2026-09-04・ユーザー指示）
    *
-   * 人は全員降りた（あるいは切れた）が、結果を待っている人はまだいる、という状態。
+   * 人は誰も打っていないが、見ている人はいる、という状態。
    * こうなると人が手を出す場面はもう来ないので、間合いを置いて見せる意味がない。
    * 呼び出し側はこれが真のあいだ `runOutRound()` で決着まで飛ばしてよい。
+   *
+   * **見ている人が生きているかは問わない。** 降りた人も脱落した人も、
+   * 席に着いたまま CPU の応酬を見せられる立場は同じ。
+   * ここで生死を条件にしていたせいで、破産した人だけが1手ずつ見せられていた。
    */
   runsOnBotsAlone(): boolean {
     if (this.phase !== "PLAYING") return false;
     // 誰も見ていない卓は畳まれるのを待つだけ。急いで進める理由がない
-    if (!this.humanSeats().some((i) => this.isConnected(i) && isAlive(this.match, i))) return false;
+    if (this.isAbandoned()) return false;
     return !this.humanSeats().some((i) => this.isPlaying(i));
   }
 
