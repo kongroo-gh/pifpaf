@@ -24,7 +24,7 @@
 // 先に「盤面の型を PlayerView に揃える」整理をしないと持ってこられない。
 
 import { useEffect, useState } from "react";
-import type { PlayerView } from "@pifpaf/protocol";
+import type { PlayerView, RoomInfo } from "@pifpaf/protocol";
 import { findBaterAction } from "@pifpaf/engine";
 import { useT, Gloss, Kicker, Rich } from "../i18n";
 import { PlayingCard, CardBack, SUIT_GLYPH, describeCard } from "../components/PlayingCard";
@@ -98,6 +98,38 @@ function Connecting({ game }: { game: OnlineGame }) {
             VOLTAR<Gloss flavor="VOLTAR" text={t.online.retry} />
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 誰かの通信が切れて、戻りを待っているあいだの覆い。
+ *
+ * **盤面は残したまま被せる。** 卓はそこにあって止まっているだけなので、
+ * 別の画面へ飛ばすと「終わった」と誤解される。押せるものはひとつも無い
+ * （サーバーもこのあいだの手を受け付けない）。
+ */
+function AwayOverlay({ room }: { room: RoomInfo }) {
+  const t = useT();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 500);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const names = room.awaiting
+    .map((seat) => room.seats[seat]?.name ?? null)
+    .filter((n): n is string => n !== null);
+  // 期限はサーバーの時計。多少ずれても、残り秒数の見え方が数秒動くだけ
+  const left = room.awaitingUntil === null ? 0 : Math.max(0, Math.ceil((room.awaitingUntil - now) / 1000));
+
+  return (
+    <div className="panel panel--verdict" role="dialog" aria-modal="true" aria-label={t.online.away}>
+      <div className="panel__box">
+        <Kicker flavor="ALGUÉM SUMIU" gloss={t.online.away} className="panel__kicker" />
+        {names.length > 0 && <p className="panel__lead">{t.online.awayWho(names)}</p>}
+        <p className="panel__note">{t.online.awayCountdown(left)}</p>
       </div>
     </div>
   );
@@ -531,6 +563,8 @@ function Table({
       {showResult && <ResultPanel game={game} view={view} />}
       {room.phase === "WAITING" && <WaitingPanel game={game} />}
 
+      {room.awaiting.length > 0 && <AwayOverlay room={room} />}
+
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
 
       {leaveOpen && (
@@ -538,8 +572,8 @@ function Table({
           warning={t.leave.warnOnline}
           onLeave={() => {
             setLeaveOpen(false);
-            // 卓との縁を切ってから入口へ戻す。**卓はここで畳まれる**（代役は立たない）
-            game.disconnect();
+            // **「降りる」と伝えてから**切る。ただ切ると、残った人が30秒待たされる
+            game.leave();
             onExit();
           }}
           onStay={() => setLeaveOpen(false)}

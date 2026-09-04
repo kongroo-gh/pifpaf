@@ -43,6 +43,12 @@ export interface OnlineGame {
   create: (name: string) => void;
   connect: (roomId: string, name: string) => void;
   disconnect: () => void;
+  /**
+   * 自分から卓を降りる。
+   * **ただ切るのとは違う。** 切れただけならサーバーは戻りを待って卓を止めるが、
+   * こちらは「戻らない」と伝えるので、残った人を待たせずに卓が畳まれる。
+   */
+  leave: () => void;
 
   /** 開始する。既定は4人そろってから。人が来ないときだけ CPU を呼んで埋める */
   start: (fillWithBots?: boolean) => void;
@@ -258,6 +264,12 @@ export function useOnlineGame(): OnlineGame {
     setSettlement(null);
   }, []);
 
+  const leave = useCallback(() => {
+    // 先に「降りる」と伝えてから切る。切るだけだと、残った人が30秒待たされる
+    send({ t: "LEAVE" });
+    disconnect();
+  }, [send, disconnect]);
+
   // 画面を閉じるときに後片付けする
   useEffect(() => {
     return () => {
@@ -290,6 +302,7 @@ export function useOnlineGame(): OnlineGame {
     create,
     connect,
     disconnect,
+    leave,
     start,
     setFold,
     act,

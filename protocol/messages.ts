@@ -58,6 +58,16 @@ export interface RoomInfo {
   seats: RoomSeat[];
   /** 何ラウンド目か */
   round: number;
+  /**
+   * 戻りを待っている席。**このあいだ卓は止まる。**
+   * 空なら普通に進行中。期限までに戻らなければ `phase` が `"CLOSED"` になる。
+   */
+  awaiting: number[];
+  /**
+   * 待ちの期限（epoch ms）。`awaiting` が空なら null。
+   * 残り秒数を出すためだけのもので、実際に畳むかは常にサーバーが決める。
+   */
+  awaitingUntil: number | null;
 }
 
 /* ─────────── クライアント → サーバー ─────────── */
@@ -79,6 +89,12 @@ export type ClientMessage =
   | { t: "ACTION"; action: GameAction }
   /** 結果表示から次のラウンドへ */
   | { t: "NEXT" }
+  /**
+   * 自分から卓を降りる。
+   * **通信が切れたのとは区別する。** 切れただけなら戻りを待つが、
+   * 自分で降りると言った人は待っても戻らないので、その場で卓を畳む。
+   */
+  | { t: "LEAVE" }
   /** 生存確認への返事 */
   | { t: "PONG" };
 
@@ -145,6 +161,9 @@ export function parseClientMessage(raw: unknown): ClientMessage | null {
 
     case "NEXT":
       return { t: "NEXT" };
+
+    case "LEAVE":
+      return { t: "LEAVE" };
 
     case "PONG":
       return { t: "PONG" };

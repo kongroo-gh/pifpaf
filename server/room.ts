@@ -76,6 +76,16 @@ export class Room {
   private decided: boolean[] = Array.from({ length: SEAT_COUNT }, () => false);
   /** 結果画面から次へ進んでよいと言った席 */
   private readyForNext = new Set<number>();
+  /**
+   * 戻りを待っている席。**空でないあいだ卓は止まる。**
+   * 通信が一瞬切れただけの人を、抜けたことにして卓ごと畳まないための猶予。
+   */
+  private awaiting = new Set<number>();
+  /**
+   * 待ちの期限（epoch ms）。**時計は持たない**ので、値は `hub` が入れる。
+   * 残り秒数を画面に出すためだけに預かっている。畳むかを決めるのも `hub`。
+   */
+  private awaitingUntil: number | null = null;
 
   private lastSettlement: RoundSettlement | null = null;
   /**
@@ -121,7 +131,12 @@ export class Room {
         const o = this.seats[seat] as Extract<Occupant, { kind: "HUMAN" }>;
         o.connected = true;
         o.name = name;
+        this.awaiting.delete(seat);
+        if (!this.isAwaiting()) this.awaitingUntil = null;
         this.onChange();
+        // 止めていたぶんを動かし直す。場面が違えばどちらも何もしない
+        this.maybeStartPlay();
+        this.maybeAdvance();
         return { ok: true, seat, token, rejoined: true };
       }
     }
@@ -141,14 +156,18 @@ export class Room {
   }
 
   /**
-   * 人が抜けた。**対局中なら、そこで卓を畳む**（2026-09-04・ユーザー指示）。
+   * 人が消えた。**代役は立てない。**（2026-09-04・ユーザー指示）
    *
    * 以前は席を残したまま CPU が代わりに打っていた。卓が止まらない利点はあるが、
    * 相手が入れ替わったことに気づかないまま CPU と打ち続けることになり、
-   * 人と打ちに来た意味が消える。**抜けたら一戦は終わり**にした。
+   * 人と打ちに来た意味が消える。
+   *
+   * ただし**すぐには畳まない。** 通信が一瞬切れただけの人まで抜けた扱いにすると、
+   * 電車に入っただけで卓が消える。**戻りを待つあいだ卓は止める**（`awaiting`）。
+   * 何秒待つかと、待ちきれなかったときに畳むのは `hub` の仕事（ここは時計を持たない）。
    *
    * まだ始まっていない卓は別で、席を空けるだけ（人待ちに戻る）。
-   * 決着後も畳まない（もう打つものが無いので、結果を読んでいる人の邪魔をしない）。
+   * 決着後も待たない（もう打つものが無いので、結果を読んでいる人の邪魔をしない）。
    */
   disconnect(seat: number): void {
     const o = this.seats[seat];
@@ -165,10 +184,60 @@ export class Room {
       return;
     }
 
-    // 打っている最中に抜けられたら、そこで終わり。誰も代役を立てない
     if (this.phase !== "MATCH_OVER" && this.phase !== "CLOSED") {
+      this.awaiting.add(seat);
+    }
+    this.onChange();
+  }
+
+  /* ───────────── 戻りを待つ ───────────── */
+
+  /** 誰かの戻りを待っている（＝卓が止まっている）か。 */
+  isAwaiting(): boolean {
+    return this.awaiting.size > 0;
+  }
+
+  /**
+   * 待ちの期限を預かる。`hub` が時計を見て入れる。
+   * 表示に使うだけで、実際に畳むのは `giveUpWaiting()` が呼ばれたとき。
+   */
+  setAwaitingUntil(at: number | null): void {
+    this.awaitingUntil = at;
+    this.onChange();
+  }
+
+  /**
+   * 自分から卓を降りた。**待たずに畳む。**
+   * 切れただけの人は戻ってくるかもしれないが、降りると言った人は戻らない。
+   */
+  leave(seat: number): void {
+    const o = this.seats[seat];
+    if (o === null || o === undefined || o.kind !== "HUMAN") return;
+    o.connected = false;
+
+    if (this.phase === "WAITING") {
+      this.seats[seat] = null;
+      if (this.hostSeat === seat) {
+        this.hostSeat = this.seats.findIndex((occupant) => occupant?.kind === "HUMAN");
+      }
+      this.onChange();
+      return;
+    }
+
+    if (this.phase !== "MATCH_OVER" && this.phase !== "CLOSED") {
+      this.awaiting.clear();
+      this.awaitingUntil = null;
       this.phase = "CLOSED";
     }
+    this.onChange();
+  }
+
+  /** 待ちきれなかった。ここで一戦は終わり。 */
+  giveUpWaiting(): void {
+    if (!this.isAwaiting()) return;
+    this.awaiting.clear();
+    this.awaitingUntil = null;
+    this.phase = "CLOSED";
     this.onChange();
   }
 
@@ -242,6 +311,7 @@ export class Room {
 
   /** ラウンド開始前の「降りる／勝負する」。 */
   setFold(seat: number, fold: boolean): ActResult {
+    if (this.isAwaiting()) return { ok: false, reason: "抜けた人の戻りを待っています" };
     if (this.phase !== "FOLD_DECISION") return { ok: false, reason: "いま決める場面ではありません" };
     if (!isAlive(this.match, seat)) return { ok: false, reason: "すでに脱落しています" };
     if (this.decided[seat]) return { ok: false, reason: "もう決めています" };
@@ -255,6 +325,7 @@ export class Room {
 
   /** 全員が決め終えたら手番を始める。 */
   private maybeStartPlay(): void {
+    if (this.isAwaiting()) return;
     if (this.phase !== "FOLD_DECISION") return;
     if (!this.decided.every((d) => d)) return;
 
@@ -284,6 +355,7 @@ export class Room {
 
   /** 対局中の手。**その席の番かどうかはここで見る。** */
   act(seat: number, action: GameAction): ActResult {
+    if (this.isAwaiting()) return { ok: false, reason: "抜けた人の戻りを待っています" };
     if (this.phase !== "PLAYING") return { ok: false, reason: "いま打つ場面ではありません" };
     if (currentActor(this.state) !== seat) return { ok: false, reason: "あなたの番ではありません" };
 
@@ -332,6 +404,7 @@ export class Room {
 
   /** 結果画面から次へ。つながっている人が全員押したら進む。 */
   next(seat: number): ActResult {
+    if (this.isAwaiting()) return { ok: false, reason: "抜けた人の戻りを待っています" };
     if (this.phase !== "ROUND_RESULT") return { ok: false, reason: "いま進む場面ではありません" };
     this.readyForNext.add(seat);
     this.onChange();
@@ -340,6 +413,7 @@ export class Room {
   }
 
   private maybeAdvance(): void {
+    if (this.isAwaiting()) return;
     if (this.phase !== "ROUND_RESULT") return;
 
     // **脱落した人も待つ。** 繋がっている以上は結果を見ているので、
@@ -355,8 +429,9 @@ export class Room {
 
   /* ───────────── CPU ───────────── */
 
-  /** CPU が打つべき局面か。 */
+  /** CPU が打つべき局面か。**戻りを待っているあいだは打たせない。** */
   needsBotStep(): boolean {
+    if (this.isAwaiting()) return false;
     if (this.phase !== "PLAYING") return false;
     return this.isBotControlled(currentActor(this.state));
   }
@@ -441,7 +516,15 @@ export class Room {
       decided: this.decided[i] === true,
       ready: this.readyForNext.has(i),
     }));
-    return { roomId: this.roomId, hostSeat: this.hostSeat, phase: this.phase, seats, round: this.match.round };
+    return {
+      roomId: this.roomId,
+      hostSeat: this.hostSeat,
+      phase: this.phase,
+      seats,
+      round: this.match.round,
+      awaiting: [...this.awaiting],
+      awaitingUntil: this.awaitingUntil,
+    };
   }
 
   settlement(): RoundSettlement | null {

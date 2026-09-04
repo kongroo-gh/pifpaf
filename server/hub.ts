@@ -19,6 +19,15 @@ const PONG_TIMEOUT_MS = 60_000;
 /** 人が誰もいなくなった卓を畳むまで */
 const EMPTY_ROOM_TTL_MS = 5 * 60_000;
 
+/**
+ * 消えた人の戻りを待つ時間（2026-09-04・ユーザー指示）。
+ * このあいだ卓は止まる。戻らなければ卓を畳む。
+ *
+ * 短すぎると電車に入っただけで卓が消え、長すぎると残った人が待たされる。
+ * 自動再接続は 0.5 秒から倍々で最大10秒間隔なので、30秒あれば数回は試せる。
+ */
+const ABSENCE_GRACE_MS = 30_000;
+
 interface Member {
   conn: WsConnection;
   roomId: string;
@@ -31,6 +40,8 @@ export class Hub {
   private members = new Map<number, Member>();
   /** 卓ごとの CPU タイマー。二重に走らせない */
   private botTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /** 卓ごとの「戻りを待つ」タイマー */
+  private absenceTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private emptySince = new Map<string, number>();
 
   private housekeeping: ReturnType<typeof setInterval> | null = null;
@@ -47,6 +58,8 @@ export class Hub {
     this.housekeeping = null;
     for (const timer of this.botTimers.values()) clearTimeout(timer);
     this.botTimers.clear();
+    for (const timer of this.absenceTimers.values()) clearTimeout(timer);
+    this.absenceTimers.clear();
   }
 
   handleOpen(conn: WsConnection): void {
@@ -105,10 +118,41 @@ export class Hub {
     if (room === undefined) return;
 
     room.disconnect(member.seat);
+    this.syncAbsence(room);
     this.broadcast(room);
     this.scheduleBot(room);
 
     if (room.isAbandoned()) this.emptySince.set(room.roomId, Date.now());
+  }
+
+  /**
+   * 「戻りを待つ」時計の面倒を見る。**時計を持つのはここだけ。**
+   * 待ち始めたら期限を切り、戻ってきたら止める。
+   */
+  private syncAbsence(room: Room): void {
+    const running = this.absenceTimers.get(room.roomId);
+
+    if (!room.isAwaiting()) {
+      if (running !== undefined) {
+        clearTimeout(running);
+        this.absenceTimers.delete(room.roomId);
+        room.setAwaitingUntil(null);
+      }
+      return;
+    }
+
+    // すでに待っているなら期限は延ばさない。何度も切れる人を待ち続けないため
+    if (running !== undefined) return;
+
+    room.setAwaitingUntil(Date.now() + ABSENCE_GRACE_MS);
+    const timer = setTimeout(() => {
+      this.absenceTimers.delete(room.roomId);
+      if (!this.rooms.has(room.roomId)) return;
+      room.giveUpWaiting();
+      this.broadcast(room);
+    }, ABSENCE_GRACE_MS);
+    timer.unref?.();
+    this.absenceTimers.set(room.roomId, timer);
   }
 
   /* ───────────── 中身 ───────────── */
@@ -171,6 +215,8 @@ export class Hub {
       seat: joined.seat,
       token: joined.token,
     });
+    // 戻ってきたぶん、待ちが解けているかもしれない
+    this.syncAbsence(room);
     this.broadcast(room);
     this.scheduleBot(room);
   }
@@ -220,6 +266,12 @@ export class Hub {
       case "NEXT": {
         const r = room.next(member.seat);
         if (!r.ok) this.send(member.conn, { t: "REJECTED", reason: r.reason });
+        break;
+      }
+      case "LEAVE": {
+        // 自分から降りた人は待っても戻らない。猶予を挟まずに畳む
+        room.leave(member.seat);
+        this.syncAbsence(room);
         break;
       }
       default:
@@ -308,6 +360,7 @@ export class Hub {
         const room = this.rooms.get(member.roomId);
         if (room !== undefined) {
           room.disconnect(member.seat);
+          this.syncAbsence(room);
           this.broadcast(room);
         }
         continue;
@@ -326,9 +379,11 @@ export class Hub {
         continue;
       }
       if (now - since > EMPTY_ROOM_TTL_MS) {
-        const timer = this.botTimers.get(roomId);
-        if (timer !== undefined) clearTimeout(timer);
-        this.botTimers.delete(roomId);
+        for (const timers of [this.botTimers, this.absenceTimers]) {
+          const timer = timers.get(roomId);
+          if (timer !== undefined) clearTimeout(timer);
+          timers.delete(roomId);
+        }
         this.rooms.delete(roomId);
         this.emptySince.delete(roomId);
       }

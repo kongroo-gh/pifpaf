@@ -54,6 +54,15 @@ function joinAll(room: Room, names = ["あ", "い", "う", "え"]): number[] {
   return joined.map((j) => (j as Extract<JoinResult, { ok: true }>).seat);
 }
 
+/** 4人ぶん座らせて、席とトークンの両方を返す。戻ってくる側の検査で使う。 */
+function joinAllKeepingTokens(room: Room, names = ["あ", "い", "う", "え"]) {
+  return names.map((n) => {
+    const j = room.join(n);
+    if (!j.ok) throw new Error("4人ぶん席が無い");
+    return j;
+  });
+}
+
 /** 与えた席全員に同じ降りる／勝負するを決めさせる。PLAYING まで進めるのに使う。 */
 function foldAll(room: Room, seats: number[], fold: boolean): void {
   for (const s of seats) room.setFold(s, fold);
@@ -82,8 +91,7 @@ describe("入退室", () => {
     expect(room.join("い")).toMatchObject({ ok: false });
   });
 
-  it("畳まれた卓にはトークンでも戻れない", () => {
-    // 抜けた時点で一戦は終わっている。戻る先が無い
+  it("猶予のうちなら、トークンで元の席に戻れる", () => {
     const room = makeRoom();
     const first = room.join("あ");
     room.join("い");
@@ -93,6 +101,28 @@ describe("入退室", () => {
     room.start();
 
     room.disconnect(first.seat);
+    // まだ畳まない。戻りを待って卓を止めている
+    expect(room.currentPhase()).toBe("FOLD_DECISION");
+    expect(room.isAwaiting()).toBe(true);
+    expect(room.roomInfo().awaiting).toEqual([first.seat]);
+
+    const back = room.join("あ", first.token);
+    expect(back).toMatchObject({ ok: true, seat: first.seat, rejoined: true });
+    expect(room.isAwaiting()).toBe(false);
+    expect(room.roomInfo().seats[first.seat]!.disconnected).toBe(false);
+  });
+
+  it("待ちきれなければ畳む。そこにはトークンでも戻れない", () => {
+    const room = makeRoom();
+    const first = room.join("あ");
+    room.join("い");
+    room.join("う");
+    room.join("え");
+    if (!first.ok) return;
+    room.start();
+
+    room.disconnect(first.seat);
+    room.giveUpWaiting(); // hub が期限切れで呼ぶもの
     expect(room.currentPhase()).toBe("CLOSED");
 
     const back = room.join("あ", first.token);
@@ -153,33 +183,50 @@ describe("開始", () => {
     expect(makeRoom().start(true)).toMatchObject({ ok: false });
   });
 
-  it("対局中に1人抜けたら、その場で卓を畳む", () => {
+  it("対局中に1人消えたら、卓は止まって戻りを待つ", () => {
     // 抜けた席を CPU が引き継ぐことはしない（2026-09-04・ユーザー指示）。
-    // 相手が入れ替わったことに気づかないまま CPU と打ち続けるほうが害が大きい
+    // ただしすぐには畳まない。通信が一瞬切れただけの人まで抜けた扱いにすると、
+    // 電車に入っただけで卓が消える
     const room = makeRoom();
     const seats = joinAll(room);
     room.start();
     expect(room.currentPhase()).toBe("FOLD_DECISION");
 
     room.disconnect(seats[0]!);
-    expect(room.currentPhase()).toBe("CLOSED");
-    // 抜けた人は残りの画面から見えるので、席は消さない
+    expect(room.isAwaiting()).toBe(true);
+    // 席は消さない。誰を待っているのかが残りの画面から見える
     expect(room.roomInfo().seats[seats[0]!]!.disconnected).toBe(true);
     expect(room.roomInfo().seats[seats[0]!]!.name).not.toBeNull();
   });
 
-  it("決着したあとに抜けても畳まない。結果を読んでいる人の邪魔をしない", () => {
+  it("待っているあいだは、残った人も打てない", () => {
+    // 片方だけ進めると、戻ってきた人が知らないうちに局が動いている
+    const room = makeRoom();
+    const joined = joinAllKeepingTokens(room);
+    room.start();
+    room.disconnect(joined[0]!.seat);
+
+    expect(room.setFold(joined[1]!.seat, false).ok).toBe(false);
+    expect(room.needsBotStep()).toBe(false);
+    expect(room.roomInfo().awaiting).toEqual([joined[0]!.seat]);
+
+    // 戻れば、そのまま続きから
+    room.join("あ", joined[0]!.token);
+    expect(room.isAwaiting()).toBe(false);
+    expect(room.setFold(joined[1]!.seat, false).ok).toBe(true);
+  });
+
+  it("決着したあとに消えても待たない。結果を読んでいる人の邪魔をしない", () => {
     const room = makeRoom();
     const seats = joinAll(room);
     room.start();
-    // 1人だけ勝負すれば不戦勝。全員が次へ進まなければ ROUND_RESULT のまま
     room.setFold(seats[0]!, false);
     foldAll(room, seats.slice(1), true);
     expect(room.currentPhase()).toBe("ROUND_RESULT");
 
-    // ラウンドの結果はまだ対局中なので、ここで抜ければ畳む
+    // ラウンドの結果はまだ対局中なので、ここで消えれば待つ
     room.disconnect(seats[1]!);
-    expect(room.currentPhase()).toBe("CLOSED");
+    expect(room.isAwaiting()).toBe(true);
   });
 });
 
@@ -260,9 +307,8 @@ describe("配る盤面", () => {
 });
 
 describe("卓が止まらないこと", () => {
-  it("自分の番の人が切れても、卓は止まらずに畳まれる", () => {
-    // 昔は CPU が代役を立てて続けていた。いまは畳むので、
-    // 「その人を待ったまま永久に止まる」形にならないことを見る
+  it("自分の番の人が切れても、CPUが代役を打たない", () => {
+    // 昔はここで CPU が代わりに打っていた。いまは止めて戻りを待つ
     const room = makeRoom();
     const seats = joinAll(room);
     room.start();
@@ -271,7 +317,7 @@ describe("卓が止まらないこと", () => {
     const actor = room.viewFor(seats[0]!).game.actor;
     room.disconnect(actor);
 
-    expect(room.currentPhase()).toBe("CLOSED");
+    expect(room.isAwaiting()).toBe(true);
     expect(room.needsBotStep()).toBe(false);
     expect(runBots(room)).toBe(0);
   });
@@ -281,6 +327,7 @@ describe("卓が止まらないこと", () => {
     const seats = joinAll(room);
     room.start();
     room.disconnect(seats[3]!);
+    room.giveUpWaiting();
     expect(room.currentPhase()).toBe("CLOSED");
 
     expect(room.setFold(seats[0]!, false).ok).toBe(false);
@@ -311,8 +358,10 @@ describe("卓が止まらないこと", () => {
     room.runOutRound();
     expect(room.currentPhase()).toBe("ROUND_RESULT");
 
-    // 見ている人が抜ければ畳まれ、止まったままにはならない
+    // 見ている人が消えたら止めて待ち、戻らなければ畳む
     room.disconnect(0);
+    expect(room.isAwaiting()).toBe(true);
+    room.giveUpWaiting();
     expect(room.currentPhase()).toBe("CLOSED");
   });
 });

@@ -305,7 +305,9 @@ describe("繋いで往復する", () => {
     for (const client of clients) client.close();
   });
 
-  it("対局中に1人抜けたら、残った人の画面に「畳んだ」が届く", async () => {
+  it("対局中に1人消えたら卓は止まり、戻ってくれば続く", async () => {
+    // 畳むまでの猶予は30秒。ここでは「止まること」と「戻れること」を見る
+    // （待ちきれずに畳む側は room.test.ts が同期のまま見ている）
     const url = await startServer();
     const { clients, host } = await startedTable(url);
     const watcher = clients[1]!;
@@ -313,18 +315,19 @@ describe("繋いで往復する", () => {
     clients[0]!.close();
 
     const deadline = Date.now() + 3000;
-    while (watcher.last("ROOM")?.room.phase !== "CLOSED") {
-      if (Date.now() > deadline) {
-        throw new Error(`畳まれない（phase=${watcher.last("ROOM")?.room.phase}）`);
-      }
+    while ((watcher.last("ROOM")?.room.awaiting ?? []).length === 0) {
+      if (Date.now() > deadline) throw new Error("止まらない");
       await new Promise((r) => setTimeout(r, 20));
     }
-    // 抜けた人が誰かは残った画面から見える（席は消さない）
-    const seat = watcher.last("ROOM")!.room.seats[host.seat]!;
-    expect(seat.disconnected).toBe(true);
-    expect(seat.name).not.toBeNull();
+    const stopped = watcher.last("ROOM")!.room;
+    // 誰を待っているかは残った画面から見える（席は消さない）
+    expect(stopped.awaiting).toEqual([host.seat]);
+    expect(stopped.phase).not.toBe("CLOSED");
+    expect(stopped.seats[host.seat]!.disconnected).toBe(true);
+    expect(stopped.seats[host.seat]!.name).not.toBeNull();
+    expect(stopped.awaitingUntil).not.toBeNull();
 
-    // 畳んだ卓には、トークンを持っていても戻れない
+    // トークンを持って戻れば、同じ席で続きから
     const again = await TestClient.connect(url);
     again.send({
       t: "JOIN",
@@ -333,8 +336,15 @@ describe("繋いで往復する", () => {
       name: "あ",
       token: host.token,
     });
-    const refused = await again.waitFor("REJECTED");
-    expect(refused.reason).toContain("畳まれ");
+    const back = await again.waitFor("JOINED");
+    expect(back.seat).toBe(host.seat);
+
+    const resumed = Date.now() + 3000;
+    while ((watcher.last("ROOM")?.room.awaiting ?? []).length > 0) {
+      if (Date.now() > resumed) throw new Error("待ちが解けない");
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    expect(watcher.last("ROOM")!.room.awaitingUntil).toBeNull();
 
     again.close();
     for (const client of clients.slice(1)) client.close();
