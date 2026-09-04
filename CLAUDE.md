@@ -457,11 +457,21 @@ persona を持ち込むとオンライン版だけ別の見た目に育つ（単
 GitHub Pages が画面、Render Web Service が卓。**画面と卓は別の場所に居る**
 （Pages は静的配信しかできず WebSocket を置けない）。
 
+**2026-09-04、Render のサービスは作成済み**（`pifpaf-online-kongroo`、名前は既定のまま）。
+以後この手順を踏み直す必要はない。
+
 繋ぎ先は `useOnlineGame.ts` の `RENDER_WS_URL` に焼いてある。
-`render.yaml` の `name` から URL が決まるので、**手作業は「Render で Blueprint から
-サービスを作る」だけ**。GitHub の変数設定は要らない。
-別名で立てたときや他所へ移したときだけ、Repository variable `VITE_WS_URL` で
+`render.yaml` の `name` から URL が決まるので、GitHub の変数設定は要らない。
+別名で立て直したときや他所へ移したときだけ、Repository variable `VITE_WS_URL` で
 差し替える（`deploy.yml` が渡していて、空なら焼いた既定に落ちる）。
+
+**繋がらないときに最初に疑うのはこの変数**。焼いた既定より優先されるので、
+昔の値が残っていると、そちらへ繋ぎに行って失敗し続ける。
+
+**この開発環境から Render と GitHub Pages へは出られない**（egress ポリシーで
+CONNECT が 403）。実地の疎通確認はブラウザから行うしかない。
+`https://pifpaf-online-kongroo.onrender.com/health` が
+`{"ok":true,"rooms":[...]}` を返せば卓は生きている。
 
 無料枠は15分間通信がないと休止する。休止後の最初の接続は失敗しうるが、
 `useOnlineGame` が待ち時間を倍にしながら繋ぎ直すので、
