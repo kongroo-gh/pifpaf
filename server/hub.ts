@@ -236,6 +236,13 @@ export class Hub {
     if (this.botTimers.has(room.roomId)) return;
     if (!room.needsBotStep()) return;
 
+    // 打っているのが CPU だけになった卓は、間合いを置いて見せる相手がいない。
+    // 待たせるだけなので決着まで飛ばし、結果だけを配る（単機版と同じ扱い）
+    if (room.runsOnBotsAlone()) {
+      room.runOutRound();
+      return;
+    }
+
     const timer = setTimeout(() => {
       this.botTimers.delete(room.roomId);
       if (!this.rooms.has(room.roomId)) return;

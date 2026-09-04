@@ -89,14 +89,16 @@ export class Room {
   private readonly rng: (() => number) | undefined;
   private readonly makeToken: () => string;
   private readonly startingChips: number;
-  private readonly onChange: () => void;
+  private readonly notify: () => void;
+  /** 決着まで一気に進めている最中。途中経過は配らない（`onChange` を参照） */
+  private quiet = false;
 
   constructor(options: RoomOptions) {
     this.roomId = options.roomId;
     this.rng = options.rng;
     this.makeToken = options.makeToken ?? defaultToken;
     this.startingChips = options.startingChips ?? DEFAULT_CHIPS;
-    this.onChange = options.onChange ?? (() => {});
+    this.notify = options.onChange ?? (() => {});
 
     this.match = createMatch(SEAT_COUNT, this.startingChips);
     // 卓が始まるまでの置き場所。WAITING のあいだは誰にも配らない
@@ -363,6 +365,39 @@ export class Room {
     return this.isBotControlled(currentActor(this.state));
   }
 
+  /**
+   * 打っているのが CPU だけになった対局か。（2026-09-04・ユーザー指示）
+   *
+   * 人は全員降りた（あるいは切れた）が、結果を待っている人はまだいる、という状態。
+   * こうなると人が手を出す場面はもう来ないので、間合いを置いて見せる意味がない。
+   * 呼び出し側はこれが真のあいだ `runOutRound()` で決着まで飛ばしてよい。
+   */
+  runsOnBotsAlone(): boolean {
+    if (this.phase !== "PLAYING") return false;
+    // 誰も見ていない卓は畳まれるのを待つだけ。急いで進める理由がない
+    if (!this.humanSeats().some((i) => this.isConnected(i) && isAlive(this.match, i))) return false;
+    return !this.humanSeats().some((i) => this.isPlaying(i));
+  }
+
+  /**
+   * 決着まで一気に打つ。**途中経過は配らない。**
+   * 見せないと決めた対戦の応酬を1手ずつ配ると、盤面が高速で瞬くだけになる。
+   *
+   * 間合い（setTimeout）は呼び出し側の持ち物なので、ここでは時計を触らない。
+   */
+  runOutRound(): void {
+    if (!this.runsOnBotsAlone()) return;
+
+    this.quiet = true;
+    try {
+      // 打ち切りの保険。engine 側で決着するはずだが、無限には回さない
+      for (let i = 0; i < 500 && this.needsBotStep(); i += 1) this.stepBot();
+    } finally {
+      this.quiet = false;
+    }
+    this.onChange();
+  }
+
   /** CPU の1手を進める。呼び出し側が間合いを決める。 */
   stepBot(): void {
     if (!this.needsBotStep()) return;
@@ -444,6 +479,17 @@ export class Room {
   private isConnected(seat: number): boolean {
     const o = this.seats[seat];
     return o !== null && o !== undefined && o.kind === "HUMAN" && o.connected;
+  }
+
+  /** その席の人が、いまこのラウンドを打っているか。降りた・脱落した・切れたは見ているだけ */
+  private isPlaying(seat: number): boolean {
+    return this.isConnected(seat) && isAlive(this.match, seat) && this.folded[seat] !== true;
+  }
+
+  /** 変化を知らせる。一気に進めている最中は、途中経過を配らない */
+  private onChange(): void {
+    if (this.quiet) return;
+    this.notify();
   }
 
   private humanSeats(): number[] {

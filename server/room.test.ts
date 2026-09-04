@@ -318,3 +318,59 @@ describe("マッチが終わるまで回る", () => {
     expect(view.match.chips.every((c) => c >= 0)).toBe(true);
   });
 });
+
+describe("CPUだけになった対局は見せない", () => {
+  it("人が降りたら、CPU同士の応酬は飛ばして結果まで進む", () => {
+    // 種は「残ったCPUが2人以上で、実際に打ち合いになる」配りを選んである
+    const room = makeRoom(2);
+    room.join("あ");
+    room.start(true); // 人が集まらないので CPU を呼んだ卓
+    room.setFold(0, true);
+
+    expect(room.runsOnBotsAlone()).toBe(true);
+    room.runOutRound();
+    // 降りた本人は結果を待つ側。CPU 同士の決着まで一気に進んでいる
+    expect(["ROUND_RESULT", "MATCH_OVER"]).toContain(room.currentPhase());
+  });
+
+  it("途中経過は配らない。知らせるのは決着の1回だけ", () => {
+    let changes = 0;
+    const room = new Room({
+      roomId: "test",
+      rng: rng(2),
+      makeToken: () => `token-${++tokenCounter}`,
+      onChange: () => {
+        changes += 1;
+      },
+    });
+    room.join("あ");
+    room.start(true);
+    room.setFold(0, true);
+
+    const before = changes;
+    room.runOutRound();
+    expect(changes - before).toBe(1);
+  });
+
+  it("まだ打っている人がいるうちは飛ばさない", () => {
+    const room = makeRoom();
+    const seats = joinAll(room);
+    room.start();
+    room.setFold(seats[0]!, true);
+    foldAll(room, seats.slice(1), false);
+
+    // 3人が勝負している。見せるべき対戦がある
+    expect(room.runsOnBotsAlone()).toBe(false);
+  });
+
+  it("誰も見ていない卓では飛ばさない", () => {
+    const room = makeRoom();
+    const seats = joinAll(room);
+    room.start();
+    foldAll(room, seats, false);
+    for (const s of seats) room.disconnect(s);
+
+    // 全席が CPU 任せだが、結果を待っている人もいない。急ぐ理由が無い
+    expect(room.runsOnBotsAlone()).toBe(false);
+  });
+});

@@ -381,13 +381,43 @@ export function useGame() {
 
   // ---- 自動進行 -------------------------------------------------------
 
+  /**
+   * 卓に残っているのが CPU だけになったラウンドは、**見せずに結果まで飛ばす。**
+   * （2026-09-04・ユーザー指示）
+   * 降りた（あるいは脱落した）あとは、待たされるだけで手を出せる場面はもう来ない。
+   *
+   * 1手ずつ state を更新すると盤面が高速で瞬くので、決着までを1回の更新にまとめる。
+   * 札が飛ぶ演出も鳴らさない。見せないと決めた対戦の途中経過なので。
+   */
+  useEffect(() => {
+    if (screen !== "PLAYING") return;
+    // state.folded は「降りた」と「脱落した」の両方が立つ。どちらでも同じこと
+    if (!state.folded[HUMAN]) return;
+    if (state.phase === "ROUND_OVER") return;
+    // 勝負する者が1人以下なら不戦勝。下の効果が畳むので、ここで打たせない
+    if (walkoverWinner(match, state.folded).decided) return;
+
+    let next = state;
+    // 打ち切りの保険。engine 側で決着するはずだが、無限には回さない
+    for (let i = 0; i < 500 && next.phase !== "ROUND_OVER"; i += 1) {
+      const action = decideAction(next);
+      if (action === null) break;
+      const result = applyAction(next, action);
+      if (!result.ok) break;
+      next = result.state;
+    }
+    if (next !== state) setState(next);
+  }, [screen, state, match]);
+
   // CPUの手番を1手ずつ進める
   useEffect(() => {
     if (screen !== "PLAYING") return;
     if (state.phase === "ROUND_OVER") return;
+    // 自分が抜けた卓は上の効果が一気に畳む。ここで1手ずつ進めると二重に打つ
+    if (state.folded[HUMAN]) return;
     // 割り込みの局面では判断者が、それ以外は手番の持ち主が行動する
     const acting = currentActor(state);
-    if (acting === HUMAN && !humanFolded) return;
+    if (acting === HUMAN) return;
 
     const base =
       state.phase === "AWAITING_INTERCEPT"
@@ -411,7 +441,7 @@ export function useGame() {
     }, delay);
 
     return () => clearTimeout(timer);
-  }, [screen, state, humanFolded, speed, notePickup]);
+  }, [screen, state, speed, notePickup]);
 
   // ラウンドが決着したら勘定する
   useEffect(() => {

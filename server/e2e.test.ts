@@ -328,20 +328,31 @@ describe("繋いで往復する", () => {
     for (const client of clients.slice(1)) client.close();
   });
 
-  it("切れた席は CPU が代わりに打ち、盤面が届き続ける", async () => {
+  it("打つ人が CPU だけになったら、対戦を見せずに結果まで飛ぶ", async () => {
     const url = await startServer();
     const { clients } = await startedTable(url);
     const observer = clients[0]!;
 
     // 観戦役以外を切ってCPUに任せ、観戦役は降りて見ているだけにする
     for (const client of clients.slice(1)) client.close();
-    observer.send({ t: "FOLD", fold: true });
 
     const before = observer.received.filter((m) => m.t === "VIEW").length;
-    await new Promise((r) => setTimeout(r, 2500));
-    const after = observer.received.filter((m) => m.t === "VIEW").length;
+    observer.send({ t: "FOLD", fold: true });
 
-    // CPU（切れた席）が打つたびに配られるので、増えている
+    // 1手ずつ間合い（900ms）を置いて流したら数十秒かかる場面。
+    // 見せる相手がいないので飛ばしており、結果はすぐ届く
+    const t0 = Date.now();
+    const deadline = t0 + 4000;
+    for (;;) {
+      const phase = observer.last("ROOM")?.room.phase;
+      if (phase === "ROUND_RESULT" || phase === "MATCH_OVER") break;
+      if (Date.now() > deadline) throw new Error(`結果まで来ない（phase=${phase}）`);
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    expect(Date.now() - t0).toBeLessThan(3000);
+
+    // 途中経過は配らないが、決着した盤面は届いている
+    const after = observer.received.filter((m) => m.t === "VIEW").length;
     expect(after).toBeGreaterThan(before);
     observer.close();
   });
