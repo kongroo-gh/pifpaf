@@ -173,6 +173,7 @@ export const ja: Strings = {
     bust: "破産",
     streak: (name, n) => `${name} が *${n}連勝*`,
     next: "次のラウンドへ",
+    waitingFor: (names) => `${names.join("、")} が次へ進むのを待っている。`,
   },
 
   matchOver: {

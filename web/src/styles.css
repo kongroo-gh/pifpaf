@@ -872,6 +872,13 @@ button {
   flex-wrap: wrap;
 }
 
+/* 「次へ」を押したあと、誰を待っているか。操作の下に小さく添える */
+.result__waiting {
+  margin: 14px 0 0;
+  font-size: 11px;
+  color: var(--smoke-dim);
+}
+
 .verdictTitle {
   font-family: var(--display);
   font-weight: 900;

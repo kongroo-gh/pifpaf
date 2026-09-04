@@ -37,6 +37,12 @@ export interface RoomSeat {
   disconnected: boolean;
   /** このラウンドの降りるか否かを決め終えたか */
   decided: boolean;
+  /**
+   * 結果画面で「次へ」を押したか。
+   * 押したあと誰を待っているのかを画面に出すために配る
+   * （押しても何も変わらないと、届いていないのかと思われる）。
+   */
+  ready: boolean;
 }
 
 export interface RoomInfo {

@@ -240,6 +240,8 @@ export interface Strings {
     streak: (name: string, n: number) => string;
     /** CONTINUAR の下 */
     next: string;
+    /** 「次へ」を押したあと、誰を待っているか。**連ね方も言語ごとに違う**ので配列で渡す */
+    waitingFor: (names: string[]) => string;
   };
 
   matchOver: {

@@ -177,6 +177,7 @@ export const en: Strings = {
     bust: "Busted",
     streak: (name, n) => `${name} is on a *${n}-round streak*`,
     next: "Next round",
+    waitingFor: (names) => `Waiting on ${names.join(", ")} to move on.`,
   },
 
   matchOver: {

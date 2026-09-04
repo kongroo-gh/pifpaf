@@ -440,6 +440,30 @@ describe("CPUだけになった対局は見せない", () => {
   });
 });
 
+describe("結果画面の待ち", () => {
+  it("「次へ」を押した席が盤面に出る。押していない人がいるうちは進まない", () => {
+    // 押しても画面が何も変わらないと、届いていないのか卓が止まったのか分からない。
+    // 誰を待っているかを名前で出せるよう、席ごとの用意を配る
+    const room = makeRoom();
+    const seats = joinAll(room);
+    room.start();
+    // 1人だけ勝負すれば不戦勝で結果画面に入る
+    room.setFold(seats[0]!, false);
+    foldAll(room, seats.slice(1), true);
+    expect(room.currentPhase()).toBe("ROUND_RESULT");
+    expect(room.roomInfo().seats.map((s) => s.ready)).toEqual([false, false, false, false]);
+
+    room.next(seats[0]!);
+    expect(room.roomInfo().seats.map((s) => s.ready)).toEqual([true, false, false, false]);
+    expect(room.currentPhase()).toBe("ROUND_RESULT");
+
+    for (const s of seats.slice(1)) room.next(s);
+    // 全員そろえば次のラウンドへ。用意は持ち越さない
+    expect(room.currentPhase()).not.toBe("ROUND_RESULT");
+    expect(room.roomInfo().seats.map((x) => x.ready)).toEqual([false, false, false, false]);
+  });
+});
+
 describe("上がる", () => {
   it("画面が持っている情報だけで組み立てた上がり手が、そのまま通る", () => {
     // 種 1379 は席0に配られた9枚がそのまま役として揃っている

@@ -622,6 +622,19 @@ function ResultPanel({ game, view }: { game: OnlineGame; view: PlayerView }) {
   const winner = view.match.lastWinner;
   const over = room.phase === "MATCH_OVER";
 
+  /**
+   * 次のラウンドは**繋がっている人が全員押すまで始まらない**。
+   * 押しても何も変わらないと、届いていないのか卓が止まったのか分からない。
+   * 押した側は操作を閉じ、誰を待っているのかを名前で出す。
+   *
+   * CPU と切れている席は待たない（サーバーの `maybeAdvance` と同じ見方）。
+   */
+  const iAmReady = room.seats[view.you]?.ready === true;
+  const waitingFor = room.seats
+    .filter((s) => s.name !== null && !s.isBot && !s.disconnected && !s.ready)
+    .map((s) => s.name)
+    .filter((n): n is string => n !== null);
+
   return (
     <div className="panel">
       <div className="panel__box">
@@ -679,11 +692,20 @@ function ResultPanel({ game, view }: { game: OnlineGame; view: PlayerView }) {
             </div>
           </>
         ) : (
-          <div className="panel__actions">
-            <button className="btn btn--again" onClick={game.next}>
-              CONTINUAR<Gloss flavor="CONTINUAR" text={t.result.next} />
-            </button>
-          </div>
+          <>
+            <div className="panel__actions">
+              <button className="btn btn--again" onClick={game.next} disabled={iAmReady}>
+                CONTINUAR
+                <Gloss
+                  flavor="CONTINUAR"
+                  text={iAmReady ? t.online.waitingForNext : t.result.next}
+                />
+              </button>
+            </div>
+            {iAmReady && waitingFor.length > 0 && (
+              <p className="panel__note result__waiting">{t.result.waitingFor(waitingFor)}</p>
+            )}
+          </>
         )}
       </div>
     </div>

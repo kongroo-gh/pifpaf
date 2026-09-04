@@ -185,6 +185,7 @@ export const pt: Strings = {
     bust: "Quebrou",
     streak: (name, n) => `${name} está com *${n} vitórias seguidas*`,
     next: "Próxima rodada",
+    waitingFor: (names) => `Esperando ${names.join(", ")} seguir.`,
   },
 
   matchOver: {

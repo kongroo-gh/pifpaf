@@ -446,6 +446,7 @@ export class Room {
       isBot: o !== null && o.kind === "BOT",
       disconnected: o !== null && o.kind === "HUMAN" && !o.connected,
       decided: this.decided[i] === true,
+      ready: this.readyForNext.has(i),
     }));
     return { roomId: this.roomId, hostSeat: this.hostSeat, phase: this.phase, seats, round: this.match.round };
   }
