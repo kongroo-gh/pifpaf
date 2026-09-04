@@ -18,6 +18,7 @@ import { RuleBook } from "./components/RuleBook";
 import { BackButton } from "./components/BackButton";
 import { useT, personaName, personaTitle, withGloss, Rich, Kicker, Gloss } from "./i18n";
 import { SettingsButton, SettingsPanel, SettingsControls } from "./components/Settings";
+import { LeaveButton, LeaveConfirm } from "./components/LeaveTable";
 import { CardBurst } from "./components/CardBurst";
 import { OnlineTable } from "./net/OnlineTable";
 import { useAmbience, useSoundUnlock, sfx } from "./audio";
@@ -90,6 +91,7 @@ export default function App() {
     advance,
     backToTable,
     leaveTable,
+    abandonMatch,
     takeLoan,
     drawCard,
     takeDiscard,
@@ -114,6 +116,9 @@ export default function App() {
 
   // 対局中の設定は隅の歯車から開く（盤面に常時出す余地がない）
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // 卓を降りるかの確認。隅の印は触れやすいので、一度挟む
+  const [leaveOpen, setLeaveOpen] = useState(false);
 
   // 初回は自動で開く。以降はボタンから
   const [rulesOpen, setRulesOpen] = useState(() => !rulesSeen());
@@ -223,6 +228,8 @@ export default function App() {
               <span className="iconButton__mark">?</span>
             </button>
             <SettingsButton onClick={() => setSettingsOpen(true)} />
+            {/* 決着後は「VOLTAR À MESA」がパネルにある。そこへ重ねては置かない */}
+            {screen !== "MATCH_OVER" && <LeaveButton onClick={() => setLeaveOpen(true)} />}
           </div>
 
           <div className="topbar__wild">
@@ -436,6 +443,18 @@ export default function App() {
 
       {settingsOpen && (
         <SettingsPanel speed={speed} onSpeed={setSpeed} onClose={() => setSettingsOpen(false)} />
+      )}
+
+      {leaveOpen && (
+        <LeaveConfirm
+          warning={t.leave.warnSolo(wager)}
+          onLeave={() => {
+            // 閉じてから降りる。開いたままだと、次に座った瞬間にまた出る
+            setLeaveOpen(false);
+            abandonMatch();
+          }}
+          onStay={() => setLeaveOpen(false)}
+        />
       )}
 
       {screen === "DEALING" && (

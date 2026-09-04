@@ -31,6 +31,22 @@ export interface Strings {
     back: string;
   };
 
+  /** 対局の途中で卓を降りる。隅の印から開く確認 */
+  leave: {
+    /** 隅の印の読み上げ */
+    open: string;
+    /** 確認画面の見出し */
+    title: string;
+    /** 単機版で失うもの。`*` で挟んだところが強調される */
+    warnSolo: (wager: number) => string;
+    /** オンラインで起きること */
+    warnOnline: string;
+    /** 降りる側 */
+    confirm: string;
+    /** 続ける側 */
+    cancel: string;
+  };
+
   settings: {
     /** 歯車を押して開く画面の見出し */
     title: string;

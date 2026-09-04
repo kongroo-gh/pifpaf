@@ -23,6 +23,7 @@ import { OpponentSeat } from "../components/OpponentSeat";
 import { MeldReveal } from "../components/MeldReveal";
 import { FoldPrompt, InterceptBar, KeepBar } from "../components/TablePrompts";
 import { SettingsButton, SettingsPanel, SettingsControls } from "../components/Settings";
+import { LeaveButton, LeaveConfirm } from "../components/LeaveTable";
 import { BackButton } from "../components/BackButton";
 import { useHandOrder } from "../game/useHandOrder";
 import { useBoardSounds } from "../game/useBoardSounds";
@@ -46,7 +47,7 @@ export function OnlineTable({ onExit, onRules }: OnlineTableProps) {
     return <Connecting game={game} />;
   }
 
-  return <Table game={game} onRules={onRules} />;
+  return <Table game={game} onRules={onRules} onExit={onExit} />;
 }
 
 /* ───────────── 入室前 ───────────── */
@@ -180,7 +181,16 @@ function Lobby({
 
 /* ───────────── 卓 ───────────── */
 
-function Table({ game, onRules }: { game: OnlineGame; onRules: () => void }) {
+function Table({
+  game,
+  onRules,
+  onExit,
+}: {
+  game: OnlineGame;
+  onRules: () => void;
+  /** 卓を降りてメインメニューへ。待機中の SAIR（＝オンラインの入口へ戻る）とは行き先が違う */
+  onExit: () => void;
+}) {
   const t = useT();
   const view = game.view!;
   const room = game.room!;
@@ -198,6 +208,9 @@ function Table({ game, onRules }: { game: OnlineGame; onRules: () => void }) {
 
   // 対局中の設定は隅の歯車から開く（単機版と同じ。盤面に常時出す余地がない）
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // 卓を降りるかの確認。単機版と同じく、隅の印は一度受け止めてから効かせる
+  const [leaveOpen, setLeaveOpen] = useState(false);
 
   // 人を待っているあいだは卓に着く前と同じ。始まったら止める
   useAmbience(room.phase === "WAITING");
@@ -246,7 +259,7 @@ function Table({ game, onRules }: { game: OnlineGame; onRules: () => void }) {
             </p>
           </div>
 
-          {/* 単機版と同じ2つだけ。卓を抜ける道は、待機中と決着後のパネルに置いてある */}
+          {/* 単機版と同じ並び。?・歯車・卓を降りる */}
           <div className="topbar__tools">
             <button
               type="button"
@@ -258,6 +271,11 @@ function Table({ game, onRules }: { game: OnlineGame; onRules: () => void }) {
               <span className="iconButton__mark">?</span>
             </button>
             <SettingsButton onClick={() => setSettingsOpen(true)} />
+            {/* 待機中は SAIR が、決着後は VOLTAR À MESA が、それぞれパネルの中にある。
+                そこへ重ねると同じ操作が2か所に出るので、対局中だけ隅にも置く */}
+            {room.phase !== "WAITING" && room.phase !== "MATCH_OVER" && (
+              <LeaveButton onClick={() => setLeaveOpen(true)} />
+            )}
           </div>
 
           <div className="topbar__wild">
@@ -453,6 +471,19 @@ function Table({ game, onRules }: { game: OnlineGame; onRules: () => void }) {
       {room.phase === "WAITING" && <WaitingPanel game={game} />}
 
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
+
+      {leaveOpen && (
+        <LeaveConfirm
+          warning={t.leave.warnOnline}
+          onLeave={() => {
+            setLeaveOpen(false);
+            // 卓との縁を切ってから入口へ戻す。席は残り、CPU が代わりに打つ
+            game.disconnect();
+            onExit();
+          }}
+          onStay={() => setLeaveOpen(false)}
+        />
+      )}
     </>
   );
 }

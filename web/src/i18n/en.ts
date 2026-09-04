@@ -12,6 +12,15 @@ export const en: Strings = {
     back: "Back",
   },
 
+  leave: {
+    open: "Leave the table",
+    title: "Leave the table",
+    warnSolo: (wager) => `Walk out now and the *${wager}* you staked stays on the table.`,
+    warnOnline: "The CPU takes your seat. Come back with the same code and it is yours again.",
+    confirm: "Walk out",
+    cancel: "Keep playing",
+  },
+
   settings: {
     title: "Settings",
     open: "Open settings",

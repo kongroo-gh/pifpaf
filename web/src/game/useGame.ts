@@ -282,6 +282,18 @@ export function useGame() {
   /** 掛け金を決めるのをやめて、入口へ戻る。まだ何も賭けていないので後始末は要らない */
   const leaveTable = useCallback(() => setScreen("INTRO"), []);
 
+  /**
+   * 対局の途中で卓を降りる。**賭け金は戻らない。**
+   *
+   * 掛け金は `startMatch` の時点で所持金から引いてある。降りたからといって
+   * 返すと、旗色の悪い勝負を投げれば元手が戻る抜け道になる。
+   * 盤面は次に `startMatch` が配り直すので、ここで消すのは結果の控えだけでよい。
+   */
+  const abandonMatch = useCallback(() => {
+    setSettlement(null);
+    setScreen("INTRO");
+  }, []);
+
   /** 所持金が尽きたときの借金 */
   const takeLoan = useCallback(() => {
     persistBankroll(bankroll + LOAN_AMOUNT);
@@ -505,6 +517,7 @@ export function useGame() {
     advance,
     backToTable,
     leaveTable,
+    abandonMatch,
     takeLoan,
     drawCard,
     takeDiscard,

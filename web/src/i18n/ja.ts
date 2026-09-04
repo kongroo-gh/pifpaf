@@ -10,6 +10,15 @@ export const ja: Strings = {
     back: "戻る",
   },
 
+  leave: {
+    open: "卓を降りる",
+    title: "卓を降りる",
+    warnSolo: (wager) => `途中で降りれば、賭けた *${wager}* は卓に置いていくことになる。`,
+    warnOnline: "空いた席はCPUが引き継ぐ。同じ合言葉で入り直せば戻れる。",
+    confirm: "降りる",
+    cancel: "続ける",
+  },
+
   settings: {
     title: "設定",
     open: "設定を開く",

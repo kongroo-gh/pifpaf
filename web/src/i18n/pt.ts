@@ -19,6 +19,15 @@ export const pt: Strings = {
     back: "Voltar",
   },
 
+  leave: {
+    open: "Deixar a mesa",
+    title: "Deixar a mesa",
+    warnSolo: (wager) => `Se sair agora, os *${wager}* apostados ficam na mesa.`,
+    warnOnline: "A CPU assume o seu lugar. Volte com a mesma senha e ele é seu de novo.",
+    confirm: "Sair",
+    cancel: "Ficar",
+  },
+
   settings: {
     title: "Ajustes",
     open: "Abrir os ajustes",
