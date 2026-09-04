@@ -11,6 +11,7 @@
 
 import { describe, it, expect } from "vitest";
 import { Room, SEAT_COUNT } from "./room.ts";
+import { findBaterAction } from "@pifpaf/engine";
 import type { JoinResult } from "./room.ts";
 
 function rng(seed: number): () => number {
@@ -436,5 +437,40 @@ describe("CPUだけになった対局は見せない", () => {
 
     // 全席が CPU 任せだが、結果を待っている人もいない。急ぐ理由が無い
     expect(room.runsOnBotsAlone()).toBe(false);
+  });
+});
+
+describe("上がる", () => {
+  it("画面が持っている情報だけで組み立てた上がり手が、そのまま通る", () => {
+    // 種 1379 は席0に配られた9枚がそのまま役として揃っている
+    // （QDQHQS / 9D9C9S / AD-KD-QD の階段。コリンガは QD）。
+    // 1枚引けば、その札を捨てて上がれる＝いちばん普通の上がり方。
+    // ※ Room は生成時に一度配ってから start でもう一度配るので、
+    //   種は「2回目の配り」で揃うものを選んである。
+    const room = makeRoom(1379);
+    room.join("あ");
+    room.start(true);
+    room.setFold(0, false);
+    expect(room.currentPhase()).toBe("PLAYING");
+
+    // 引いて、その札を手札に入れる（山から引くと採否を訊かれる）
+    room.act(0, { type: "DRAW", from: "STOCK" });
+    expect(room.viewFor(0).game.phase).toBe("AWAITING_KEEP_DECISION");
+    room.act(0, { type: "KEEP" });
+    const board = room.viewFor(0).game;
+    expect(board.phase).toBe("AWAITING_DISCARD");
+    expect(board.hand).toHaveLength(10);
+
+    // **画面が見えているものだけで組み立てる。** 自分の手札とコリンガしか使わない
+    const action = findBaterAction(board.hand, board.wild);
+    expect(action).not.toBeNull();
+    // 捨てる札を指していること。指さない BATER は「10枚すべて役」の意味しか持たず、
+    // オンライン版はこれを付けずに送っていたため普通の上がりが通らなかった
+    expect((action as { cardId?: string }).cardId).toBeDefined();
+
+    const r = room.act(0, action!);
+    expect(r.ok).toBe(true);
+    expect(room.currentPhase()).not.toBe("PLAYING");
+    expect(room.viewFor(0).match.lastWinner).toBe(0);
   });
 });

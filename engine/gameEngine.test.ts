@@ -381,6 +381,22 @@ describe("BATER", () => {
     expect(result.state.discard).toEqual([extra]);
   });
 
+  it("9枚が役成立していても、cardIdなしのBATERは断る", () => {
+    // 捨てる札を指さない BATER は「10枚すべてが役」の意味しか持たない。
+    // 呼ぶ側（画面）は findBaterAction が返した手をそのまま渡すこと。
+    // オンライン版が cardId を付けずに送っていたため、いちばん普通の
+    // 「1枚捨てて9枚で上がる」がまったく通らなくなっていた。
+    const state = makeState({
+      hands: [[...meldedNine, c("extra", "D", "2")], [], [], []],
+      currentPlayer: 0,
+      phase: "AWAITING_DISCARD",
+    });
+
+    const result = applyAction(state, { type: "BATER" });
+
+    expect(result.ok).toBe(false);
+  });
+
   it("10枚全てが役成立する場合、cardIdなしで何も捨てずに上がれる（bater com 10）", () => {
     // meldedNineの5-6-7シーケンスを5-6-7-8(ワイルド)に伸ばして10枚全部役にする
     const tenCardHand: Card[] = [

@@ -1,8 +1,18 @@
 // オンライン対戦の画面。
 //
-// **ルール判定を一切持たない。** 何が押せるかもサーバーが配った盤面から読むだけで、
-// 「上がれるか」の判定すら自前ではしない（`BATER` は押して断られたら断られたまま）。
-// 単機版が engine を直に叩いていたところが、まるごと通信に置き換わっている。
+// **決めるのはサーバー。** 何が押せるかはサーバーが配った盤面から読むだけで、
+// 送った手はサーバーが必ず検め直す。単機版が engine を直に叩いていたところが、
+// まるごと通信に置き換わっている。
+//
+// 例外が「上がれるか」の一点だけある。**engine の `findBaterAction` をここでも呼ぶ。**
+// 理由は2つ:
+//   - 捨てる札を指さない `BATER` は「10枚すべてが役」の意味しかない。
+//     いちばん普通の「1枚捨てて9枚で上がる」を送るには、どの札を捨てるかを
+//     こちらで決めるしかない（ここを省いたせいで、オンラインでは普通の上がりが
+//     まったく通らなくなっていた）
+//   - 上がれるかどうかが見た目に出ないと、ボタンが手札と無関係に点いて見える
+// 権威はサーバーのままで、ここでやるのは合図と手の組み立てだけ。
+// engine は単機版のために web へ元から入っているので、増えるものは無い。
 //
 // **通信の都合以外は単機版と同じ器を使う。** 席・採否バー・割り込みバー・
 // 降りる判断・上がり手の公開・設定はすべて `components/` の共有部品で、
@@ -15,6 +25,7 @@
 
 import { useEffect, useState } from "react";
 import type { PlayerView } from "@pifpaf/protocol";
+import { findBaterAction } from "@pifpaf/engine";
 import { useT, Gloss, Kicker, Rich } from "../i18n";
 import { PlayingCard, CardBack, SUIT_GLYPH, describeCard } from "../components/PlayingCard";
 import { PlayerHand } from "../components/PlayerHand";
@@ -225,6 +236,14 @@ function Table({
   const canDiscard = myTurn && board.phase === "AWAITING_DISCARD" && selected !== null;
   const deciding = myTurn && board.phase === "AWAITING_KEEP_DECISION" && board.pendingCard !== null;
   const intercepting = myTurn && board.phase === "AWAITING_INTERCEPT";
+  /**
+   * 上がれるなら、その手（捨てる札を含む）。単機版の `humanBater` と同じもの。
+   * 自分の番の捨てる場面でしか計算しないので、毎描画で走っても実際は静かな一瞬だけ。
+   */
+  const myBater =
+    myTurn && board.phase === "AWAITING_DISCARD"
+      ? findBaterAction(board.hand, board.wild)
+      : null;
 
   const showFold = room.phase === "FOLD_DECISION" && iAmSeated &&
     room.seats[mySeat]?.decided === false;
@@ -443,16 +462,15 @@ function Table({
             >
               DESCARTAR<Gloss flavor="DESCARTAR" text={t.actions.discard} />
             </button>
-            {/*
-              上がれるかの判定はサーバーが持つ。押せるようにしておいて、
-              駄目なら断られる。ここで判定すると web にルールが漏れる
-            */}
+            {/* 見た目も押せる条件も単機版と同じ。上がれるときだけ赤く点く */}
             <button
-              className="btn btn--bater"
-              disabled={!myTurn || board.phase !== "AWAITING_DISCARD"}
-              onClick={() => game.act({ type: "BATER" })}
+              className={`btn btn--bater ${myBater ? "btn--armed" : ""}`}
+              disabled={myBater === null}
+              onClick={() => {
+                if (myBater !== null) game.act(myBater);
+              }}
             >
-              BATER!<Gloss flavor="BATER!" text={t.actions.canBater} />
+              BATER!<Gloss flavor="BATER!" text={myBater ? t.actions.canBater : t.actions.cannotBater} />
             </button>
           </div>
         </section>
