@@ -8,6 +8,14 @@
 // **ブラウザは操作前に音を出させない。** AudioContext は生成しても suspended で
 // 始まるので、最初のクリック・キー入力で resume する。それまでに求められた音は
 // 鳴らさずに捨てる（溜めて後から一斉に鳴らすほうが不自然なため）。
+//
+// iOS はここがさらに厳しく、**操作の外で作った AudioContext は動かせず、
+// 操作の外からの `resume()` も通らない**。だから
+//   - 生成も resume も、操作を受けたその場（`armUnlock` の中）で済ませる
+//   - 解禁したあとも耳を立てたままにして、**触るたびに動いているか確かめ直す**
+// の2つを守る。2つめが要るのは、画面を消す・別のアプリへ行く・低電力モードの
+// どれでも context が止まり、そこから戻す機会が操作のときしかないため。
+// 止まったまま気づかないと、以後ずっと無音になる。
 
 const SOUND_KEY = "pifpaf.sound";
 
@@ -43,7 +51,12 @@ export function setSoundEnabled(next: boolean): void {
   } catch {
     // 保存できなくても、その場では切り替わる
   }
-  if (!next) stopAllVoices();
+  if (next) {
+    // 設定を押した操作の中にいる。iOS で音を起こせる数少ない機会なので逃さない
+    ensureRunning();
+  } else {
+    stopAllVoices();
+  }
   listeners.forEach((fn) => fn());
 }
 
@@ -53,26 +66,46 @@ export function subscribeSound(fn: () => void): () => void {
 }
 
 /**
- * 最初の操作で音を解禁する。
- * `App` から一度だけ呼ぶ。二重に呼んでも足されない。
+ * 「操作された」と数える出来事。
+ *
+ * 押し下げ（pointerdown）だけに頼らない。**WebKit は押し下げ系を操作と見なさない
+ * ことがあり**、そこで作った context がそのまま止まって二度と鳴らなくなる。
+ * `click` と `touchend` は同じ一度のタップで重ねて飛んでくるが、
+ * やることは「動いているか確かめる」だけなので、二重でも害はない。
+ */
+const GESTURES = ["pointerdown", "touchend", "click", "keydown"] as const;
+
+/**
+ * 音を解禁し、**以後も操作のたびに鳴る状態へ戻す**。
+ * `App` から呼び、外すときは返り値を呼ぶ。
+ *
+ * 最初の一度で終わりにしない。iOS は画面を消しただけでも context を止めるので、
+ * 戻す機会（＝操作）は捨てずに拾い続ける。
  */
 export function armUnlock(): () => void {
-  if (unlocked) return () => {};
-
-  const unlock = () => {
+  const onGesture = () => {
+    const first = !unlocked;
     unlocked = true;
-    void ctx?.resume();
-    window.removeEventListener("pointerdown", unlock);
-    window.removeEventListener("keydown", unlock);
-    listeners.forEach((fn) => fn());
+    ensureRunning();
+    // 知らせるのは解禁の一度だけ。触るたびに知らせると画面が作り直される
+    if (first) listeners.forEach((fn) => fn());
   };
 
-  window.addEventListener("pointerdown", unlock);
-  window.addEventListener("keydown", unlock);
+  for (const type of GESTURES) window.addEventListener(type, onGesture, { passive: true });
   return () => {
-    window.removeEventListener("pointerdown", unlock);
-    window.removeEventListener("keydown", unlock);
+    for (const type of GESTURES) window.removeEventListener(type, onGesture);
   };
+}
+
+/**
+ * AudioContext を用意し、止まっていれば動かし直す。
+ * **必ずユーザー操作の中から呼ぶ。** iOS はそれ以外での生成も resume も通さない。
+ */
+function ensureRunning(): void {
+  // 黙らせている人のために音の口を開けない
+  if (!enabled) return;
+  const a = context();
+  if (a !== null && a.ctx.state !== "running") void a.ctx.resume();
 }
 
 export function soundUnlocked(): boolean {
@@ -82,10 +115,25 @@ export function soundUnlocked(): boolean {
 /**
  * 鳴らせる状態なら AudioContext を返す。
  * まだ操作されていない・黙らせている・そもそも使えない環境では null。
+ *
+ * **ここで新しく作られることを当てにしない。** 呼ばれるのは CPU が札を引いた
+ * ときなど、操作の外がほとんどで、iOS ではそこで作った context は動かない。
+ * 作るのは `ensureRunning()`（＝操作の中）の役目で、ここはその結果を使うだけ。
  */
 export function audio(): { ctx: AudioContext; out: GainNode } | null {
   if (!enabled || !unlocked) return null;
 
+  const a = context();
+  if (a === null) return null;
+
+  // 端末を伏せるなどで止まっていることがある。iOS ではこの試みは通らないが、
+  // 次に画面を触ったときに `armUnlock` 側が戻すので、ここは通る環境向けの保険
+  if (a.ctx.state === "suspended") void a.ctx.resume();
+  return a;
+}
+
+/** AudioContext と主音量。まだ無ければ作る。使えない環境では null。 */
+function context(): { ctx: AudioContext; out: GainNode } | null {
   if (ctx === null) {
     const Ctor = window.AudioContext ?? (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (Ctor === undefined) return null;
@@ -98,9 +146,6 @@ export function audio(): { ctx: AudioContext; out: GainNode } | null {
     master.gain.value = MASTER_GAIN;
     master.connect(ctx.destination);
   }
-
-  // 端末を伏せるなどで止まっていることがある
-  if (ctx.state === "suspended") void ctx.resume();
   if (master === null) return null;
   return { ctx, out: master };
 }
