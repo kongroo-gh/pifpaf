@@ -156,28 +156,26 @@ export class Room {
   }
 
   /**
-   * 人が消えた。**代役は立てない。**（2026-09-04・ユーザー指示）
+   * 人が消えた。
    *
-   * 以前は席を残したまま CPU が代わりに打っていた。卓が止まらない利点はあるが、
-   * 相手が入れ替わったことに気づかないまま CPU と打ち続けることになり、
-   * 人と打ちに来た意味が消える。
+   * **卓は決まった顔ぶれのもの**（2026-09-05・ユーザー指示）。
+   *   - 代役は立てない。CPU に化けることはない
+   *   - **席が空くという概念を持たない。** 抜けた席を他人が取ることもない
+   *   - 戻りを30秒待ち、戻らなければ**どの場面でも卓は終わり**（`CLOSED`）
    *
-   * ただし**すぐには畳まない。** 通信が一瞬切れただけの人まで抜けた扱いにすると、
-   * 電車に入っただけで卓が消える。**戻りを待つあいだ卓は止める**（`awaiting`）。
-   * 何秒待つかと、待ちきれなかったときに畳むのは `hub` の仕事（ここは時計を持たない）。
+   * 待つのは、通信が一瞬切れただけの人まで抜けた扱いにしないため。
+   * 電車に入っただけで卓が消えるのは行き過ぎる。戻りを待つあいだ卓は止める。
+   * 何秒待つかと、待ちきれなかったときに畳むのは `hub` の仕事
+   * （ここは時計を持たない）。
    *
-   * まだ始まっていない卓は別で、席を空けるだけ（人待ちに戻る）。
-   * 決着後も待たない（もう打つものが無いので、結果を読んでいる人の邪魔をしない）。
+   * 決着後（`MATCH_OVER`）だけは待たない。もう打つものが無いので、
+   * 結果を読んでいる人の邪魔をしない。
    */
   disconnect(seat: number): void {
     const o = this.seats[seat];
     if (o === null || o === undefined || o.kind !== "HUMAN") return;
     o.connected = false;
 
-    // **ホストも他の人と同じ扱い**（2026-09-05・ユーザー指示）。
-    // 待機中も席を空けずに待つ。以前はここで即座に空けていたので、
-    // ホストが一瞬切れただけで席が空き、ホスト権が移り、そのうえ
-    // CHAMAR A CPU を押されると**その席が CPU になっていた**。
     if (this.phase !== "MATCH_OVER" && this.phase !== "CLOSED") {
       this.awaiting.add(seat);
     }
@@ -209,15 +207,6 @@ export class Room {
     if (o === null || o === undefined || o.kind !== "HUMAN") return;
     o.connected = false;
 
-    if (this.phase === "WAITING") {
-      this.seats[seat] = null;
-      if (this.hostSeat === seat) {
-        this.hostSeat = this.seats.findIndex((occupant) => occupant?.kind === "HUMAN");
-      }
-      this.onChange();
-      return;
-    }
-
     if (this.phase !== "MATCH_OVER" && this.phase !== "CLOSED") {
       this.awaiting.clear();
       this.awaitingUntil = null;
@@ -226,28 +215,11 @@ export class Room {
     this.onChange();
   }
 
-  /**
-   * 待ちきれなかった。
-   *
-   * 対局中なら、そこで一戦は終わり。**まだ始まっていない卓は畳まない** ——
-   * 始まっていないものを終わらせる意味が無いうえ、1人の電波が途切れただけで
-   * 待っている全員を追い出すことになる。席を空けて人待ちに戻すだけにする。
-   */
+  /** 待ちきれなかった。**どの場面でも卓は終わり。** */
   giveUpWaiting(): void {
     if (!this.isAwaiting()) return;
-    const gone = [...this.awaiting];
     this.awaiting.clear();
     this.awaitingUntil = null;
-
-    if (this.phase === "WAITING") {
-      for (const seat of gone) this.seats[seat] = null;
-      if (this.seats[this.hostSeat] === null || this.seats[this.hostSeat] === undefined) {
-        this.hostSeat = this.seats.findIndex((o) => o?.kind === "HUMAN");
-      }
-      this.onChange();
-      return;
-    }
-
     this.phase = "CLOSED";
     this.onChange();
   }

@@ -129,13 +129,15 @@ describe("入退室", () => {
     expect(back.ok).toBe(false);
   });
 
-  it("始まる前に自分から降りたら、席はその場で空く", () => {
+  it("始まる前でも、自分から降りれば卓は畳まれる", () => {
+    // **席が空くという概念を持たない。** 抜けた席を他人が取ることもない
     const room = makeRoom();
     const joined = room.join("あ");
+    room.join("い");
     if (!joined.ok) return;
     room.leave(joined.seat);
-    expect(room.roomInfo().seats[0]!.name).toBeNull();
-    expect(room.roomInfo().hostSeat).toBe(-1);
+    expect(room.currentPhase()).toBe("CLOSED");
+    expect(room.roomInfo().seats[0]!.name).toBe("あ");
   });
 
   it("始まる前でも、切れただけなら席を押さえて戻りを待つ", () => {
@@ -162,9 +164,8 @@ describe("入退室", () => {
     expect(room.roomInfo().hostSeat).toBe(host.seat);
   });
 
-  it("始まる前に待ちきれなければ、卓は畳まず席だけ空ける", () => {
-    // 始まっていないものを終わらせる意味が無いうえ、1人の電波が途切れただけで
-    // 待っている全員を追い出すことになる
+  it("始まる前でも、待ちきれなければ卓は畳まれる", () => {
+    // 場面によらず同じ。席を空けて人待ちに戻す、という道は無い
     const room = makeRoom();
     const host = room.join("ホスト");
     const other = room.join("い");
@@ -173,9 +174,9 @@ describe("入退室", () => {
     room.disconnect(host.seat);
     room.giveUpWaiting();
 
-    expect(room.currentPhase()).toBe("WAITING"); // 畳まない
-    expect(room.roomInfo().seats[host.seat]!.name).toBeNull();
-    expect(room.roomInfo().hostSeat).toBe(other.seat); // ここで初めて移る
+    expect(room.currentPhase()).toBe("CLOSED");
+    // ホスト権も動かさない。卓は決まった顔ぶれのもの
+    expect(room.roomInfo().hostSeat).toBe(host.seat);
   });
 });
 

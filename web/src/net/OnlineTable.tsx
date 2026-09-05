@@ -564,9 +564,8 @@ function Table({
       {showResult && <ResultPanel game={game} view={view} />}
       {room.phase === "WAITING" && <WaitingPanel game={game} />}
 
-      {/* 覆いは対局中だけ。待機中はもともと人を待っている場面で、
-          席の一覧に「切断中」と出るので、上から塞ぐ必要がない */}
-      {room.phase !== "WAITING" && room.awaiting.length > 0 && <AwayOverlay room={room} />}
+      {/* 待機中も出す。戻らなければ卓が終わるのは、始まる前でも同じなので */}
+      {room.awaiting.length > 0 && <AwayOverlay room={room} />}
 
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
 
