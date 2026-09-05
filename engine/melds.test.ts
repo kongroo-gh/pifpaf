@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Card, Rank, Wild } from "./types.ts";
-import { isValidTrinca, isValidSequence, classifyAsMelds } from "./melds.ts";
+import { isValidTrinca, isValidSequence, classifyAsMelds, orderSequence } from "./melds.ts";
 
 const c = (id: string, suit: Card["suit"], rank: Rank): Card => ({ id, suit, rank });
 const wild: Wild = { rank: "8", suit: "S" }; // ヴィラが 7♠ のとき。8♠ だけがワイルド
@@ -246,5 +246,48 @@ describe("トリンカの枚数別ルール", () => {
     const m = classifyAsMelds(hand, wild);
     expect(m).not.toBeNull();
     expect(m?.map((x) => x.cards.length).sort()).toEqual([4, 5]);
+  });
+});
+
+describe("階段の並べ替え（見せる順序）", () => {
+  const show = (cards: Card[]) => cards.map((x) => x.rank).join("-");
+
+  it("拾った順が前後していてもランク順に直す", () => {
+    // classifyAsMelds は組み合わせの探索順で拾うので A-K-Q のように出てくる
+    const jumbled = [c("a", "D", "A"), c("b", "D", "Q"), c("d", "D", "K")];
+    expect(show(orderSequence(jumbled, wild))).toBe("Q-K-A");
+  });
+
+  it("2-3-4 のように下から並べる", () => {
+    const jumbled = [c("a", "H", "4"), c("b", "H", "2"), c("d", "H", "3")];
+    expect(show(orderSequence(jumbled, wild))).toBe("2-3-4");
+  });
+
+  it("コリンガは埋めている穴の位置に置く", () => {
+    // 3♥ □ 5♥。8♠ がコリンガで、4♥ の代わりに入っている
+    const withGap = [c("a", "H", "5"), c("w", "S", "8"), c("b", "H", "3")];
+    expect(show(orderSequence(withGap, wild))).toBe("3-8-5");
+  });
+
+  it("コリンガが端に来るときは、自然な札から始める", () => {
+    // 3-4 とコリンガ1枚は 2-3-4 でも 3-4-5 でも通る。上が足りない側に寄せる
+    const openEnd = [c("a", "H", "3"), c("w", "S", "8"), c("b", "H", "4")];
+    expect(show(orderSequence(openEnd, wild))).toBe("3-4-8");
+  });
+
+  it("classifyAsMelds が返す階段も並んでいる", () => {
+    const hand = [
+      c("1", "D", "A"), c("2", "D", "Q"), c("3", "D", "K"),
+      c("4", "H", "9"), c("5", "D", "9"), c("6", "C", "9"),
+    ];
+    const melds = classifyAsMelds(hand, wild);
+    const seq = melds?.find((m) => m.type === "SEQUENCE");
+    expect(seq).toBeDefined();
+    expect(show(seq!.cards)).toBe("Q-K-A");
+  });
+
+  it("A をまたぐ並びは作らない", () => {
+    // K-A-2 は役として成立しないので、そもそも並べ替えの対象にならない
+    expect(isValidSequence([c("a", "H", "K"), c("b", "H", "A"), c("d", "H", "2")], wild)).toBe(false);
   });
 });

@@ -167,11 +167,55 @@ export function classifyAsMelds(cards: Card[], wild: Wild): Meld[] | null {
       }
       if (isValidSequence(combo, wild)) {
         const restResult = classifyAsMelds(rest, wild);
-        if (restResult !== null) return [{ type: "SEQUENCE", cards: combo }, ...restResult];
+        if (restResult !== null) {
+          // 拾った順のままだと A♦ K♦ Q♦ のように前後する。見せる前に並べ直す
+          return [{ type: "SEQUENCE", cards: orderSequence(combo, wild) }, ...restResult];
+        }
       }
     }
   }
   return null;
+}
+
+/**
+ * 階段をランクの並びに直す。**見せるための順序**で、判定には関わらない。
+ *
+ * `classifyAsMelds` が拾ってくる順序は組み合わせの探索順のままなので、
+ * 上がり手を開いたときに A♦ K♦ Q♦ のように前後して読めない。2-3-4 や
+ * Q-K-A のように並べる（2026-09-04・ユーザー指示）。
+ *
+ * **コリンガは埋めている穴の位置に置く。** 3-□-5 のように、どの札の代わりで
+ * 通ったのかが見て分かる。端に来る場合は窓が2通りありうる（3-4 と1枚なら
+ * 2-3-4 でも 3-4-5 でも通る）ので、**自然な札から始まるほう**を選ぶ。
+ * 「足りないのは上」と読むほうが、手を作っていたときの感覚に近い。
+ */
+export function orderSequence(cards: Card[], wild: Wild): Card[] {
+  const naturals = cards.filter((c) => !isWildCard(c, wild));
+  const wilds = cards.filter((c) => isWildCard(c, wild));
+  if (naturals.length === 0) return cards;
+
+  // 階段はランク重複不可なので、ランクから札を引ける
+  const byRank = new Map(naturals.map((c) => [c.rank, c]));
+  const fits = buildRankWindows(cards.length).filter((w) =>
+    naturals.every((c) => w.includes(c.rank))
+  );
+  const window = fits.find((w) => w[0] !== undefined && byRank.has(w[0])) ?? fits[0];
+  if (window === undefined) return cards;
+
+  const ordered: Card[] = [];
+  let nextWild = 0;
+  for (const rank of window) {
+    const natural = byRank.get(rank);
+    if (natural !== undefined) {
+      ordered.push(natural);
+      continue;
+    }
+    const filler = wilds[nextWild];
+    nextWild += 1;
+    if (filler !== undefined) ordered.push(filler);
+  }
+  // 数が合わなければ触らない。並べ替えで札を落とすほうがよほど悪い
+  return ordered.length === cards.length ? ordered : cards;
 }
 
 function combinations<T>(arr: T[], size: number): T[][] {
