@@ -119,6 +119,26 @@ export function serverUrl(): string {
   return RENDER_WS_URL;
 }
 
+/**
+ * 届いた卓の情報を、**足りない項目を埋めてから**使う。
+ *
+ * 画面（GitHub Pages）と卓（Render）は別々に配信されるので、**新しい画面が
+ * 古いサーバーに繋がる時間帯が必ずできる**。項目を足しただけなら古い画面は
+ * 読み飛ばして無事だが、逆向きは無事では済まない。実際 `awaiting` を足したとき、
+ * 古いサーバー相手に `room.awaiting.length` で落ちて画面が真っ黒になった。
+ *
+ * 受け取った側で埋めておけば、その時間帯は**その機能だけが無い**状態に落ちる。
+ * 卓が止まったように見えるより、待ちの表示が出ないほうがはるかにましなので。
+ */
+function normalizeRoom(room: RoomInfo): RoomInfo {
+  return {
+    ...room,
+    seats: (room.seats ?? []).map((s) => ({ ...s, ready: s.ready === true })),
+    awaiting: room.awaiting ?? [],
+    awaitingUntil: room.awaitingUntil ?? null,
+  };
+}
+
 export function useOnlineGame(): OnlineGame {
   const [connection, setConnection] = useState<ConnectionState>("IDLE");
   const [error, setError] = useState<string | null>(null);
@@ -186,7 +206,7 @@ export function useOnlineGame(): OnlineGame {
             retryDelay.current = RECONNECT_MIN_MS;
             break;
           case "ROOM":
-            setRoom(msg.room);
+            setRoom(normalizeRoom(msg.room));
             break;
           case "VIEW":
             setView(msg.view);
