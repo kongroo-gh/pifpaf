@@ -21,6 +21,8 @@ export interface BoardSnapshot {
   myTurn: boolean;
   /** 上がった席。決着していなければ null */
   winner: number | null;
+  /** 自分の席。上がったのが自分かどうかで音を変えるのに使う */
+  mySeat: number;
 }
 
 export function useBoardSounds(now: BoardSnapshot): void {
@@ -44,7 +46,11 @@ export function useBoardSounds(now: BoardSnapshot): void {
       if (now.myTurn && !before.myTurn) sfx.turn();
     }
 
-    // 誰かが上がった。自分か相手かで音は変えない（結果は次の画面で分かる）
-    if (now.winner !== null && before.winner === null) sfx.bater();
-  }, [now.live, now.stockCount, now.discardCount, now.myTurn, now.winner]);
+    // 誰かが上がった。**自分か相手かで音を変える**（2026-09-04・ユーザー指示）。
+    // 同じ和音を長調へ開いただけの対にしてあるので、卓の音からは外れない。
+    if (now.winner !== null && before.winner === null) {
+      if (now.winner === now.mySeat) sfx.baterMine();
+      else sfx.bater();
+    }
+  }, [now.live, now.stockCount, now.discardCount, now.myTurn, now.winner, now.mySeat]);
 }

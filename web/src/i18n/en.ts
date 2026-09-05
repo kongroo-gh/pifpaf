@@ -198,7 +198,6 @@ export const en: Strings = {
     payout: "Payout",
     bankroll: (n) => `Purse ${n}`,
     back: "Back to the table",
-    brokeTitle: "...",
     broke: "Not a penny left",
   },
 

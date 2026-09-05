@@ -194,7 +194,6 @@ export const ja: Strings = {
     payout: "配当",
     bankroll: (n) => `所持金 ${n}`,
     back: "卓に戻る",
-    brokeTitle: "...",
     broke: "一文無しだ",
   },
 

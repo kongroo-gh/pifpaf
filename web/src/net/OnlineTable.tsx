@@ -330,6 +330,7 @@ function Table({
     discardCount: board.discardCount,
     myTurn,
     winner: board.winner,
+    mySeat,
   });
 
   // サーバーに断られた手。単機版には無い場面（あちらは押せない形にしてある）

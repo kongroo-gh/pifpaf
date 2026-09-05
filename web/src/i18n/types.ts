@@ -270,7 +270,6 @@ export interface Strings {
     bankroll: (n: number) => string;
     /** VOLTAR À MESA の下 */
     back: string;
-    brokeTitle: string;
     broke: string;
   };
 

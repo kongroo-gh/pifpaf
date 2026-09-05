@@ -3,12 +3,13 @@
 // マッチ制覇の「金が降る」は別にあるので、こちらは軽く短く。
 // 勝った手札そのものを放射状に飛び散らせて、何で勝ったかを一瞬見せる。
 //
-// 見た目だけの部品で、ルールにも進行にも関与しない。
+// 見た目だけの部品で、ルールにも進行にも関与しない。**音も鳴らさない。**
+// 上がりの音は `useBoardSounds` が盤面の差分から鳴らす。ここに置いていた頃は、
+// この演出を出さない側（動きを抑える設定・オンライン版）だけ無音になっていた。
 
 import { useEffect, useRef } from "react";
 import type { Card, Wild } from "@pifpaf/engine";
 import { PlayingCard } from "./PlayingCard";
-import { sfx } from "../audio";
 
 /** 飛び散ってから収まるまで */
 const BURST_MS = 1400;
@@ -33,9 +34,6 @@ export function CardBurst({ cards, wild, onDone }: CardBurstProps) {
       doneRef.current();
       return;
     }
-
-    // 音も演出のうち。出さないと決めた側では鳴らさない
-    sfx.win();
 
     const timer = setTimeout(() => doneRef.current(), BURST_MS);
     return () => clearTimeout(timer);

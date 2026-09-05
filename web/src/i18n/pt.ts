@@ -206,7 +206,6 @@ export const pt: Strings = {
     payout: "Pagamento",
     bankroll: (n) => `Caixa ${n}`,
     back: "Voltar para a mesa",
-    brokeTitle: "...",
     broke: "Sem um tostão",
   },
 

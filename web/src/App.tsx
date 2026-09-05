@@ -149,6 +149,7 @@ export default function App() {
     discardCount: state.discard.length,
     myTurn: isHumanTurn,
     winner: state.winner,
+    mySeat: HUMAN,
   });
 
   // 破産して終わったとき。金が降る側（MoneyRain）と対になる
@@ -685,9 +686,11 @@ function MatchOver({
 
         <div className="panel__actions">
           <button className="btn btn--again" onClick={onBack}>
-            {bankroll > 0 ? "VOLTAR À MESA" : t.matchOver.brokeTitle}
+            {/* 飾り語は他のボタンと同じく、ここに直に置く。辞書に入れると
+                言語ごとに埋め忘れが起きる（実際 "..." のまま出ていた） */}
+            {bankroll > 0 ? "VOLTAR À MESA" : "SEM UM TOSTÃO"}
             <Gloss
-              flavor={bankroll > 0 ? "VOLTAR À MESA" : t.matchOver.brokeTitle}
+              flavor={bankroll > 0 ? "VOLTAR À MESA" : "SEM UM TOSTÃO"}
               text={bankroll > 0 ? t.matchOver.back : t.matchOver.broke}
             />
           </button>

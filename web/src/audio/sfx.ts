@@ -126,7 +126,7 @@ export function coin(delay = 0): void {
 /* ───────────── 決着 ───────────── */
 
 /**
- * BATER!（上がり）。短い金管の刺し。
+ * BATER!（上がり）を**相手に**取られた。短い金管の刺し。
  * ニ短調の和音で、卓の音楽と喧嘩しないようにしてある。
  */
 export function bater(): void {
@@ -160,15 +160,53 @@ export function bater(): void {
 }
 
 /**
- * ラウンドを取ったときの祝い。札が散って、短く上へ抜ける。
- * マッチ制覇の金（`coin`）と役割を分けてあるので、ここは短く保つこと。
+ * **自分が**上がった。`bater()` と対になる、こちらだけ晴れる刺し。
+ *
+ * 仕掛けは1つだけ。**同じ和音をニ短調からニ長調へ開く**（F→F#）。
+ * 卓の音のまま、第3音がひとつ上がるだけで景色が変わる。
+ * その上に、上へ抜ける分散和音・散る札・金貨の粒を薄く重ねる。
+ *
+ * 長く引かない。1秒で終わらせて、すぐ結果パネルに渡す。
  */
-export function win(): void {
+export function baterMine(): void {
+  const a = audio();
+  if (a === null) return;
+  const { ctx, out } = a;
+  const at = ctx.currentTime;
+
+  const bq = ctx.createBiquadFilter();
+  bq.type = "lowpass";
+  // bater より高く開く。同じ形のまま明るいほうへ寄せる
+  bq.frequency.setValueAtTime(900, at);
+  bq.frequency.exponentialRampToValueAtTime(5200, at + 0.1);
+  bq.frequency.exponentialRampToValueAtTime(1200, at + 0.75);
+  bq.Q.value = 1;
+
+  const gain = ctx.createGain();
+  envelope(gain, at, 0.15, 0.02, 0.8);
+  bq.connect(gain).connect(out);
+
+  // D4 / F#4 / A4 / D5。bater の D-F-A の F だけが F# に上がっている
+  for (const f of [293.66, 369.99, 440, 587.33]) {
+    const osc = ctx.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.value = f;
+    osc.connect(bq);
+    osc.start(at);
+    osc.stop(at + 0.9);
+  }
+
+  // 上へ抜ける分散和音。速さで華やかさを出し、音量は上へいくほど落とす
+  const arp = [587.33, 739.99, 880, 1174.66]; // D5 F#5 A5 D6
+  arp.forEach((f, i) => tone(f, "triangle", 0.1 - i * 0.012, 0.008, 0.4, 0.07 + i * 0.055));
+
+  // 札が散る音
   for (let i = 0; i < 7; i += 1) card(i * 0.045);
-  // D5 → A5 → D6。三度を置かず、開いた響きのままにする
-  tone(587.33, "sine", 0.1, 0.01, 0.3, 0.05);
-  tone(880, "sine", 0.09, 0.01, 0.35, 0.13);
-  tone(1174.66, "sine", 0.07, 0.01, 0.5, 0.21);
+
+  // 金貨の粒。最後にきらつかせるだけなので、数は少なく散らす
+  for (let i = 0; i < 4; i += 1) coin(0.18 + Math.random() * 0.32);
+
+  burst(0.14, 0.002, 0.14, { type: "bandpass", from: 4200, to: 900, q: 0.7 });
 }
 
 /** 金貨と札束が降ってくる。粒を散らして降らせる。 */
