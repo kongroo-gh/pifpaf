@@ -129,13 +129,53 @@ describe("入退室", () => {
     expect(back.ok).toBe(false);
   });
 
-  it("始まる前に抜けたら席は空く", () => {
+  it("始まる前に自分から降りたら、席はその場で空く", () => {
     const room = makeRoom();
     const joined = room.join("あ");
     if (!joined.ok) return;
-    room.disconnect(joined.seat);
+    room.leave(joined.seat);
     expect(room.roomInfo().seats[0]!.name).toBeNull();
     expect(room.roomInfo().hostSeat).toBe(-1);
+  });
+
+  it("始まる前でも、切れただけなら席を押さえて戻りを待つ", () => {
+    // **ホストも他の人と同じ扱い**。ここで即座に空けていた頃は、ホストが
+    // 一瞬切れただけで席が空き、ホスト権が移り、CHAMAR A CPU で
+    // その席が CPU になっていた
+    const room = makeRoom();
+    const host = room.join("ホスト");
+    room.join("い");
+    if (!host.ok) return;
+
+    room.disconnect(host.seat);
+    expect(room.isAwaiting()).toBe(true);
+    expect(room.roomInfo().seats[host.seat]!.name).toBe("ホスト");
+    expect(room.roomInfo().hostSeat).toBe(host.seat); // ホスト権も渡さない
+
+    // 待っているあいだは始められない。欠けたまま始まってしまう
+    expect(room.start(true).ok).toBe(false);
+
+    // トークンで戻れば、席もホスト権もそのまま
+    const back = room.join("ホスト", host.token);
+    expect(back).toMatchObject({ ok: true, seat: host.seat, rejoined: true });
+    expect(room.isAwaiting()).toBe(false);
+    expect(room.roomInfo().hostSeat).toBe(host.seat);
+  });
+
+  it("始まる前に待ちきれなければ、卓は畳まず席だけ空ける", () => {
+    // 始まっていないものを終わらせる意味が無いうえ、1人の電波が途切れただけで
+    // 待っている全員を追い出すことになる
+    const room = makeRoom();
+    const host = room.join("ホスト");
+    const other = room.join("い");
+    if (!host.ok || !other.ok) return;
+
+    room.disconnect(host.seat);
+    room.giveUpWaiting();
+
+    expect(room.currentPhase()).toBe("WAITING"); // 畳まない
+    expect(room.roomInfo().seats[host.seat]!.name).toBeNull();
+    expect(room.roomInfo().hostSeat).toBe(other.seat); // ここで初めて移る
   });
 });
 

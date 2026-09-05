@@ -174,16 +174,10 @@ export class Room {
     if (o === null || o === undefined || o.kind !== "HUMAN") return;
     o.connected = false;
 
-    // まだ始まっていない卓なら席を空けてしまってよい
-    if (this.phase === "WAITING") {
-      this.seats[seat] = null;
-      if (this.hostSeat === seat) {
-        this.hostSeat = this.seats.findIndex((occupant) => occupant?.kind === "HUMAN");
-      }
-      this.onChange();
-      return;
-    }
-
+    // **ホストも他の人と同じ扱い**（2026-09-05・ユーザー指示）。
+    // 待機中も席を空けずに待つ。以前はここで即座に空けていたので、
+    // ホストが一瞬切れただけで席が空き、ホスト権が移り、そのうえ
+    // CHAMAR A CPU を押されると**その席が CPU になっていた**。
     if (this.phase !== "MATCH_OVER" && this.phase !== "CLOSED") {
       this.awaiting.add(seat);
     }
@@ -232,11 +226,28 @@ export class Room {
     this.onChange();
   }
 
-  /** 待ちきれなかった。ここで一戦は終わり。 */
+  /**
+   * 待ちきれなかった。
+   *
+   * 対局中なら、そこで一戦は終わり。**まだ始まっていない卓は畳まない** ——
+   * 始まっていないものを終わらせる意味が無いうえ、1人の電波が途切れただけで
+   * 待っている全員を追い出すことになる。席を空けて人待ちに戻すだけにする。
+   */
   giveUpWaiting(): void {
     if (!this.isAwaiting()) return;
+    const gone = [...this.awaiting];
     this.awaiting.clear();
     this.awaitingUntil = null;
+
+    if (this.phase === "WAITING") {
+      for (const seat of gone) this.seats[seat] = null;
+      if (this.seats[this.hostSeat] === null || this.seats[this.hostSeat] === undefined) {
+        this.hostSeat = this.seats.findIndex((o) => o?.kind === "HUMAN");
+      }
+      this.onChange();
+      return;
+    }
+
     this.phase = "CLOSED";
     this.onChange();
   }
@@ -254,6 +265,8 @@ export class Room {
    */
   start(fillWithBots = false): ActResult {
     if (this.phase !== "WAITING") return { ok: false, reason: "すでに始まっています" };
+    // 席は残っているが本人はいない。欠けたまま始めない
+    if (this.isAwaiting()) return { ok: false, reason: "抜けた人の戻りを待っています" };
 
     const humans = this.seats.filter((o) => o !== null && o.kind === "HUMAN").length;
     if (humans === 0) return { ok: false, reason: "人がいません" };

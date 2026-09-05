@@ -564,7 +564,9 @@ function Table({
       {showResult && <ResultPanel game={game} view={view} />}
       {room.phase === "WAITING" && <WaitingPanel game={game} />}
 
-      {room.awaiting.length > 0 && <AwayOverlay room={room} />}
+      {/* 覆いは対局中だけ。待機中はもともと人を待っている場面で、
+          席の一覧に「切断中」と出るので、上から塞ぐ必要がない */}
+      {room.phase !== "WAITING" && room.awaiting.length > 0 && <AwayOverlay room={room} />}
 
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
 
@@ -669,7 +671,7 @@ function WaitingPanel({ game }: { game: OnlineGame }) {
           <button className="btn btn--keep" onClick={() => game.start()} disabled={!isHost || !full}>
             COMEÇAR<Gloss flavor="COMEÇAR" text={full ? t.online.startFull : t.online.needMore(4 - humans.length)} />
           </button>
-          <button className="btn btn--reject" onClick={() => game.disconnect()}>
+          <button className="btn btn--reject" onClick={() => game.leave()}>
             SAIR<Gloss flavor="SAIR" text={t.online.leave} />
           </button>
         </div>
