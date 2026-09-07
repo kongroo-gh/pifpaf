@@ -82,7 +82,7 @@ function Connecting({ game }: { game: OnlineGame }) {
       <div className="intro__panel">
         {/* 繋ぎに行くのをやめて、卓の入口へ戻る */}
         <BackButton onClick={() => game.disconnect()} />
-        <Kicker flavor="A SALA" gloss={t.online.title} className="intro__kicker" />
+        <Kicker flavor="A PRAÇA" gloss={t.online.title} className="intro__kicker" />
         <h1 className="intro__title">PIF PAF</h1>
         <div className="intro__rule" />
         <p className="intro__body">
@@ -198,7 +198,7 @@ function Lobby({
       <div className="intro__panel">
         {/* まだ卓に着いていないので、メインメニューへ戻れる */}
         <BackButton onClick={onExit} />
-        <Kicker flavor="A SALA" gloss={t.online.title} className="intro__kicker" />
+        <Kicker flavor="A PRAÇA" gloss={t.online.title} className="intro__kicker" />
         <h1 className="intro__title">PIF PAF</h1>
         <div className="intro__rule" />
 
@@ -643,7 +643,7 @@ function WaitingPanel({ game }: { game: OnlineGame }) {
   return (
     <div className="panel">
       <div className="panel__box">
-        <Kicker flavor="A SALA" gloss={t.online.waiting} className="panel__kicker" />
+        <Kicker flavor="A PRAÇA" gloss={t.online.waiting} className="panel__kicker" />
         <div className="online__invite">
           <span>{t.online.inviteCode}</span>
           <strong>{room.roomId}</strong>

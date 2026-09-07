@@ -93,7 +93,7 @@ export function OpponentSeat({
 
       {isActive && <div className="seat__thinking">{t.seat.thinking}</div>}
       {folded && !eliminated && <div className="seat__foldTag">{t.seat.folded}</div>}
-      {eliminated && <div className="seat__stamp">ELIMINADO</div>}
+      {eliminated && <div className="seat__stamp">APAGADO</div>}
       {survived && <div className="seat__stamp seat__stamp--gold">SOBREVIVEU</div>}
     </div>
   );

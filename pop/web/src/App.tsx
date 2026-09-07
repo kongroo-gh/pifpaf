@@ -426,7 +426,7 @@ export default function App() {
             </button>
           </div>
 
-          {humanOut && <div className="me__stamp">FALIDO</div>}
+          {humanOut && <div className="me__stamp">APAGADO</div>}
         </section>
       </div>
 
@@ -674,7 +674,7 @@ function MatchOver({
           </>
         ) : (
           <>
-            <h2 className="verdictTitle verdictTitle--lose">VOCÊ ESTÁ FALIDO</h2>
+            <h2 className="verdictTitle verdictTitle--lose">SUA LUZ APAGOU</h2>
             <p className="panel__lead">{t.matchOver.loseLead}</p>
             <p className="payout__cash payout__cash--lost">
               {wager} → <strong>0</strong>
@@ -688,9 +688,9 @@ function MatchOver({
           <button className="btn btn--again" onClick={onBack}>
             {/* 飾り語は他のボタンと同じく、ここに直に置く。辞書に入れると
                 言語ごとに埋め忘れが起きる（実際 "..." のまま出ていた） */}
-            {bankroll > 0 ? "VOLTAR À MESA" : "SEM UM TOSTÃO"}
+            {bankroll > 0 ? "VOLTAR À MESA" : "SEM LUZ"}
             <Gloss
-              flavor={bankroll > 0 ? "VOLTAR À MESA" : "SEM UM TOSTÃO"}
+              flavor={bankroll > 0 ? "VOLTAR À MESA" : "SEM LUZ"}
               text={bankroll > 0 ? t.matchOver.back : t.matchOver.broke}
             />
           </button>
@@ -727,7 +727,7 @@ function Betting({
       <div className="intro__panel">
         {/* まだ賭けていないので、入口へ戻れる */}
         <BackButton onClick={onBack} />
-        <Kicker flavor="A APOSTA" gloss={t.betting.kicker} className="intro__kicker" />
+        <Kicker flavor="A PARTIDA" gloss={t.betting.kicker} className="intro__kicker" />
         <h1 className="betting__bankroll">{bankroll}</h1>
         <p className="intro__sub">{t.betting.bankroll}</p>
         <div className="intro__rule" />
@@ -740,7 +740,7 @@ function Betting({
               {t.betting.brokeBody2}
             </p>
             <button className="btn btn--start" onClick={onLoan}>
-              PEGAR EMPRESTADO<Gloss flavor="PEGAR EMPRESTADO" text={t.betting.borrow(LOAN_AMOUNT)} />
+              NOVA LUZ<Gloss flavor="NOVA LUZ" text={t.betting.borrow(LOAN_AMOUNT)} />
             </button>
           </>
         ) : (
@@ -770,7 +770,7 @@ function Betting({
                   onBet(bankroll);
                 }}
               >
-                ALL IN<Gloss flavor="ALL IN" text={String(bankroll)} />
+                ATÉ O FIM DO CÉU<Gloss flavor="ATÉ O FIM DO CÉU" text={String(bankroll)} />
               </button>
             </div>
             <button className="btn btn--rules btn--strip betting__rules" onClick={onRules}>
@@ -808,7 +808,7 @@ function Intro({
       <div className="intro__panel">
         <p className="intro__kicker">BEM-VINDO À MESA</p>
         <h1 className="intro__title">PIF PAF</h1>
-        <p className="intro__sub">A FAMÍLIA</p>
+        <p className="intro__sub">A TRAVESSIA</p>
         <div className="intro__rule" />
         <p className="intro__body">
           {t.intro.body1}
