@@ -10,7 +10,7 @@ import { PlayerHand } from "./components/PlayerHand";
 import { OpponentSeat } from "./components/OpponentSeat";
 import { MeldReveal } from "./components/MeldReveal";
 import { FoldPrompt, InterceptBar, KeepBar } from "./components/TablePrompts";
-import { MoneyRain } from "./components/MoneyRain";
+import { StarRain } from "./components/StarRain";
 import { ChipStack } from "./components/ChipStack";
 import { CardFlight } from "./components/CardFlight";
 import { DealingScene } from "./components/DealingScene";
@@ -152,7 +152,7 @@ export default function App() {
     mySeat: HUMAN,
   });
 
-  // 破産して終わったとき。金が降る側（MoneyRain）と対になる
+  // 破産して終わったとき。金が降る側（StarRain）と対になる
   useEffect(() => {
     if (screen === "MATCH_OVER" && match.winner !== HUMAN) sfx.bust();
   }, [screen, match.winner]);
@@ -498,7 +498,7 @@ export default function App() {
 
       {screen === "MATCH_OVER" && (
         <>
-          {humanWonMatch && <MoneyRain />}
+          {humanWonMatch && <StarRain />}
           <MatchOver
             won={humanWonMatch}
             wager={wager}

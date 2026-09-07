@@ -40,13 +40,13 @@ button {
   font-family: inherit;
 }
 
-/* ざらついた紙／フィルムの粒子感 */
+/* 遠い星の粒。静かな瞬きの質感だけを残す。 */
 .grain {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 60;
-  opacity: 0.32;
+  opacity: 0.12;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
   mix-blend-mode: overlay;
 }
@@ -745,20 +745,19 @@ button {
   100% { box-shadow: inset 0 0 0 rgba(236, 205, 131, 0); }
 }
 
-/* ---------- チップ（＝命／掛け金） ---------- */
+/* ---------- ほしのかけら ---------- */
 .chipStack {
   display: inline-flex;
   align-items: center;
 }
 
+/* 円盤ではなく、五つの先端を持つほしのかけら。 */
 .chipStack__chip {
   width: 13px;
   height: 13px;
-  border-radius: 50%;
-  margin-left: -5px;
-  background: radial-gradient(circle at 35% 30%, #d8534a, #8b1a14 60%, #5c100c);
-  border: 1.5px solid rgba(236, 227, 207, 0.55);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  margin-left: -3px;
+  background: linear-gradient(135deg, var(--star-bright), var(--star));
+  clip-path: polygon(50% 0, 62% 35%, 100% 38%, 72% 62%, 82% 100%, 50% 78%, 18% 100%, 28% 62%, 0 38%, 38% 35%);
 }
 
 .chipStack__chip:first-child { margin-left: 0; }
@@ -1896,7 +1895,7 @@ button {
 }
 
 .btn:disabled {
-  opacity: 0.32;
+  opacity: 0.12;
   cursor: not-allowed;
 }
 
@@ -1923,8 +1922,8 @@ button {
   color: var(--star-bright);
 }
 
-/* ---------- 金が降る（勝ったとき） ---------- */
-.moneyRain {
+/* ---------- 星が降る（勝ったとき） ---------- */
+.starRain {
   position: fixed;
   inset: 0;
   z-index: 78;
@@ -1932,26 +1931,26 @@ button {
   overflow: hidden;
 }
 
-.moneyRain__piece {
+.starRain__piece {
   position: absolute;
   top: -8%;
   display: block;
-  animation-name: moneyFall;
+  animation-name: starFall;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
   will-change: transform;
 }
 
-.moneyRain__piece--coin { width: 30px; }
-.moneyRain__piece--bill { width: 44px; }
+.starRain__piece--star { width: 30px; }
+.starRain__piece--light { width: 20px; }
 
-.moneyRain__piece svg {
+.starRain__piece svg {
   width: 100%;
   height: auto;
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5));
 }
 
-@keyframes moneyFall {
+@keyframes starFall {
   0% {
     transform: translate3d(0, -10vh, 0) rotate(0deg) scale(var(--scale));
     opacity: 0;
@@ -2307,7 +2306,7 @@ button {
 
   /* 降り物と配札は、動きを止めると意味を成さないので出さない。
      配札は演出が省かれるだけで、進行は変わらない（すぐ本編に入る）。 */
-  .moneyRain,
+  .starRain,
   .dealing,
   .burst {
     display: none;
