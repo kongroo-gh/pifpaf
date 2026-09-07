@@ -1,0 +1,64 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 同時実行を1つに絞る。連続pushでデプロイが競合しないようにするため。
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: 依存を入れる
+        run: npm ci
+
+      # 壊れたものを公開しないため、デプロイ前に関門を通す。
+      # ここに置くのは**決定性のあるものだけ**。server の e2e は実際に
+      # ポートを開くので、たまたま失敗したときに公開まで止まるのは割に合わない
+      # （server は ci.yml で別に検査する）。
+      - name: engineのテスト
+        run: npm test --workspace=engine
+
+      - name: protocolのテスト（配信のマスク）
+        run: npm test --workspace=protocol
+
+      - name: ビルド（tsc --noEmit を含む）
+        run: npm run build --workspace=web
+        env:
+          # 繋ぎ先は useOnlineGame.ts の RENDER_WS_URL に焼いてあるので、
+          # 通常この変数は未設定でよい（空なら焼いた既定に落ちる）。
+          # 別名で立てた場合や他所へ移した場合だけ Repository variable を設定する。
+          VITE_WS_URL: ${{ vars.VITE_WS_URL }}
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

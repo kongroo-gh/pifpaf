@@ -1,0 +1,34 @@
+# 公開とは別の検査。
+#
+# Pages の公開を止めたくないものをここに置く。server の e2e は実際に
+# ポートを開いて往復するので、環境しだいで揺れる。落ちたら直すべきだが、
+# そのあいだ web の公開まで止まるのは割に合わない。
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # server は node:test ではなく素の WebSocket を使う。
+          # グローバルの WebSocket は Node 22 から使えるので、20 では動かない
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: 型（全ワークスペース）
+        run: npm run typecheck
+
+      - name: テスト（全ワークスペース）
+        run: npm test
