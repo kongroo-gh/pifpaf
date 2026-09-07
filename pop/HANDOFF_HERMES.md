@@ -8,7 +8,7 @@
 | | |
 |---|---|
 | リポジトリ | `kongroo-gh/pifpaf` |
-| 作業ディレクトリ | `/home/user/pifpaf` |
+| 作業ディレクトリ | `/Users/kongroo.ai/Downloads/pifpaf` |
 | ブランチ | `claude/pif-paf-pop-reskin-sji3pc`（**他へ push しない**） |
 | 作業範囲 | **`pop/` の中だけ**。リポジトリ直下の現行版は1行も触らない |
 | PR | **明示の依頼があるまで作らない** |
@@ -35,13 +35,19 @@
 ## 毎コミットで通す検査
 
 ```
-cd /home/user/pifpaf
-diff -r pop/engine   engine    # 差分ゼロであること
-diff -r pop/protocol protocol  # 同上
-diff -r pop/server   server    # 同上
-git diff --name-only main...HEAD | grep -v '^pop/'   # 何も出ないこと
-npm run typecheck --workspace=web   # i18n の埋め忘れはここで全部出る
+cd /Users/kongroo.ai/Downloads/pifpaf
+git fetch -q origin
+diff -r --exclude=node_modules --exclude=dist pop/engine   engine    # 差分ゼロ
+diff -r --exclude=node_modules --exclude=dist pop/protocol protocol  # 同上
+diff -r --exclude=node_modules --exclude=dist pop/server   server    # 同上
+git diff --name-only origin/main...HEAD | grep -v '^pop/'   # 何も出ないこと
+cd pop && npm run typecheck   # i18n の埋め忘れはここで全部出る
 ```
+
+**`--exclude` を外さないこと。** ルート側には `npm install` 済みの
+`node_modules/` があり、`pop/` には無い。除外しないと必ず「差分あり」になる。
+**`main` ではなく `origin/main` を使うこと。** ローカルの `main` は
+古いことがあり、無関係なファイルが大量に出る。
 
 `git show --stat` に `engine/` `protocol/` `server/` が出たら約束を破っている。
 
@@ -63,8 +69,8 @@ npm run typecheck --workspace=web   # i18n の埋め忘れはここで全部出�
 `pop/` の中で独立に動く。`node_modules/` は `.gitignore` に入っている。
 
 ```
-cd /home/user/pifpaf/pop
-npm install
+cd /Users/kongroo.ai/Downloads/pifpaf/pop
+npm install   # 実行済み。node_modules があれば飛ばしてよい
 npm run dev --workspace=web   # スクリーンショットはここから撮る
 npm run typecheck
 ```
