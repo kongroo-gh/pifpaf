@@ -154,7 +154,7 @@ export default function App() {
 
   // 破産して終わったとき。金が降る側（StarRain）と対になる
   useEffect(() => {
-    if (screen === "MATCH_OVER" && match.winner !== HUMAN) sfx.bust();
+    if (screen === "MATCH_OVER" && match.winner !== HUMAN) sfx.blackout();
   }, [screen, match.winner]);
 
   if (online) {

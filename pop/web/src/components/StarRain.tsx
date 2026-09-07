@@ -38,7 +38,7 @@ export function StarRain() {
 
   // 降り始めに合わせて粒を散らす。降り続けるあいだ鳴らし続けはしない
   // （マッチ制覇は一度きりの見せ場なので、頭だけ厚くすれば足りる）
-  useEffect(() => sfx.moneyRain(), []);
+  useEffect(() => sfx.starfall(), []);
 
   return (
     <div className="starRain" aria-hidden="true">

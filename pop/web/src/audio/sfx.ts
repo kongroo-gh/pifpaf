@@ -1,11 +1,7 @@
 // 一発ものの効果音。すべて合成で、資産ファイルは持たない。
 //
-// 卓の設定はマフィアの酒場の奥の部屋。**乾いていて、短く、余韻を引かない。**
-// 華やかな音（金貨・上がり）だけが例外で、そこだけ倍音を足して光らせる。
-//
-// ここに銃声は無い。撃たれる演出ごと外してある（CLAUDE.md「見た目の方針」）。
-// イントロで一発鳴るほうは、盤面の出来事ではなく曲の段取りなので `ambience.ts` にある。
-//
+// 観測船の甲板。札の手応えは残し、祝いは光、消灯は柔らかな下降音にする。
+// 流れ星と伴奏の段取りは ambience.ts が持つ。
 // どの関数も「鳴らせないなら黙って何もしない」。呼ぶ側が
 // 音の可否を気にしなくてよいようにしてある（画面の条件分岐が増えるため）。
 
@@ -16,7 +12,7 @@ function vary(base: number, spread: number): number {
   return base * (1 + (Math.random() * 2 - 1) * spread);
 }
 
-/** 雑音を帯域で削って鳴らす。札・チップ・金貨の芯はすべてこれ。 */
+/** 雑音を帯域で削って鳴らす。札・チップ・光の芯はすべてこれ。 */
 function burst(
   peak: number,
   attack: number,
@@ -51,7 +47,7 @@ function burst(
   src.stop(at + attack + decay + 0.05);
 }
 
-/** 単音。上がりの和音や金貨の粒はこれを重ねて作る。 */
+/** 単音。上がりの和音や光の粒はこれを重ねて作る。 */
 function tone(
   freq: number,
   type: OscillatorType,
@@ -106,20 +102,20 @@ export function vira(): void {
   tone(1174, "sine", 0.07, 0.012, 0.7, 0.07);
 }
 
-/* ───────────── チップと金 ───────────── */
+/* ───────────── ほしと光 ───────────── */
 
-/** 粘土のチップが当たる音。乾いた短い当たり。 */
+/** 小さなかけらが当たる音。乾いた短い当たり。 */
 export function chip(delay = 0): void {
   burst(0.3, 0.002, 0.045, { type: "bandpass", from: vary(1500, 0.2), q: 2.4 }, delay);
   tone(vary(2100, 0.15), "sine", 0.06, 0.002, 0.05, delay);
 }
 
-/** 金貨。チップと違って金属なので、倍音をずらして光らせる。 */
-export function coin(delay = 0): void {
-  const base = vary(2450, 0.3);
+/** 光の粒。柔らかな正弦と澄んだ倍音。 */
+export function spark(delay = 0): void {
+  const base = vary(1174.66, 0.12);
   tone(base, "sine", 0.09, 0.002, vary(0.4, 0.3), delay);
-  // 整数倍からわずかに外すと金属らしくなる
-  tone(base * 2.76, "sine", 0.045, 0.002, vary(0.3, 0.3), delay);
+  // 澄んだ倍音で光の粒を描く
+  tone(base * 2, "sine", 0.045, 0.002, vary(0.3, 0.3), delay);
   burst(0.08, 0.001, 0.03, { type: "highpass", from: 4000 }, delay);
 }
 
@@ -164,7 +160,7 @@ export function bater(): void {
  *
  * 仕掛けは1つだけ。**同じ和音をニ短調からニ長調へ開く**（F→F#）。
  * 卓の音のまま、第3音がひとつ上がるだけで景色が変わる。
- * その上に、上へ抜ける分散和音・散る札・金貨の粒を薄く重ねる。
+ * その上に、上へ抜ける分散和音・散る札・光の粒を薄く重ねる。
  *
  * 長く引かない。1秒で終わらせて、すぐ結果パネルに渡す。
  */
@@ -203,21 +199,21 @@ export function baterMine(): void {
   // 札が散る音
   for (let i = 0; i < 7; i += 1) card(i * 0.045);
 
-  // 金貨の粒。最後にきらつかせるだけなので、数は少なく散らす
-  for (let i = 0; i < 4; i += 1) coin(0.18 + Math.random() * 0.32);
+  // 光の粒。最後にきらつかせるだけなので、数は少なく散らす
+  for (let i = 0; i < 4; i += 1) spark(0.18 + Math.random() * 0.32);
 
   burst(0.14, 0.002, 0.14, { type: "bandpass", from: 4200, to: 900, q: 0.7 });
 }
 
-/** 金貨と札束が降ってくる。粒を散らして降らせる。 */
-export function moneyRain(seconds = 2.4, count = 22): void {
-  for (let i = 0; i < count; i += 1) coin(Math.random() * seconds);
+/** 星と光が降ってくる。粒を散らして降らせる。 */
+export function starfall(seconds = 2.4, count = 22): void {
+  for (let i = 0; i < count; i += 1) spark(Math.random() * seconds);
 }
 
-/** 破産して脱落した。下へ落ちていく低い音。 */
-export function bust(): void {
-  tone(180, "sawtooth", 0.16, 0.02, 0.9, 0, 55);
-  burst(0.07, 0.05, 0.6, { type: "lowpass", from: 700, to: 180 });
+/** 灯が消えた。下へほどける柔らかな音。 */
+export function blackout(): void {
+  tone(587.33, "sine", 0.12, 0.06, 0.9, 0, 293.66);
+  tone(440, "sine", 0.05, 0.08, 0.8, 0.15, 220);
 }
 
 /* ───────────── 画面の操作 ───────────── */
