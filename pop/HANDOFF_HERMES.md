@@ -44,7 +44,7 @@ npm run typecheck --workspace=web   # i18n の埋め忘れはここで全部出�
 ## commit の順（`RESKIN_PLAN.md` §6）
 
 1. 色の値だけ差し替え（`pop/web/src/styles.css` の `:root`、`pop/web/index.html`）
-2. CSS 変数名の改名（値は変えない。**この可否は未承認** → §7-4）
+2. CSS 変数名の改名（値は変えない。**可否は §7-4 D1 の決定待ち**）
 3. 書体の差し替え
 4. ポルトガル語の装飾語（§1-1）
 5. 席の顔ぶれ（§1-2、`pop/web/src/game/players.ts` と各辞書の `personas`）
@@ -52,6 +52,18 @@ npm run typecheck --workspace=web   # i18n の埋め忘れはここで全部出�
 7. `MoneyRain` → `StarRain`、`ChipStack` の意匠（§3・§7-1 A/B）
 8. 音（`ambience.ts` の流れ星、`tunes/starlight.ts`、`sfx` の改名）
 9. `pop/CLAUDE.md` `pop/README.md` `pop/rules.md` を新しい世界観に合わせる
+
+## 動かし方（`pop/` は単体で動く）
+
+ルートの `workspaces` に `pop` は入っていない。`pop/package.json` は複製なので、
+`pop/` の中で独立に動く。`node_modules/` は `.gitignore` に入っている。
+
+```
+cd /home/user/pifpaf/pop
+npm install
+npm run dev --workspace=web   # スクリーンショットはここから撮る
+npm run typecheck
+```
 
 ## 触るファイル（現行版の実測に基づく）
 
