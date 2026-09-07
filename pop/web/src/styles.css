@@ -2,17 +2,17 @@
    演出はすべてこのファイルとcomponents/に閉じており、ルールには関与しない。 */
 
 :root {
-  --ink: #0a0908;
-  --ink-2: #131010;
-  --felt: #14352a;
-  --felt-2: #0d2419;
-  --gold: #c8a24a;
-  --gold-bright: #eccd83;
-  --blood: #8b1a14;
-  --blood-hot: #d24a34;
-  --cream: #ece3cf;
-  --smoke: #8f887c;
-  --smoke-dim: #5d574e;
+  --ink: #0b1026;
+  --ink-2: #151c3d;
+  --felt: #1c2a5e;
+  --felt-2: #131c42;
+  --gold: #ffd166;
+  --gold-bright: #ffe9a8;
+  --blood: #e5487f;
+  --blood-hot: #ff7ab0;
+  --cream: #eef2ff;
+  --smoke: #8f9bc4;
+  --smoke-dim: #5b6591;
 
   --display: "Cinzel", "Noto Serif JP", Georgia, serif;
   --body: "Noto Serif JP", "Hiragino Mincho ProN", Georgia, serif;
