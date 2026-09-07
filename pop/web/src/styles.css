@@ -14,8 +14,8 @@
   --haze: #8f9bc4;
   --haze-dim: #5b6591;
 
-  --display: "Cinzel", "Noto Serif JP", Georgia, serif;
-  --body: "Noto Serif JP", "Hiragino Mincho ProN", Georgia, serif;
+  --display: "Baloo 2", "Zen Maru Gothic", sans-serif;
+  --body: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif;
 }
 
 * {
