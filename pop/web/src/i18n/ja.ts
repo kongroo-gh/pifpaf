@@ -216,10 +216,10 @@ export const ja: Strings = {
   },
 
   personas: [
-    { name: "あなた", title: "よそ者" },
-    { name: "ドン・ヴィエイラ", title: "頭目" },
-    { name: "ゼ・ナヴァーリャ", title: "剃刀" },
-    { name: "ドナ・ローザ", title: "未亡人" },
+    { name: "あなた", title: "旅人" },
+    { name: "セウ・オリオン", title: "星読み" },
+    { name: "ビア・ブッソラ", title: "道しるべ" },
+    { name: "ドナ・コメッタ", title: "流れ星" },
   ],
 
   rules: {

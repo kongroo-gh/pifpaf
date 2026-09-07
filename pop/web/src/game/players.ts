@@ -1,4 +1,4 @@
-// 席に座る「ファミリー」の顔ぶれ。
+// 席に座る旅の連れの顔ぶれ。
 // これは完全に演出上の設定であり、ルールには一切関与しない（engineは席番号しか知らない）。
 //
 // 呼び名と肩書きの訳は i18n の辞書が持つ。ここに残っているのはポルトガル語の
@@ -13,8 +13,8 @@ export interface Persona {
 }
 
 export const PERSONAS: Persona[] = [
-  { index: 0, epithet: "O Forasteiro", isHuman: true },
-  { index: 1, epithet: "O Chefe", isHuman: false },
-  { index: 2, epithet: "A Navalha", isHuman: false },
-  { index: 3, epithet: "A Viúva", isHuman: false },
+  { index: 0, epithet: "O Viajante", isHuman: true },
+  { index: 1, epithet: "O Astrônomo", isHuman: false },
+  { index: 2, epithet: "A Bússola", isHuman: false },
+  { index: 3, epithet: "A Cometa", isHuman: false },
 ];
