@@ -1,5 +1,5 @@
-// 日本語。**元の実装の文面をそのまま移したもの**で、表示は以前と変わらない。
-// 卓のならず者じみた口調はこの言語の持ち味なので、他言語もそこは合わせる。
+// 日本語 — 夜空を渡る観測船「ほしめぐり」。
+// 内部キーとルールはそのまま、案内の言葉だけを旅の語彙にする。
 
 import type { Strings } from "./types";
 
@@ -13,7 +13,7 @@ export const ja: Strings = {
   leave: {
     open: "卓を降りる",
     title: "卓を降りる",
-    warnSolo: (wager) => `途中で降りれば、賭けた *${wager}* は卓に置いていくことになる。`,
+    warnSolo: (wager) => `途中で降りれば、支度に出した *${wager}* は戻らない。`,
     warnOnline: "抜ければ卓は畳まれる。この一戦は、残った人のぶんも含めて終わる。",
     confirm: "降りる",
     cancel: "続ける",
@@ -76,27 +76,27 @@ export const ja: Strings = {
   },
 
   intro: {
-    body1: "奥の部屋に、四つの椅子。灰皿は満杯で、誰も窓を開けない。",
-    body2: "全員が7枚のチップを積む。負けるたびに減り、尽きた者から店を出られなくなる。",
-    warn: "最後の一人になるまで、誰も帰れない。",
-    sit: (bankroll) => `席に着く（所持金 ${bankroll}）`,
+    body1: "甲板に、四つの椅子。見上げれば、名前のない星ばかり。",
+    body2: "全員が7つのほしを灯す。負けるたびに消え、尽きた人から旅を降りる。",
+    warn: "最後のひとつが残るまで、旅は続く。",
+    sit: (bankroll) => `席に着く（ひかり ${bankroll}）`,
     rules: "ルールを読む",
   },
 
   betting: {
-    kicker: "掛け金",
-    bankroll: "所持金",
-    brokeBody1: "一文無しだ。ファミリーが立て替えてくれるそうだが、",
-    brokeBody2: "返せなかったときのことは、聞かないほうがいい。",
-    borrow: (amount) => `${amount} 借りる`,
-    body1: "4人卓、持ちチップ7枚。最後まで残れば配当がつく。",
-    body2: "勝率はおよそ4分の1。配当は残りチップと連勝で 2.0〜5.7倍。",
+    kicker: "旅の支度",
+    bankroll: "ひかり",
+    brokeBody1: "ひかりが尽きた。観測所が新しいひかりを分けてくれる。",
+    brokeBody2: "また灯せば、旅はいつでも続けられる。",
+    borrow: (amount) => `ひかりを ${amount} わけてもらう`,
+    body1: "4人で7つのほしを灯し、旅に出る。最後まで残れば旅のみのりがある。",
+    body2: "どこまで旅をする？ 距離に合わせて、支度に出すひかりを選ぼう。",
     rules: "ルールを読む",
   },
 
   topbar: {
     round: (n) => `第${n}ラウンド`,
-    wager: "掛け金",
+    wager: "旅の支度",
     rules: "ルール",
     vira: "ヴィラ",
     buyViraAria: (card) => `ヴィラの ${card} を買う`,
@@ -127,7 +127,7 @@ export const ja: Strings = {
     firstDraw: "先手だ。ヴィラを買うか、山札から引くか。",
     keepDecision: "その札、取るか捨てるか。",
     draw: "山札か、捨て札から1枚。",
-    discard: "1枚捨てろ。",
+    discard: "1枚捨てよう。",
   },
 
   actions: {
@@ -138,12 +138,12 @@ export const ja: Strings = {
   },
 
   fold: {
-    kicker: "手札を見て決めろ",
+    kicker: "手札を見て決めよう",
     title: "勝負するか、降りるか",
     note: (lossPlay, lossCom10) =>
-      `勝負して負ければ *${lossPlay}チップ*、10枚上がりを食らえば *${lossCom10}チップ* 失う。`,
-    noteFold: (lossFold) => `降りれば *${lossFold}チップ* で済むが、このラウンドは勝てない。`,
-    chipsInHand: (chips) => `手持ち ${chips} チップ`,
+      `勝負して負ければ *${lossPlay}ほし*、10枚上がりをされたら *${lossCom10}ほし* 失う。`,
+    noteFold: (lossFold) => `降りれば *${lossFold}ほし* で済むが、このラウンドは勝てない。`,
+    chipsInHand: (chips) => `手持ち ${chips} ほし`,
     play: "勝負する",
     fold: (lossFold) => `降りる（−${lossFold}）`,
   },
@@ -151,7 +151,7 @@ export const ja: Strings = {
   keep: {
     kicker: "一番手の特権",
     title: "この札を手札に入れるか",
-    noteLong: "下の手札と見比べて決めろ。並べ替えてもいい。",
+    noteLong: "下の手札と見比べて決めよう。並べ替えてもいい。",
     note: "引き直せるのは*一度きり*。",
     keep: "手札に入れる",
     reject: "捨てて引き直す",
@@ -169,7 +169,7 @@ export const ja: Strings = {
   result: {
     kicker: "ラウンド終了",
     noWinner: "決着つかず",
-    youWon: "あんたが取った",
+    youWon: "あなたが取った",
     theyWon: (name) => `${name} が取った`,
     revealLabel: "上がり手",
     revealCount: (n) => `${n}枚`,
@@ -177,24 +177,24 @@ export const ja: Strings = {
     sequence: "階段",
     took: "取った",
     noChange: "±0",
-    bust: "破産",
+    bust: "消灯",
     streak: (name, n) => `${name} が *${n}連勝*`,
     next: "次のラウンドへ",
     waitingFor: (names) => `${names.join("、")} が次へ進むのを待っている。`,
   },
 
   matchOver: {
-    winLead: "テーブルに残ったのはあんただけだ。",
-    loseLead: "チップが尽きた。掛け金は戻らない。",
-    chipsLeft: (n) => `残りチップ ${n}`,
-    times: (x) => `${x}倍`,
+    winLead: "最後まで灯っていたのは、あなたのほしだった。",
+    loseLead: "ほしが尽きた。支度に出したひかりは戻らない。",
+    chipsLeft: (n) => `残りほし ${n}`,
+    times: (x) => x,
     streak: (n) => `${n}連勝`,
     clean: "ワイルド無しの上がり",
     withWild: "ワイルドを使った上がり",
-    payout: "配当",
-    bankroll: (n) => `所持金 ${n}`,
+    payout: "旅のみのり",
+    bankroll: (n) => `ひかり ${n}`,
     back: "卓に戻る",
-    broke: "一文無しだ",
+    broke: "ひかりが尽きた",
   },
 
   dealing: {
@@ -204,7 +204,7 @@ export const ja: Strings = {
   },
 
   seat: {
-    chipsAria: (n) => `残りチップ ${n}`,
+    chipsAria: (n) => `残りほし ${n}`,
     handAria: (n) => `手札 ${n}枚`,
     thinking: "…考えている",
     folded: "降りた",
@@ -230,8 +230,8 @@ export const ja: Strings = {
       title: "目的",
       body:
         "9枚の手札をすべて*役*にして、最初に「*バテル*」と宣言した者がその" +
-        "ラウンドを取る。取られた者はチップを失い、尽きた者から卓を去る。" +
-        "最後に残った一人が場の金を持って帰る。",
+        "ラウンドを取る。取られた者はほしを失い、尽きた者から卓を去る。" +
+        "最後に残った一人が旅のみのりを受け取る。",
     },
 
     s2: {
@@ -297,7 +297,7 @@ export const ja: Strings = {
       nineDetail: "10枚のうち9枚が役。余り1枚を捨てて上がる（3+3+3 か 4+5）",
       ten: "10枚",
       tenDetail: "10枚すべてが役。捨てずに上がる（3+3+4 か 5+5）",
-      note: "10枚で上がられた者は、失うチップが1枚増える。",
+      note: "10枚で上がられた者は、失うほしが1つ増える。",
     },
 
     s8: {
@@ -312,14 +312,14 @@ export const ja: Strings = {
     },
 
     s9: {
-      title: "チップと勝敗",
-      lead: "全員が7チップを持って始める。ラウンドを取られると減る。",
+      title: "ほしと勝敗",
+      lead: "全員が7ほしを持って始める。ラウンドを取られると減る。",
       colCase: "状況",
-      colLoss: "失うチップ",
+      colLoss: "失うほし",
       lost: "勝負して負けた",
       folded: "降りていた",
-      com10: "10枚上がりを食らった",
-      body: "0になった者は*破産*して卓を去る。最後に残った一人がマッチの勝者。",
+      com10: "10枚上がりをされた",
+      body: "0になった人は*消灯*して旅を降りる。最後に残った一人がマッチの勝者。",
       note: "山札が尽きたら、捨て札がそのままの順で新しい山札になる。",
     },
 
@@ -327,23 +327,23 @@ export const ja: Strings = {
       title: "降りる（コヘール）",
       body:
         "ラウンドが始まる前に手札を見て、勝ち目が薄ければ*降りられる*。" +
-        "失うのは1チップで済むが、そのラウンドは勝てない。",
+        "失うのは1ほしで済むが、そのラウンドは勝てない。",
     },
 
     s11: {
-      title: "配当",
-      lead: "マッチを制すれば掛け金が戻る。倍率は勝ち方で変わる。",
+      title: "旅のみのり",
+      lead: "最後まで残ると、旅のみのりとしてひかりを受け取る。",
       colFactor: "要素",
-      colRate: "倍率",
-      chips: "残りチップ（1枚 → 7枚）",
-      chipsRate: "2.7 → 4.5 倍",
-      streak: "連勝（2連勝目から）",
-      streakRate: "+0.4 ずつ、最大 +1.2",
-      wild: "決め手にコリンガを使った",
-      wildRate: "×0.75",
+      colRate: "みのり",
+      chips: "残ったほし",
+      chipsRate: "",
+      streak: "連勝",
+      streakRate: "",
+      wild: "決め手のコリンガ",
+      wildRate: "",
       note:
-        "おおむね *2.0〜5.7倍*。コリンガ無しで上がったほうが難しいぶん、配当は高い。" +
-        "負ければ掛け金は戻らない。",
+        "受け取るひかりは、残ったほし・連勝・コリンガの使用で変わる。" +
+        "結果画面で受け取った数を確かめよう。負ければ、支度に出したひかりは戻らない。",
     },
   },
 };

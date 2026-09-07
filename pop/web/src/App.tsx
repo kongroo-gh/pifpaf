@@ -649,27 +649,20 @@ function MatchOver({
               <div className="payout">
                 <div className="payout__row">
                   <span>{t.matchOver.chipsLeft(detail.chipsLeft)}</span>
-                  <span>{t.matchOver.times(detail.base.toFixed(1))}</span>
                 </div>
                 {detail.streakBonus > 0 && (
                   <div className="payout__row">
                     <span>{t.matchOver.streak(detail.streak)}</span>
-                    <span>+{detail.streakBonus.toFixed(1)}</span>
                   </div>
                 )}
                 <div className="payout__row">
                   <span>{detail.clean ? t.matchOver.clean : t.matchOver.withWild}</span>
-                  <span>{detail.clean ? "×1.0" : "×0.75"}</span>
-                </div>
-                <div className="payout__row payout__row--total">
-                  <span>{t.matchOver.payout}</span>
-                  <span>{t.matchOver.times(payout.toFixed(2))}</span>
                 </div>
               </div>
             )}
 
             <p className="payout__cash">
-              {wager} → <strong>{winnings}</strong>
+              {t.matchOver.payout} <strong>{winnings}</strong>
             </p>
           </>
         ) : (
@@ -760,7 +753,10 @@ function Betting({
                     onBet(w);
                   }}
                 >
-                  {w}
+                  {t.meta.htmlLang === "ja"
+                    ? ["ちかい星まで", "とおい星まで", "もっととおい星まで"][WAGERS.indexOf(w)]
+                    : ["ESTRELA PRÓXIMA", "ESTRELA DISTANTE", "MAIS ALÉM"][WAGERS.indexOf(w)]}
+                  <small>{w}</small>
                 </button>
               ))}
               <button
@@ -770,7 +766,7 @@ function Betting({
                   onBet(bankroll);
                 }}
               >
-                ATÉ O FIM DO CÉU<Gloss flavor="ATÉ O FIM DO CÉU" text={String(bankroll)} />
+                ATÉ O FIM DO CÉU<Gloss flavor="ATÉ O FIM DO CÉU" text={t.meta.htmlLang === "ja" ? `空のはてまで · ${bankroll}` : String(bankroll)} />
               </button>
             </div>
             <button className="btn btn--rules btn--strip betting__rules" onClick={onRules}>

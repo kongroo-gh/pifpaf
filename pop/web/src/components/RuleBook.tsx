@@ -212,28 +212,7 @@ export function RuleBook({ onClose }: RuleBookProps) {
 
           <Section n="11" title={r.s11.title}>
             <p>{r.s11.lead}</p>
-            <table className="rulebook__table">
-              <thead>
-                <tr>
-                  <th>{r.s11.colFactor}</th>
-                  <th>{r.s11.colRate}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>{r.s11.chips}</td>
-                  <td>{r.s11.chipsRate}</td>
-                </tr>
-                <tr>
-                  <td>{r.s11.streak}</td>
-                  <td>{r.s11.streakRate}</td>
-                </tr>
-                <tr>
-                  <td>{r.s11.wild}</td>
-                  <td>{r.s11.wildRate}</td>
-                </tr>
-              </tbody>
-            </table>
+
             <p className="rulebook__note">
               <Em text={r.s11.note} />
             </p>
