@@ -41,6 +41,7 @@ type Occupant =
 
 export interface RoomOptions {
   roomId: string;
+  playerCount?: number;
   /** 配札の乱数。テストでは種を固定して渡す */
   rng?: () => number;
   /** 再接続用トークンの発行。テストでは決まった値を返す */
@@ -62,18 +63,19 @@ const BOT_NAMES = ["Dom Vieira", "Zé Navalha", "Dona Rosa", "O Fantasma"];
 
 export class Room {
   readonly roomId: string;
+  readonly playerCount: number;
   private hostSeat = -1;
 
-  private seats: Occupant[] = Array.from({ length: SEAT_COUNT }, () => null);
+  private seats: Occupant[];
   private phase: RoomPhase = "WAITING";
 
   private match: MatchState;
   private state: GameState;
 
   /** その席が自分の意思で降りたか。ラウンドごとに作り直す */
-  private folded: boolean[] = Array.from({ length: SEAT_COUNT }, () => false);
+  private folded: boolean[];
   /** 降りるか否かを決め終えた席 */
-  private decided: boolean[] = Array.from({ length: SEAT_COUNT }, () => false);
+  private decided: boolean[];
   /** 結果画面から次へ進んでよいと言った席 */
   private readyForNext = new Set<number>();
   /**
@@ -105,12 +107,16 @@ export class Room {
 
   constructor(options: RoomOptions) {
     this.roomId = options.roomId;
+    this.playerCount = options.playerCount ?? SEAT_COUNT;
+    this.seats = Array.from({ length: this.playerCount }, () => null);
+    this.folded = this.seats.map(() => false);
+    this.decided = this.seats.map(() => false);
     this.rng = options.rng;
     this.makeToken = options.makeToken ?? defaultToken;
     this.startingChips = options.startingChips ?? DEFAULT_CHIPS;
     this.notify = options.onChange ?? (() => {});
 
-    this.match = createMatch(SEAT_COUNT, this.startingChips);
+    this.match = createMatch(this.playerCount, this.startingChips);
     // 卓が始まるまでの置き場所。WAITING のあいだは誰にも配らない
     this.state = createInitialState(this.deal());
   }
@@ -244,16 +250,16 @@ export class Room {
     if (humans === 0) return { ok: false, reason: "人がいません" };
 
     if (fillWithBots) {
-      for (let i = 0; i < SEAT_COUNT; i++) {
+      for (let i = 0; i < this.playerCount; i++) {
         if (this.seats[i] === null) {
           this.seats[i] = { kind: "BOT", name: BOT_NAMES[i] ?? `CPU ${i}` };
         }
       }
-    } else if (humans < SEAT_COUNT) {
-      return { ok: false, reason: `あと ${SEAT_COUNT - humans} 人そろってから始まります` };
+    } else if (humans < this.playerCount) {
+      return { ok: false, reason: `あと ${this.playerCount - humans} 人そろってから始まります` };
     }
 
-    this.match = createMatch(SEAT_COUNT, this.startingChips);
+    this.match = createMatch(this.playerCount, this.startingChips);
     this.beginRound();
     return { ok: true };
   }
@@ -267,11 +273,11 @@ export class Room {
   private beginRound(): void {
     const deal = this.deal();
     const dead = deal.hands.map((_, i) => !isAlive(this.match, i));
-    const dealer = (this.match.round - 1) % SEAT_COUNT;
+    const dealer = (this.match.round - 1) % this.playerCount;
 
     this.state = createInitialState(deal, dealer, dead);
-    this.folded = Array.from({ length: SEAT_COUNT }, () => false);
-    this.decided = Array.from({ length: SEAT_COUNT }, () => false);
+    this.folded = Array.from({ length: this.playerCount }, () => false);
+    this.decided = Array.from({ length: this.playerCount }, () => false);
     this.readyForNext.clear();
     this.lastSettlement = null;
     this.roundWinner = null;
@@ -279,7 +285,7 @@ export class Room {
     this.phase = "FOLD_DECISION";
 
     // 人が操作しない席は、その場で手札を見て決める
-    for (let i = 0; i < SEAT_COUNT; i++) {
+    for (let i = 0; i < this.playerCount; i++) {
       if (dead[i]) {
         this.decided[i] = true;
         continue;
@@ -486,7 +492,7 @@ export class Room {
     const showing = this.phase === "ROUND_RESULT" || this.phase === "MATCH_OVER";
     const reveal = showing && this.roundPlayed ? this.roundWinner : null;
 
-    if (seat < 0 || seat >= SEAT_COUNT) {
+    if (seat < 0 || seat >= this.playerCount) {
       return maskForSpectator(this.state, this.match, reveal);
     }
     return maskFor(seat, this.state, this.match, reveal);
@@ -503,6 +509,7 @@ export class Room {
     }));
     return {
       roomId: this.roomId,
+      playerCount: this.playerCount,
       hostSeat: this.hostSeat,
       phase: this.phase,
       seats,
@@ -536,7 +543,7 @@ export class Room {
   /* ───────────── 内部 ───────────── */
 
   private deal() {
-    return this.rng === undefined ? dealGame(SEAT_COUNT) : dealGame(SEAT_COUNT, this.rng);
+    return this.rng === undefined ? dealGame(this.playerCount) : dealGame(this.playerCount, this.rng);
   }
 
   /**

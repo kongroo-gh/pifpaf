@@ -8,6 +8,7 @@
 
 /** 勝負して負けたときの失点 */
 export const LOSS_PLAY = 2;
+import { assertPlayerCount } from "./types.ts";
 /** 降りたときの失点。勝負するより軽いぶん、勝つ権利も失う */
 export const LOSS_FOLD = 1;
 /** 10枚上がり（bater com 10）を食らったときの失点 */
@@ -83,6 +84,7 @@ export interface RoundSettlement {
 }
 
 export function createMatch(playerCount: number, startingChips = DEFAULT_CHIPS): MatchState {
+  assertPlayerCount(playerCount);
   return {
     chips: Array.from({ length: playerCount }, () => startingChips),
     round: 1,

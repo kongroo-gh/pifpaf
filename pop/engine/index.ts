@@ -2,7 +2,8 @@
 // web/（将来はserver/）はこのバレル経由でのみengineを参照し、
 // 個別ファイルへの直接importはしない。実装の置き場所を後から変えられるようにするため。
 
-export type { Card, Suit, Rank, Wild } from "./types.ts";
+export type { Card, Suit, Rank, Wild, PlayerCount } from "./types.ts";
+export { PLAYER_COUNTS, DEFAULT_PLAYER_COUNT, isPlayerCount, assertPlayerCount } from "./types.ts";
 export {
   RANK_ORDER,
   SEQUENCE_ORDER,

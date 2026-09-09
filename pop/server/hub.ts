@@ -159,8 +159,13 @@ export class Hub {
 
   private handleCreate(conn: WsConnection, msg: Extract<ClientMessage, { t: "CREATE" }>): void {
     if (!this.checkVersion(conn, msg.version) || this.members.has(conn.id)) return;
+    const playerCount = msg.playerCount ?? 4;
+    if (playerCount !== 4 && msg.maxPlayers !== 6) {
+      this.send(conn, { t: "FATAL", reason: "PLAYER_COUNT_UNSUPPORTED" });
+      return;
+    }
     const roomId = this.makeRoomCode();
-    const room = new Room({ roomId, onChange: () => this.broadcast(room) });
+    const room = new Room({ roomId, playerCount, onChange: () => this.broadcast(room) });
     this.rooms.set(roomId, room);
     this.joinRoom(conn, room, msg.name);
   }
@@ -180,6 +185,11 @@ export class Hub {
       return;
     }
 
+    // 旧画面は4席だけを扱える。入室して伏せ札を配る前に拒否する。
+    if (room.playerCount !== 4 && msg.maxPlayers !== 6) {
+      this.send(conn, { t: "FATAL", reason: "PLAYER_COUNT_UNSUPPORTED" });
+      return;
+    }
     this.joinRoom(conn, room, msg.name, msg.token);
   }
 

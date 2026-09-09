@@ -1,7 +1,7 @@
 // Pif Paf ルールエンジン - デッキ生成 / シャッフル / 配札
 
 import type { Card, Suit, Wild } from "./types.ts";
-import { RANK_ORDER, nextRank } from "./types.ts";
+import { RANK_ORDER, nextRank, assertPlayerCount } from "./types.ts";
 
 const SUITS: Suit[] = ["S", "H", "D", "C"];
 const CARDS_PER_PLAYER = 9;
@@ -47,7 +47,7 @@ export interface DealResult {
 }
 
 /**
- * 4人固定でのゲーム開始処理。
+ * 3〜6人でのゲーム開始処理。
  * 1. シャッフル
  * 2. 時計回りに1枚ずつ、各プレイヤーに9枚配布
  * 3. 次の1枚をヴィラとして表向きに公開し、ワイルドを決定
@@ -55,6 +55,7 @@ export interface DealResult {
  * 4. 残りを山札とする
  */
 export function dealGame(playerCount: number, rng: () => number = Math.random): DealResult {
+  assertPlayerCount(playerCount);
   const deck = shuffle(createDoubleDeck(), rng);
   const hands: Card[][] = Array.from({ length: playerCount }, () => []);
 

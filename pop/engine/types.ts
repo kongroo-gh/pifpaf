@@ -1,6 +1,16 @@
 // Pif Paf ルールエンジン - 基本型定義
 // このファイルはUI/通信/フレームワークに一切依存しない純粋なドメイン型です。
 
+export const PLAYER_COUNTS = [3, 4, 5, 6] as const;
+export type PlayerCount = typeof PLAYER_COUNTS[number];
+export const DEFAULT_PLAYER_COUNT: PlayerCount = 4;
+export function isPlayerCount(value: unknown): value is PlayerCount {
+  return value === 3 || value === 4 || value === 5 || value === 6;
+}
+export function assertPlayerCount(value: number): asserts value is PlayerCount {
+  if (!isPlayerCount(value)) throw new RangeError("プレイヤー人数は3〜6人です");
+}
+
 export type Suit = "S" | "H" | "D" | "C"; // Spade, Heart, Diamond, Club
 
 export type Rank =

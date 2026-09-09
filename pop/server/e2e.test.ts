@@ -12,6 +12,35 @@ import { Hub } from "./hub.ts";
 import { PROTOCOL_VERSION } from "@pifpaf/protocol";
 import type { ServerMessage } from "@pifpaf/protocol";
 
+it.each([3,4,5,6])("人数指定 %i 席の作成・参加・開始と旧画面拒否", async playerCount => {
+  const url = await startServer();
+  const host = await TestClient.connect(url);
+  host.send({t:"CREATE",version:PROTOCOL_VERSION,name:"host",playerCount,maxPlayers:6});
+  const joined = await host.waitFor("JOINED");
+  expect((await host.waitFor("ROOM")).room.playerCount).toBe(playerCount);
+  host.send({t:"START"});
+  await host.waitFor("REJECTED");
+  if(playerCount !== 4) {
+    const old = await TestClient.connect(url);
+    old.send({t:"JOIN",version:PROTOCOL_VERSION,roomId:joined.roomId,name:"old"});
+    await old.waitFor("FATAL");
+    expect(old.received.some(m=>m.t==="VIEW")).toBe(false);
+  }
+  const clients = [host];
+  for(let i=1;i<playerCount;i++) {
+    const c = await TestClient.connect(url);
+    c.send({t:"JOIN",version:PROTOCOL_VERSION,roomId:joined.roomId,name:`p${i}`,maxPlayers:6});
+    expect((await c.waitFor("JOINED")).seat).toBe(i);
+    clients.push(c);
+  }
+  host.received.length=0;
+  host.send({t:"START"});
+  const room = (await host.waitFor("ROOM")).room;
+  expect(room.phase).toBe("FOLD_DECISION");
+  expect(room.seats.filter(s=>s.isBot)).toHaveLength(0);
+  expect((await host.waitFor("VIEW")).view.game.hand).toHaveLength(9);
+});
+
 let running: Server | null = null;
 let hub: Hub | null = null;
 /** 開いた口は必ず閉じる。1つでも残ると server.close() が返ってこない */

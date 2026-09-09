@@ -9,7 +9,13 @@
 //   （相手が本当にこの型を送ってくる保証はない）。
 
 import type { GameAction } from "@pifpaf/engine";
+import { isPlayerCount } from "@pifpaf/engine";
 import type { PlayerView } from "./view.ts";
+
+/** 旧サーバーが人数指定を無視した場合は対局へ進めない。 */
+export function supportsRequestedCapacity(requested: number, actual: number | undefined): boolean {
+  return requested === (actual ?? 4);
+}
 
 /** 通信仕様の版。合わないクライアントは弾く。 */
 export const PROTOCOL_VERSION = 2;
@@ -51,6 +57,8 @@ export interface RoomSeat {
 }
 
 export interface RoomInfo {
+  /** 省略する旧サーバーは4席。 */
+  playerCount?: number;
   roomId: string;
   /** 卓を作った人の席。開始操作をできるのはこの席だけ */
   hostSeat: number;
@@ -74,9 +82,9 @@ export interface RoomInfo {
 
 export type ClientMessage =
   /** 新しい卓を作る。短い接続コードはサーバーが発行する */
-  | { t: "CREATE"; version: number; name: string }
+  | { t: "CREATE"; version: number; name: string; playerCount?: number; maxPlayers?: number }
   /** 入室。席が空いていれば座る */
-  | { t: "JOIN"; version: number; roomId: string; name: string; token?: string }
+  | { t: "JOIN"; version: number; roomId: string; name: string; token?: string; maxPlayers?: number }
   /**
    * 開始する。既定は4人そろってから。
    * `fillWithBots` を立てたときだけ、空席を CPU で埋めて始める
@@ -130,7 +138,11 @@ export function parseClientMessage(raw: unknown): ClientMessage | null {
   switch (m["t"]) {
     case "CREATE":
       if (typeof m["version"] !== "number" || typeof m["name"] !== "string") return null;
-      return { t: "CREATE", version: m["version"], name: sanitizeName(m["name"]) };
+      if (m["playerCount"] !== undefined && !isPlayerCount(m["playerCount"])) return null;
+      return { t: "CREATE", version: m["version"], name: sanitizeName(m["name"]),
+        ...(isPlayerCount(m["playerCount"]) ? { playerCount: m["playerCount"] } : {}),
+        ...(m["maxPlayers"] === 6 ? { maxPlayers: 6 } : {}),
+      };
 
     case "JOIN":
       if (typeof m["version"] !== "number") return null;
@@ -140,6 +152,7 @@ export function parseClientMessage(raw: unknown): ClientMessage | null {
       return {
         t: "JOIN",
         version: m["version"],
+        ...(m["maxPlayers"] === 6 ? { maxPlayers: 6 } : {}),
         roomId: m["roomId"].slice(0, 40),
         // 表示名は他人の画面に出るので、長さを切って制御文字を落とす
         name: sanitizeName(m["name"]),

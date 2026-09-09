@@ -14,4 +14,4 @@ export type {
   ClientMessage,
   ServerMessage,
 } from "./messages.ts";
-export { PROTOCOL_VERSION, parseClientMessage, sanitizeName } from "./messages.ts";
+export { supportsRequestedCapacity, PROTOCOL_VERSION, parseClientMessage, sanitizeName } from "./messages.ts";
