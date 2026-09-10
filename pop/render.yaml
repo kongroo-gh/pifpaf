@@ -3,6 +3,7 @@ services:
     name: pifpaf-online-kongroo
     runtime: node
     plan: free
+    rootDir: pop
     buildCommand: npm ci
     startCommand: npm run server
     healthCheckPath: /health
