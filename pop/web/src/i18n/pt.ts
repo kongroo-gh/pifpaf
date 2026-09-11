@@ -44,6 +44,7 @@ export const pt: Strings = {
     title: "Entrar numa mesa",
     nameLabel: "Nome",
     namePlaceholder: "Ninguém",
+    avatarLabel: "Avatar",
     createTitle: "Criar uma mesa",
     createHint: "Você será o anfitrião. Um código curto será criado automaticamente.",
     create: "Criar mesa",

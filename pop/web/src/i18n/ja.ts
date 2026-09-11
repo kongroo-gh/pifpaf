@@ -35,6 +35,7 @@ export const ja: Strings = {
     title: "卓に入る",
     nameLabel: "呼び名",
     namePlaceholder: "名無し",
+    avatarLabel: "アバター",
     createTitle: "新しい卓を作る",
     createHint: "あなたがホストになる。接続コードは自動で発行される。",
     create: "卓を作る",

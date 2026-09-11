@@ -68,6 +68,7 @@ export interface Strings {
     title: string;
     nameLabel: string;
     namePlaceholder: string;
+    avatarLabel: string;
     createTitle: string;
     createHint: string;
     create: string;

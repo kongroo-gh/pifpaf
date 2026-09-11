@@ -1,17 +1,9 @@
-// 残ったほしの表示。重なったほしのかけらとして見せる。
-// 枚数が多いときは重ねて詰める。
-
-const MAX_SHOWN = 7;
+// 残ったチップの印。枚数は呼び出し側が横に数値で示すため、図像は常に1枚。
 
 export function ChipStack({ count, size = "sm" }: { count: number; size?: "sm" | "md" }) {
-  const shown = Math.min(count, MAX_SHOWN);
-
   return (
-    <span className={`chipStack chipStack--${size}`} aria-hidden="true">
-      {Array.from({ length: shown }, (_, i) => (
-        <span key={i} className="chipStack__chip" style={{ ["--i" as string]: i }} />
-      ))}
-      {count === 0 && <span className="chipStack__empty">—</span>}
+    <span className={`chipStack chipStack--${size} ${count === 0 ? "chipStack--empty" : ""}`} aria-hidden="true">
+      <span className="chipStack__chip" />
     </span>
   );
 }

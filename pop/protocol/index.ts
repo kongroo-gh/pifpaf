@@ -8,6 +8,7 @@ export type { SeatView, PublicGameState, PlayerView } from "./view.ts";
 export { maskFor, maskForSpectator } from "./mask.ts";
 
 export type {
+  AvatarId,
   RoomPhase,
   RoomSeat,
   RoomInfo,

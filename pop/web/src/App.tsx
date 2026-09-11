@@ -16,7 +16,7 @@ import { CardFlight } from "./components/CardFlight";
 import { DealingScene } from "./components/DealingScene";
 import { RuleBook } from "./components/RuleBook";
 import { BackButton } from "./components/BackButton";
-import { useT, personaName, personaTitle, withGloss, Rich, Kicker, Gloss } from "./i18n";
+import { useT, personaName, Rich, Kicker, Gloss } from "./i18n";
 import { SettingsButton, SettingsPanel, SettingsControls } from "./components/Settings";
 import { LeaveButton, LeaveConfirm } from "./components/LeaveTable";
 import { CardBurst } from "./components/CardBurst";
@@ -270,9 +270,7 @@ export default function App() {
               key={persona.index}
               seat={persona.index}
               name={personaName(t, persona.index)}
-              /* 異名は訳さない。続く肩書きだけが言語で変わる。
-                 ポルトガル語では異名がそのまま肩書きなので withGloss が重複を落とす */
-              title={withGloss(persona.epithet, personaTitle(t, persona.index))}
+              avatarId={persona.avatarId}
               handCount={state.hands[persona.index]?.length ?? 0}
               chips={match.chips[persona.index] ?? 0}
               lostChips={showingResult ? settlement?.losses[persona.index] : undefined}

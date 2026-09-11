@@ -7,14 +7,17 @@
 import { useT } from "../i18n";
 import { CardBack } from "./PlayingCard";
 import { ChipStack } from "./ChipStack";
+import { AvatarPortrait } from "./AvatarPortrait";
+import type { AvatarId } from "@pifpaf/protocol";
 
 export interface OpponentSeatProps {
   /** 席番号。演出が位置を実測するための data-seat に入る */
   seat: number;
   /** 表示名 */
   name: string;
-  /** 名前の下の小さな行。単機版は肩書き、オンライン版はCPU／切断中 */
-  title?: string;
+  avatarId?: AvatarId;
+  /** CPUや切断中など、人物の肩書きではない接続状態。 */
+  status?: string;
   handCount: number;
   isActive: boolean;
   /** 残りチップ（掛け金）。0で破産 */
@@ -34,7 +37,8 @@ export interface OpponentSeatProps {
 export function OpponentSeat({
   seat,
   name,
-  title = "",
+  avatarId,
+  status = "",
   handCount,
   isActive,
   chips,
@@ -59,19 +63,12 @@ export function OpponentSeat({
   return (
     <div className={classes} data-seat={seat}>
       <div className="seat__avatar" aria-hidden="true">
-        {/* 中折れ帽のシルエット */}
-        <svg viewBox="0 0 64 64">
-          <path
-            d="M12 44c0-2 3-4 8-5 1-9 4-16 12-16s11 7 12 16c5 1 8 3 8 5 0 3-9 5-20 5s-20-2-20-5z"
-            fill="currentColor"
-          />
-          <ellipse cx="32" cy="44" rx="21" ry="4.5" fill="currentColor" opacity="0.75" />
-        </svg>
+        <AvatarPortrait avatarId={avatarId} seat={seat} />
       </div>
 
       <div className="seat__info">
         <div className="seat__name">{name}</div>
-        {title !== "" && <div className="seat__title">{title}</div>}
+        {status !== "" && <div className="seat__status">{status}</div>}
       </div>
 
       <div className="seat__chips" aria-label={t.seat.chipsAria(chips)}>

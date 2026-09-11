@@ -37,6 +37,7 @@ export const en: Strings = {
     title: "Join a table",
     nameLabel: "Name",
     namePlaceholder: "Nobody",
+    avatarLabel: "Avatar",
     createTitle: "Create a table",
     createHint: "You will host it. A short code is generated automatically.",
     create: "Create table",

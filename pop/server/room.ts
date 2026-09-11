@@ -29,14 +29,14 @@ import {
 } from "@pifpaf/engine";
 import type { GameState, MatchState, GameAction, RoundResult, RoundSettlement } from "@pifpaf/engine";
 import { maskFor, maskForSpectator } from "@pifpaf/protocol";
-import type { PlayerView, RoomInfo, RoomPhase, RoomSeat } from "@pifpaf/protocol";
+import type { AvatarId, PlayerView, RoomInfo, RoomPhase, RoomSeat } from "@pifpaf/protocol";
 
 export const SEAT_COUNT = 4;
 
 /** 席の主。null は空席。 */
 type Occupant =
-  | { kind: "HUMAN"; name: string; token: string; connected: boolean }
-  | { kind: "BOT"; name: string }
+  | { kind: "HUMAN"; name: string; avatarId: AvatarId; token: string; connected: boolean }
+  | { kind: "BOT"; name: string; avatarId: AvatarId }
   | null;
 
 export interface RoomOptions {
@@ -123,7 +123,7 @@ export class Room {
 
   /* ───────────── 入退室 ───────────── */
 
-  join(name: string, token?: string): JoinResult {
+  join(name: string, token?: string, avatarId: AvatarId = 0): JoinResult {
     // トークンが合えば元の席に戻す。通信が切れただけの人を締め出さない
     if (token !== undefined) {
       const seat = this.seats.findIndex(
@@ -137,6 +137,7 @@ export class Room {
         const o = this.seats[seat] as Extract<Occupant, { kind: "HUMAN" }>;
         o.connected = true;
         o.name = name;
+        o.avatarId = avatarId;
         this.awaiting.delete(seat);
         if (!this.isAwaiting()) this.awaitingUntil = null;
         this.onChange();
@@ -155,7 +156,7 @@ export class Room {
     if (seat < 0) return { ok: false, reason: "席が空いていません" };
 
     const fresh = this.makeToken();
-    this.seats[seat] = { kind: "HUMAN", name, token: fresh, connected: true };
+    this.seats[seat] = { kind: "HUMAN", name, avatarId, token: fresh, connected: true };
     if (this.hostSeat < 0) this.hostSeat = seat;
     this.onChange();
     return { ok: true, seat, token: fresh, rejoined: false };
@@ -252,7 +253,7 @@ export class Room {
     if (fillWithBots) {
       for (let i = 0; i < this.playerCount; i++) {
         if (this.seats[i] === null) {
-          this.seats[i] = { kind: "BOT", name: BOT_NAMES[i] ?? `CPU ${i}` };
+          this.seats[i] = { kind: "BOT", name: BOT_NAMES[i] ?? `CPU ${i}`, avatarId: (i % 8) as AvatarId };
         }
       }
     } else if (humans < this.playerCount) {
@@ -502,6 +503,7 @@ export class Room {
     const seats: RoomSeat[] = this.seats.map((o, i) => ({
       seat: i,
       name: o === null ? null : o.name,
+      avatarId: o === null ? 0 : o.avatarId,
       isBot: o !== null && o.kind === "BOT",
       disconnected: o !== null && o.kind === "HUMAN" && !o.connected,
       decided: this.decided[i] === true,

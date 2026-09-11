@@ -24,7 +24,7 @@
 // 先に「盤面の型を PlayerView に揃える」整理をしないと持ってこられない。
 
 import { useEffect, useState } from "react";
-import type { PlayerView, RoomInfo } from "@pifpaf/protocol";
+import type { AvatarId, PlayerView, RoomInfo } from "@pifpaf/protocol";
 import { findBaterAction } from "@pifpaf/engine";
 import { useT, Gloss, Kicker, Rich } from "../i18n";
 import { PlayingCard, CardBack, SUIT_GLYPH, describeCard } from "../components/PlayingCard";
@@ -36,10 +36,12 @@ import { FoldPrompt, InterceptBar, KeepBar } from "../components/TablePrompts";
 import { SettingsButton, SettingsPanel, SettingsControls } from "../components/Settings";
 import { LeaveButton, LeaveConfirm } from "../components/LeaveTable";
 import { BackButton } from "../components/BackButton";
+import { AvatarPortrait } from "../components/AvatarPortrait";
+import { AVATARS } from "../game/avatars";
 import { useHandOrder } from "../game/useHandOrder";
 import { useBoardSounds } from "../game/useBoardSounds";
 import { useAmbience, sfx } from "../audio";
-import { useOnlineGame, loadName } from "./useOnlineGame";
+import { useOnlineGame, loadAvatar, loadName } from "./useOnlineGame";
 import type { OnlineGame } from "./useOnlineGame";
 
 export interface OnlineTableProps {
@@ -184,6 +186,7 @@ function Lobby({
 }) {
   const t = useT();
   const [name, setName] = useState(() => loadName());
+  const [avatarId, setAvatarId] = useState<AvatarId>(() => loadAvatar());
   const [roomId, setRoomId] = useState("");
 
   // 卓に着く前。単機版のイントロ・掛け金画面と同じ扱い
@@ -214,12 +217,14 @@ function Lobby({
             />
           </label>
 
+          <AvatarPicker value={avatarId} onChange={setAvatarId} label={t.online.avatarLabel} />
+
           <section className="lobby__choice lobby__choice--host">
             <div>
               <strong>{t.online.createTitle}</strong>
               <p className="lobby__hint">{t.online.createHint}</p>
             </div>
-            <button className="btn btn--start" type="button" disabled={!hasName} onClick={() => game.create(name.trim())}>
+            <button className="btn btn--start" type="button" disabled={!hasName} onClick={() => game.create(name.trim(), avatarId)}>
               CRIAR<Gloss flavor="CRIAR" text={t.online.create} />
             </button>
           </section>
@@ -228,7 +233,7 @@ function Lobby({
 
           <form className="lobby__choice" onSubmit={(e) => {
             e.preventDefault();
-            if (ready && hasName) game.connect(roomId, name.trim());
+            if (ready && hasName) game.connect(roomId, name.trim(), avatarId);
           }}>
             <strong>{t.online.joinTitle}</strong>
             <label className="lobby__field">
@@ -262,6 +267,36 @@ function Lobby({
         <SettingsControls />
       </div>
     </div>
+  );
+}
+
+function AvatarPicker({
+  value,
+  onChange,
+  label,
+}: {
+  value: AvatarId;
+  onChange: (avatarId: AvatarId) => void;
+  label: string;
+}) {
+  return (
+    <fieldset className="avatarPicker">
+      <legend className="lobby__label">{label}</legend>
+      <div className="avatarPicker__grid">
+        {AVATARS.map((avatar) => (
+          <button
+            key={avatar.id}
+            type="button"
+            className={`avatarPicker__option ${avatar.id === value ? "avatarPicker__option--selected" : ""}`}
+            aria-label={`${label} ${avatar.id + 1}`}
+            aria-pressed={avatar.id === value}
+            onClick={() => onChange(avatar.id)}
+          >
+            <AvatarPortrait avatarId={avatar.id} />
+          </button>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 
@@ -408,8 +443,8 @@ function Table({
                   key={s.seat}
                   seat={s.seat}
                   name={s.name ?? t.online.emptySeat}
-                  // 単機版が肩書きを置く行。オンラインでは席の素性を出す
-                  title={s.disconnected ? t.online.offline : s.isBot ? t.online.botSeat : ""}
+                  avatarId={s.avatarId}
+                  status={s.disconnected ? t.online.offline : s.isBot ? t.online.botSeat : ""}
                   handCount={info?.handCount ?? 0}
                   chips={info?.chips ?? 0}
                   lostChips={showResult ? game.settlement?.losses[s.seat] : undefined}
@@ -474,6 +509,7 @@ function Table({
 
         <section className="me" {...(iAmSeated ? { "data-seat": mySeat } : {})}>
           <div className="me__header">
+            {iAmSeated && <span className="me__avatar"><AvatarPortrait avatarId={room.seats[mySeat]?.avatarId} seat={mySeat} /></span>}
             <span className="me__name">
               {iAmSeated ? (room.seats[mySeat]?.name ?? "?") : t.online.spectating}
             </span>
@@ -652,7 +688,9 @@ function WaitingPanel({ game }: { game: OnlineGame }) {
         <ul className="online__seats" aria-label={t.online.waiting}>
           {room.seats.map((s) => (
             <li key={s.seat} className={s.name === null ? "online__seat--empty" : ""}>
-              <span className="online__avatar" aria-hidden="true">{s.name === null ? "◇" : s.seat === room.hostSeat ? "♛" : "●"}</span>
+              <span className="online__avatar" aria-hidden="true">
+                {s.name === null ? "◇" : <AvatarPortrait avatarId={s.avatarId} seat={s.seat} />}
+              </span>
               <span className="online__seatName">{s.name ?? t.online.emptySeat}</span>
               <span className="online__seatTags">
                 {s.seat === room.hostSeat && <em>{t.online.host}</em>}

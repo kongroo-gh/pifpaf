@@ -7,7 +7,7 @@
 import { Room } from "./room.ts";
 import type { WsConnection } from "./ws.ts";
 import { PROTOCOL_VERSION, parseClientMessage } from "@pifpaf/protocol";
-import type { ClientMessage, ServerMessage } from "@pifpaf/protocol";
+import type { AvatarId, ClientMessage, ServerMessage } from "@pifpaf/protocol";
 
 /** CPU が1手打つまでの間。単機版の「ふつう」に合わせてある */
 const BOT_DELAY_MS = 900;
@@ -167,7 +167,7 @@ export class Hub {
     const roomId = this.makeRoomCode();
     const room = new Room({ roomId, playerCount, onChange: () => this.broadcast(room) });
     this.rooms.set(roomId, room);
-    this.joinRoom(conn, room, msg.name);
+    this.joinRoom(conn, room, msg.name, undefined, msg.avatarId);
   }
 
   private handleJoin(conn: WsConnection, msg: Extract<ClientMessage, { t: "JOIN" }>): void {
@@ -190,13 +190,13 @@ export class Hub {
       this.send(conn, { t: "FATAL", reason: "PLAYER_COUNT_UNSUPPORTED" });
       return;
     }
-    this.joinRoom(conn, room, msg.name, msg.token);
+    this.joinRoom(conn, room, msg.name, msg.token, msg.avatarId);
   }
 
-  private joinRoom(conn: WsConnection, room: Room, name: string, token?: string): void {
+  private joinRoom(conn: WsConnection, room: Room, name: string, token?: string, avatarId: AvatarId = 0): void {
     const roomId = room.roomId;
 
-    const joined = room.join(name, token);
+    const joined = room.join(name, token, avatarId);
     if (!joined.ok) {
       this.send(conn, { t: "REJECTED", reason: joined.reason });
       return;

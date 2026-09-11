@@ -20,6 +20,13 @@ export function supportsRequestedCapacity(requested: number, actual: number | un
 /** 通信仕様の版。合わないクライアントは弾く。 */
 export const PROTOCOL_VERSION = 2;
 
+/** 選べる人物像。0〜3が男性、4〜7が女性。 */
+export type AvatarId = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+export function isAvatarId(value: unknown): value is AvatarId {
+  return Number.isInteger(value) && typeof value === "number" && value >= 0 && value <= 7;
+}
+
 /** 卓の進み具合。ロビー表示に使う。 */
 export type RoomPhase =
   /** 人が揃うのを待っている */
@@ -42,6 +49,8 @@ export interface RoomSeat {
   seat: number;
   /** 表示名。人が座っていなければ null */
   name: string | null;
+  /** 選んだ人物像。空席と旧サーバーは既定の0。 */
+  avatarId?: AvatarId;
   /** CPU が埋めている席か */
   isBot: boolean;
   /** 人が座っているが今つながっていない */
@@ -82,9 +91,9 @@ export interface RoomInfo {
 
 export type ClientMessage =
   /** 新しい卓を作る。短い接続コードはサーバーが発行する */
-  | { t: "CREATE"; version: number; name: string; playerCount?: number; maxPlayers?: number }
+  | { t: "CREATE"; version: number; name: string; avatarId: AvatarId; playerCount?: number; maxPlayers?: number }
   /** 入室。席が空いていれば座る */
-  | { t: "JOIN"; version: number; roomId: string; name: string; token?: string; maxPlayers?: number }
+  | { t: "JOIN"; version: number; roomId: string; name: string; avatarId: AvatarId; token?: string; maxPlayers?: number }
   /**
    * 開始する。既定は4人そろってから。
    * `fillWithBots` を立てたときだけ、空席を CPU で埋めて始める
@@ -139,7 +148,9 @@ export function parseClientMessage(raw: unknown): ClientMessage | null {
     case "CREATE":
       if (typeof m["version"] !== "number" || typeof m["name"] !== "string") return null;
       if (m["playerCount"] !== undefined && !isPlayerCount(m["playerCount"])) return null;
+      if (m["avatarId"] !== undefined && !isAvatarId(m["avatarId"])) return null;
       return { t: "CREATE", version: m["version"], name: sanitizeName(m["name"]),
+        avatarId: isAvatarId(m["avatarId"]) ? m["avatarId"] : 0,
         ...(isPlayerCount(m["playerCount"]) ? { playerCount: m["playerCount"] } : {}),
         ...(m["maxPlayers"] === 6 ? { maxPlayers: 6 } : {}),
       };
@@ -148,6 +159,7 @@ export function parseClientMessage(raw: unknown): ClientMessage | null {
       if (typeof m["version"] !== "number") return null;
       if (typeof m["roomId"] !== "string" || m["roomId"].length === 0) return null;
       if (typeof m["name"] !== "string") return null;
+      if (m["avatarId"] !== undefined && !isAvatarId(m["avatarId"])) return null;
       if (m["token"] !== undefined && typeof m["token"] !== "string") return null;
       return {
         t: "JOIN",
@@ -156,6 +168,7 @@ export function parseClientMessage(raw: unknown): ClientMessage | null {
         roomId: m["roomId"].slice(0, 40),
         // 表示名は他人の画面に出るので、長さを切って制御文字を落とす
         name: sanitizeName(m["name"]),
+        avatarId: isAvatarId(m["avatarId"]) ? m["avatarId"] : 0,
         ...(typeof m["token"] === "string" ? { token: m["token"] } : {}),
       };
 

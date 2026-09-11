@@ -1,20 +1,18 @@
 // 席に座る旅の連れの顔ぶれ。
 // これは完全に演出上の設定であり、ルールには一切関与しない（engineは席番号しか知らない）。
 //
-// 呼び名と肩書きの訳は i18n の辞書が持つ。ここに残っているのはポルトガル語の
-// 異名だけで、これは雰囲気そのものなので訳さない（全言語で共通）。
+import type { AvatarId } from "@pifpaf/protocol";
 
 export interface Persona {
   /** engine上のプレイヤー番号。i18n の personas もこの順 */
   index: number;
-  /** ポルトガル語の異名。訳さずそのまま出す */
-  epithet: string;
+  avatarId: AvatarId;
   isHuman: boolean;
 }
 
 export const PERSONAS: Persona[] = [
-  { index: 0, epithet: "O Viajante", isHuman: true },
-  { index: 1, epithet: "O Astrônomo", isHuman: false },
-  { index: 2, epithet: "A Bússola", isHuman: false },
-  { index: 3, epithet: "A Cometa", isHuman: false },
+  { index: 0, avatarId: 0, isHuman: true },
+  { index: 1, avatarId: 1, isHuman: false },
+  { index: 2, avatarId: 4, isHuman: false },
+  { index: 3, avatarId: 6, isHuman: false },
 ];

@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GameAction } from "@pifpaf/engine";
 import { PROTOCOL_VERSION } from "@pifpaf/protocol";
-import type { PlayerView, RoomInfo, ServerMessage } from "@pifpaf/protocol";
+import type { AvatarId, PlayerView, RoomInfo, ServerMessage } from "@pifpaf/protocol";
 
 /** 再接続の待ち時間。切れるたびに倍にして、上限で頭打ちにする */
 const RECONNECT_MIN_MS = 500;
@@ -18,6 +18,7 @@ const RECONNECT_MAX_MS = 10_000;
 
 const TOKEN_KEY = "pifpaf.online.token";
 const NAME_KEY = "pifpaf.online.name";
+const AVATAR_KEY = "pifpaf.online.avatar";
 
 export type ConnectionState =
   /** まだ繋ぎに行っていない */
@@ -40,8 +41,8 @@ export interface OnlineGame {
   view: PlayerView | null;
   settlement: { losses: number[]; eliminated: number[] } | null;
 
-  create: (name: string) => void;
-  connect: (roomId: string, name: string) => void;
+  create: (name: string, avatarId: AvatarId) => void;
+  connect: (roomId: string, name: string, avatarId: AvatarId) => void;
   disconnect: () => void;
   /**
    * 自分から卓を降りる。
@@ -94,6 +95,23 @@ export function saveName(name: string): void {
   }
 }
 
+export function loadAvatar(): AvatarId {
+  try {
+    const value = Number(window.localStorage.getItem(AVATAR_KEY));
+    return Number.isInteger(value) && value >= 0 && value <= 7 ? value as AvatarId : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function saveAvatar(avatarId: AvatarId): void {
+  try {
+    window.localStorage.setItem(AVATAR_KEY, String(avatarId));
+  } catch {
+    // 保存できなくても、その接続のあいだは選択を使える
+  }
+}
+
 /**
  * 本番の繋ぎ先。`render.yaml` の `name` から決まる Render の URL。
  *
@@ -133,7 +151,11 @@ export function serverUrl(): string {
 function normalizeRoom(room: RoomInfo): RoomInfo {
   return {
     ...room,
-    seats: (room.seats ?? []).map((s) => ({ ...s, ready: s.ready === true })),
+    seats: (room.seats ?? []).map((s) => ({
+      ...s,
+      avatarId: s.avatarId ?? (s.seat % 8) as AvatarId,
+      ready: s.ready === true,
+    })),
     awaiting: room.awaiting ?? [],
     awaitingUntil: room.awaitingUntil ?? null,
   };
@@ -151,7 +173,7 @@ export function useOnlineGame(): OnlineGame {
   const retryDelay = useRef(RECONNECT_MIN_MS);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** 繋ぎ直しに使う。ユーザーが「やめる」と言うまで保つ */
-  const target = useRef<{ mode: "CREATE" | "JOIN"; roomId: string; name: string } | null>(null);
+  const target = useRef<{ mode: "CREATE" | "JOIN"; roomId: string; name: string; avatarId: AvatarId } | null>(null);
   /** 意図して切ったか。再接続すべきかの判断に使う */
   const intentionalClose = useRef(false);
 
@@ -162,14 +184,14 @@ export function useOnlineGame(): OnlineGame {
   }, []);
 
   const open = useCallback(
-    (mode: "CREATE" | "JOIN", roomId: string, name: string) => {
+    (mode: "CREATE" | "JOIN", roomId: string, name: string, avatarId: AvatarId) => {
       if (retryTimer.current !== null) {
         clearTimeout(retryTimer.current);
         retryTimer.current = null;
       }
 
       intentionalClose.current = false;
-      target.current = { mode, roomId, name };
+      target.current = { mode, roomId, name, avatarId };
       setConnection((prev) => (prev === "IDLE" ? "CONNECTING" : prev));
 
       let ws: WebSocket;
@@ -184,8 +206,8 @@ export function useOnlineGame(): OnlineGame {
 
       ws.addEventListener("open", () => {
         setError(null);
-        if (mode === "CREATE") send({ t: "CREATE", version: PROTOCOL_VERSION, name });
-        else send({ t: "JOIN", version: PROTOCOL_VERSION, roomId, name, token: loadToken(roomId) });
+        if (mode === "CREATE") send({ t: "CREATE", version: PROTOCOL_VERSION, name, avatarId });
+        else send({ t: "JOIN", version: PROTOCOL_VERSION, roomId, name, avatarId, token: loadToken(roomId) });
       });
 
       ws.addEventListener("message", (event) => {
@@ -199,7 +221,7 @@ export function useOnlineGame(): OnlineGame {
         switch (msg.t) {
           case "JOINED":
             saveToken(msg.roomId, msg.token);
-            target.current = { mode: "JOIN", roomId: msg.roomId, name };
+            target.current = { mode: "JOIN", roomId: msg.roomId, name, avatarId };
             setSeat(msg.seat);
             setConnection("JOINED");
             // 繋がったので、次に切れたときの待ち時間を戻す
@@ -242,7 +264,7 @@ export function useOnlineGame(): OnlineGame {
         retryDelay.current = Math.min(wait * 2, RECONNECT_MAX_MS);
         retryTimer.current = setTimeout(() => {
           const t = target.current;
-          if (t !== null) open(t.mode, t.roomId, t.name);
+          if (t !== null) open(t.mode, t.roomId, t.name, t.avatarId);
         }, wait);
       });
 
@@ -254,20 +276,22 @@ export function useOnlineGame(): OnlineGame {
   );
 
   const connect = useCallback(
-    (roomId: string, name: string) => {
+    (roomId: string, name: string, avatarId: AvatarId) => {
       saveName(name);
+      saveAvatar(avatarId);
       setConnection("CONNECTING");
       setError(null);
-      open("JOIN", roomId.trim().toUpperCase(), name);
+      open("JOIN", roomId.trim().toUpperCase(), name, avatarId);
     },
     [open]
   );
 
-  const create = useCallback((name: string) => {
+  const create = useCallback((name: string, avatarId: AvatarId) => {
     saveName(name);
+    saveAvatar(avatarId);
     setConnection("CONNECTING");
     setError(null);
-    open("CREATE", "", name);
+    open("CREATE", "", name, avatarId);
   }, [open]);
 
   const disconnect = useCallback(() => {
