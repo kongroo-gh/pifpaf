@@ -26,6 +26,11 @@ const DURATION: Record<Exclude<DealStep, "DONE">, number> = {
   SETTLE: 480,
 };
 
+export function dealAnimationDuration(speedFactor: number, reducedMotion: boolean): number {
+  if (reducedMotion) return 0;
+  return Object.values(DURATION).reduce((total, duration) => total + duration, 0) * speedFactor;
+}
+
 /** 配る巡回数（3枚 × 3巡 = 9枚） */
 const WAVES = 3;
 
@@ -79,6 +84,15 @@ export function DealingScene({
 
   // 盤面のアンカーを実測する。演出中も盤面は描かれているので位置が取れる。
   useEffect(() => {
+    const reducedMotion = typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (dealAnimationDuration(speedFactor, reducedMotion) === 0) {
+      // OS側で動きを減らしている人を、見えない演出のタイマーで待たせない。
+      revealRef.current();
+      doneRef.current();
+      return;
+    }
+
     const stock = centerOf(document.querySelector("[data-stock-pile]"));
     const viraSlot = centerOf(document.querySelector("[data-vira-slot]"));
     const seats = dealtSeats.map((i) => centerOf(document.querySelector(`[data-seat="${i}"]`)));
@@ -98,7 +112,7 @@ export function DealingScene({
     });
     // seatsKey で席の顔ぶれの変化だけを見る（配列の参照は毎回変わるため）
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seatsKey]);
+  }, [seatsKey, speedFactor]);
 
   // 段階を順に進める
   useEffect(() => {
