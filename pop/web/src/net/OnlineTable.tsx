@@ -290,11 +290,12 @@ function AvatarPicker({
             key={avatar.id}
             type="button"
             className={`avatarPicker__option ${avatar.id === value ? "avatarPicker__option--selected" : ""}`}
-            aria-label={`${label} ${avatar.id + 1}`}
+            aria-label={`${label}: ${avatar.name}`}
             aria-pressed={avatar.id === value}
             onClick={() => onChange(avatar.id)}
           >
             <AvatarPortrait avatarId={avatar.id} />
+            <span className="avatarPicker__name">{avatar.name}</span>
           </button>
         ))}
       </div>

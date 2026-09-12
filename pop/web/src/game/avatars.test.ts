@@ -13,6 +13,20 @@ describe("人物アバター", () => {
     expect(new Set(AVATARS.map((avatar) => `${avatar.hair}:${avatar.accent}`)).size).toBe(8);
   });
 
+  it("CPUと共通の名前を持つ8人の人物として選べる", () => {
+    expect(AVATARS.map((avatar) => avatar.name)).toEqual([
+      "Dom Vieira",
+      "Zé Navalha",
+      "Luís",
+      "O Fantasma",
+      "Dona Rosa",
+      "Luna",
+      "Bia Falcão",
+      "Iara",
+    ]);
+    expect(new Set(AVATARS.map((avatar) => avatar.name)).size).toBe(8);
+  });
+
   it("旧サーバーや空席には席番号から既定アバターを選ぶ", () => {
     expect(avatarForSeat(undefined, 0).id).toBe(0);
     expect(avatarForSeat(undefined, 7).id).toBe(7);

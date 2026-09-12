@@ -58,8 +58,17 @@ export type JoinResult =
 
 export type ActResult = { ok: true } | { ok: false; reason: string };
 
-/** 人が集まらないときに呼ぶ CPU の呼び名。単機版の顔ぶれと同じ。 */
-const BOT_NAMES = ["Dom Vieira", "Zé Navalha", "Dona Rosa", "O Fantasma"];
+/** 人が集まらないときに呼ぶ CPU。Webの人物IDと同じ対応を保つ。 */
+const BOT_PROFILES: readonly { name: string; avatarId: AvatarId }[] = [
+  { name: "Dom Vieira", avatarId: 0 },
+  { name: "Zé Navalha", avatarId: 1 },
+  { name: "Luís", avatarId: 2 },
+  { name: "O Fantasma", avatarId: 3 },
+  { name: "Dona Rosa", avatarId: 4 },
+  { name: "Luna", avatarId: 5 },
+  { name: "Bia Falcão", avatarId: 6 },
+  { name: "Iara", avatarId: 7 },
+];
 
 export class Room {
   readonly roomId: string;
@@ -251,9 +260,11 @@ export class Room {
     if (humans === 0) return { ok: false, reason: "人がいません" };
 
     if (fillWithBots) {
+      let botIndex = 0;
       for (let i = 0; i < this.playerCount; i++) {
         if (this.seats[i] === null) {
-          this.seats[i] = { kind: "BOT", name: BOT_NAMES[i] ?? `CPU ${i}`, avatarId: (i % 8) as AvatarId };
+          const profile = BOT_PROFILES[botIndex++]!;
+          this.seats[i] = { kind: "BOT", ...profile };
         }
       }
     } else if (humans < this.playerCount) {

@@ -17,10 +17,17 @@ describe("オンラインプロフィール", () => {
     expect(room.roomInfo().seats[0]?.avatarId).toBe(5);
   });
 
-  it("CPUには席ごとに異なる既定アバターを割り当てる", () => {
-    const room = new Room({ roomId: "AVTR", makeToken: () => "token" });
-    room.join("旅人", undefined, 2);
+  it("CPUには人物名と一致する固有アバターを割り当てる", () => {
+    const room = new Room({ roomId: "AVTR", playerCount: 6, makeToken: () => "token" });
+    room.join("旅人", undefined, 7);
     room.start(true);
-    expect(room.roomInfo().seats.map((seat) => seat.avatarId)).toEqual([2, 1, 2, 3]);
+    expect(room.roomInfo().seats.map((seat) => ({ name: seat.name, avatarId: seat.avatarId }))).toEqual([
+      { name: "旅人", avatarId: 7 },
+      { name: "Dom Vieira", avatarId: 0 },
+      { name: "Zé Navalha", avatarId: 1 },
+      { name: "Luís", avatarId: 2 },
+      { name: "O Fantasma", avatarId: 3 },
+      { name: "Dona Rosa", avatarId: 4 },
+    ]);
   });
 });

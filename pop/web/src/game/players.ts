@@ -11,10 +11,10 @@ export interface Persona {
 }
 
 export const PERSONAS: Persona[] = [
-  { index: 0, avatarId: 0, isHuman: true },
-  { index: 1, avatarId: 1, isHuman: false },
-  { index: 2, avatarId: 4, isHuman: false },
-  { index: 3, avatarId: 6, isHuman: false },
+  { index: 0, avatarId: 3, isHuman: true },
+  { index: 1, avatarId: 0, isHuman: false },
+  { index: 2, avatarId: 1, isHuman: false },
+  { index: 3, avatarId: 4, isHuman: false },
   { index: 4, avatarId: 2, isHuman: false },
   { index: 5, avatarId: 5, isHuman: false },
 ];

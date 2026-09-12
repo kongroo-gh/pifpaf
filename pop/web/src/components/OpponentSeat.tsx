@@ -7,6 +7,7 @@
 import { useT } from "../i18n";
 import { CardBack } from "./PlayingCard";
 import { ChipStack } from "./ChipStack";
+import { AvatarPortrait } from "./AvatarPortrait";
 import type { AvatarId } from "@pifpaf/protocol";
 
 export interface OpponentSeatProps {
@@ -48,7 +49,6 @@ export function OpponentSeat({
   receiving = false,
 }: OpponentSeatProps) {
   const t = useT();
-  const portraitId = avatarId ?? (seat % 8) as AvatarId;
   const classes = [
     "seat",
     isActive ? "seat--active" : "",
@@ -63,31 +63,7 @@ export function OpponentSeat({
   return (
     <div className={classes} data-seat={seat}>
       <div className="seat__avatar" aria-hidden="true">
-        {/* 選んだ人物を、採用済みの囲卓人物画のまま表示する。 */}
-        <svg className="seat__person" data-person={portraitId} viewBox="0 0 100 100" focusable="false">
-          <ellipse cx="50" cy="91" rx="43" ry="7" fill="#080e0b" opacity=".45" />
-          <path d="M13 88 18 65Q22 55 39 54L61 54Q78 56 82 67L88 89Z" fill="var(--jacket, #425c65)" stroke="#172322" strokeWidth="2" />
-          <path d="m39 54 11 26 11-26-11 5Z" fill="#e9deca" />
-          <path d="m48 63-3 13 5 10 5-10-3-13Z" fill="var(--tie, #963e38)" />
-          <path d="m38 55-8 9 10 4-4 8 14 12m12-33 8 9-10 4 4 8-14 12" fill="none" stroke="#bdc3ae" strokeOpacity=".4" strokeWidth="2" />
-          <g className="seat__face">
-            {portraitId >= 4 && <path d="M27 36Q24 5 50 4t23 32v25H27Z" fill="var(--hair, #302b29)" />}
-            <path d="M43 43h14v15q-7 7-14 0Z" fill="var(--skin, #c98e69)" />
-            <ellipse cx="32" cy="32" rx="4" ry="7" fill="var(--skin, #c98e69)" />
-            <ellipse cx="68" cy="32" rx="4" ry="7" fill="var(--skin, #c98e69)" />
-            <path d="M32 23Q32 7 50 7T68 23L65 41Q61 52 50 53 39 52 35 41Z" fill="var(--skin, #c98e69)" />
-            <path d={portraitId % 2 === 0 ? "M31 28Q24 8 45 5q29-4 25 27l-6-12q-15 5-26-3l-3 12Z" : "M31 29Q27 7 47 6q26-2 22 25l-7-14Q48 29 35 21l1 10Z"} fill="var(--hair, #302b29)" />
-            <path d="m39 30 6-1m11 0 6 1" stroke="#473229" strokeWidth="2" strokeLinecap="round" />
-            <g className="seat__eyes" fill="#262626"><ellipse cx="42" cy="33" rx="1.7" ry="2" /><ellipse cx="59" cy="33" rx="1.7" ry="2" /></g>
-            <path d="m50 33-2 6 4 1m-9 5q7 4 14-1" fill="none" stroke="#805442" strokeWidth="1.5" strokeLinecap="round" />
-            {portraitId < 4 && portraitId % 3 === 0 && <path d="M36 31h11v8H36Zm18 0h11v8H54Zm-7 3h7" fill="none" stroke="#ded2b0" strokeWidth="1.6" />}
-            {portraitId < 4 && portraitId % 3 === 1 && <path d="M41 43q5-7 10-2 5-5 10 2-6 3-10 0-5 3-10 0" fill="var(--hair, #302b29)" />}
-          </g>
-          <g className="seat__hands" fill="var(--skin, #c98e69)" stroke="#815541" strokeWidth="1">
-            <path d="m17 79 19 3q10-7 16-2l-8 5q7-2 7 2-3 5-14 3l-21-2Z" />
-            <path d="m83 79-16 3q-8-8-14-3l6 6q-7-2-7 2 3 5 14 3l18-2Z" />
-          </g>
-        </svg>
+        <AvatarPortrait avatarId={avatarId} seat={seat} />
       </div>
 
       <div className="seat__info">
