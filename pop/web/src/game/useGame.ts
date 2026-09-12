@@ -105,6 +105,7 @@ function devScene(): "win" | "lose" | null {
 }
 
 export function useGame() {
+  const [playerCount, setPlayerCount] = useState<import("@pifpaf/engine").PlayerCount>(4);
   const [screen, setScreen] = useState<Screen>("INTRO");
   const [bankroll, setBankroll] = useState<number>(loadBankroll);
   const [speed, setSpeedState] = useState<Speed>(loadSpeed);
@@ -165,7 +166,7 @@ export function useGame() {
    * 親（一番手＝ヴィラを買える席）はラウンドごとに回す。
    */
   const beginRound = useCallback((m: MatchState) => {
-    const deal = dealGame(PLAYER_COUNT);
+    const deal = dealGame(m.chips.length);
     const dead = deal.hands.map((_, i) => !isAlive(m, i));
 
     // CPUは手札を見て降りるかを決める。人間はこのあと画面で選ぶ。
@@ -173,7 +174,7 @@ export function useGame() {
       i === HUMAN || dead[i] ? false : shouldFold(hand, deal.wild)
     );
 
-    const dealer = (m.round - 1) % PLAYER_COUNT;
+    const dealer = (m.round - 1) % m.chips.length;
     setMatch(m);
     setFoldedSeats(cpuFold);
     setState(createInitialState(deal, dealer, dead));
@@ -201,9 +202,9 @@ export function useGame() {
       persistBankroll(bankroll - bet);
       setWager(bet);
       setPayout(0);
-      beginRound(createMatch(PLAYER_COUNT, DEFAULT_CHIPS));
+      beginRound(createMatch(playerCount, DEFAULT_CHIPS));
     },
-    [bankroll, beginRound, persistBankroll]
+    [bankroll, beginRound, persistBankroll, playerCount]
   );
 
   /** 人間の「降りる／勝負する」の選択。ここでラウンドが動き出す。 */
@@ -480,6 +481,8 @@ export function useGame() {
   }, [screen, state, match, finishRound]);
 
   return {
+    playerCount,
+    setPlayerCount,
     screen,
     state,
     match,

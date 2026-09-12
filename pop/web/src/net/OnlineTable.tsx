@@ -26,8 +26,9 @@
 import { useEffect, useState } from "react";
 import type { PlayerView, RoomInfo } from "@pifpaf/protocol";
 import { findBaterAction } from "@pifpaf/engine";
-import { useT, Gloss, Kicker, Rich } from "../i18n";
+import { useT, Gloss, Kicker, Rich, withGloss } from "../i18n";
 import { PlayingCard, CardBack, SUIT_GLYPH, describeCard } from "../components/PlayingCard";
+import { PlayerCountSelector } from "../components/PlayerCountSelector";
 import { PlayerHand } from "../components/PlayerHand";
 import { ChipStack } from "../components/ChipStack";
 import { OpponentSeat } from "../components/OpponentSeat";
@@ -185,6 +186,7 @@ function Lobby({
   const t = useT();
   const [name, setName] = useState(() => loadName());
   const [roomId, setRoomId] = useState("");
+  const [playerCount, setPlayerCount] = useState<import("@pifpaf/engine").PlayerCount>(4);
 
   // 卓に着く前。単機版のイントロ・掛け金画面と同じ扱い
   useAmbience(true);
@@ -214,12 +216,13 @@ function Lobby({
             />
           </label>
 
+          <PlayerCountSelector value={playerCount} onChange={setPlayerCount} />
           <section className="lobby__choice lobby__choice--host">
             <div>
               <strong>{t.online.createTitle}</strong>
               <p className="lobby__hint">{t.online.createHint}</p>
             </div>
-            <button className="btn btn--start" type="button" disabled={!hasName} onClick={() => game.create(name.trim())}>
+            <button className="btn btn--start" type="button" disabled={!hasName} onClick={() => game.create(name.trim(), playerCount)}>
               CRIAR<Gloss flavor="CRIAR" text={t.online.create} />
             </button>
           </section>
@@ -398,7 +401,8 @@ function Table({
           </div>
         </header>
 
-        <section className="opponents">
+        <div className="tableRing" data-count={room.playerCount ?? 4}>
+        <section className="opponents" data-count={room.playerCount ?? 4}>
           {room.seats
             .filter((s) => s.seat !== mySeat)
             .map((s) => {
@@ -425,7 +429,7 @@ function Table({
         <section className="table">
           <div className="table__felt">
             <div className={`pile ${canDrawStock ? "pile--live" : ""}`}>
-              <span className="pile__label">MONTE / {t.table.stock}</span>
+              <span className="pile__label">{withGloss("MONTE", t.table.stock)}</span>
               <div className="pile__stack" data-stock-pile>
                 <button
                   type="button"
@@ -450,7 +454,7 @@ function Table({
             </div>
 
             <div className={`pile ${canTakeDiscard ? "pile--live" : ""}`}>
-              <span className="pile__label">DESCARTE / {t.table.discard}</span>
+              <span className="pile__label">{withGloss("DESCARTE", t.table.discard)}</span>
               <div className="pile__stack" data-discard-pile>
                 {board.topDiscard !== null ? (
                   <button
@@ -471,6 +475,8 @@ function Table({
             </div>
           </div>
         </section>
+
+        </div>
 
         <section className="me" {...(iAmSeated ? { "data-seat": mySeat } : {})}>
           <div className="me__header">
@@ -630,7 +636,8 @@ function WaitingPanel({ game }: { game: OnlineGame }) {
   const humans = room.seats.filter((s) => s.name !== null && !s.isBot);
   const isHost = room.hostSeat === game.seat;
   // 4人そろうまで始められない（オンラインは人と打つ場。CPU戦は単機版）
-  const full = humans.length >= 4;
+  const capacity = room.playerCount ?? 4;
+  const full = humans.length >= capacity;
   const [copied, setCopied] = useState(false);
 
   const copyCode = () => {
@@ -662,13 +669,13 @@ function WaitingPanel({ game }: { game: OnlineGame }) {
           ))}
         </ul>
         <p className="panel__note">{t.online.waitingHint}</p>
-        <p className="panel__dim">{humans.length} / 4</p>
+        <p className="panel__dim">{humans.length} / {capacity}</p>
 
         {/* まず人を待つ。卓を抜ける道もここ
             （始まってしまえば単機版と同じで、途中では抜けられない） */}
         <div className="panel__actions">
-          <button className="btn btn--keep" onClick={() => game.start()} disabled={!isHost || !full}>
-            COMEÇAR<Gloss flavor="COMEÇAR" text={full ? t.online.startFull : t.online.needMore(4 - humans.length)} />
+          <button className="btn btn--keep" onClick={() => game.start()} disabled={!isHost || !full || room.awaiting.length > 0}>
+            COMEÇAR<Gloss flavor="COMEÇAR" text={full ? t.online.startFull : t.online.needMore(capacity - humans.length)} />
           </button>
           <button className="btn btn--reject" onClick={() => game.leave()}>
             SAIR<Gloss flavor="SAIR" text={t.online.leave} />
@@ -680,10 +687,11 @@ function WaitingPanel({ game }: { game: OnlineGame }) {
           <>
             <button
               className="btn btn--rules btn--strip online__callBots"
+              disabled={room.awaiting.length > 0}
               onClick={() => game.start(true)}
             >
               CHAMAR A CPU
-              <Gloss flavor="CHAMAR A CPU" text={t.online.callBots(4 - humans.length)} />
+              <Gloss flavor="CHAMAR A CPU" text={t.online.callBots(capacity - humans.length)} />
             </button>
             <p className="panel__dim">{t.online.callBotsHint}</p>
           </>
@@ -708,9 +716,9 @@ function ResultPanel({ game, view }: { game: OnlineGame; view: PlayerView }) {
    *
    * CPU と切れている席は待たない（サーバーの `maybeAdvance` と同じ見方）。
    */
-  const iAmReady = room.seats[view.you]?.ready === true;
+  const iAmReady = game.nextRequested || room.seats[view.you]?.ready === true;
   const waitingFor = room.seats
-    .filter((s) => s.name !== null && !s.isBot && !s.disconnected && !s.ready)
+    .filter((s) => s.seat !== view.you && s.name !== null && !s.isBot && !s.disconnected && !s.ready)
     .map((s) => s.name)
     .filter((n): n is string => n !== null);
 
@@ -774,15 +782,11 @@ function ResultPanel({ game, view }: { game: OnlineGame; view: PlayerView }) {
           <>
             <div className="panel__actions">
               <button className="btn btn--again" onClick={game.next} disabled={iAmReady}>
-                CONTINUAR
-                <Gloss
-                  flavor="CONTINUAR"
-                  text={iAmReady ? t.online.waitingForNext : t.result.next}
-                />
+                {iAmReady ? t.online.waitingForNext : <>CONTINUAR<Gloss flavor="CONTINUAR" text={t.result.next} /></>}
               </button>
             </div>
             {iAmReady && waitingFor.length > 0 && (
-              <p className="panel__note result__waiting">{t.result.waitingFor(waitingFor)}</p>
+              <p className="panel__note result__waiting" role="status">{t.result.waitingFor(waitingFor)}</p>
             )}
           </>
         )}

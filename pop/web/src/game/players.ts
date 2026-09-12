@@ -13,8 +13,10 @@ export interface Persona {
 }
 
 export const PERSONAS: Persona[] = [
-  { index: 0, epithet: "O Viajante", isHuman: true },
-  { index: 1, epithet: "O Astrônomo", isHuman: false },
-  { index: 2, epithet: "A Bússola", isHuman: false },
-  { index: 3, epithet: "A Cometa", isHuman: false },
+  { index: 0, epithet: "O Forasteiro", isHuman: true },
+  { index: 1, epithet: "O Chefe", isHuman: false },
+  { index: 2, epithet: "A Navalha", isHuman: false },
+  { index: 3, epithet: "A Viúva", isHuman: false },
+  { index: 4, epithet: "O Viajante", isHuman: false },
+  { index: 5, epithet: "A Estrela", isHuman: false },
 ];

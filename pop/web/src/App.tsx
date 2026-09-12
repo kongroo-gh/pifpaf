@@ -4,6 +4,8 @@ import { useGame, HUMAN, LOAN_AMOUNT } from "./game/useGame";
 import type { Speed } from "./game/useGame";
 import { useBoardSounds } from "./game/useBoardSounds";
 import { useHandOrder } from "./game/useHandOrder";
+import { currentActor } from "@pifpaf/engine";
+import { PlayerCountSelector } from "./components/PlayerCountSelector";
 import { PERSONAS } from "./game/players";
 import { PlayingCard, CardBack, SUIT_GLYPH, describeCard } from "./components/PlayingCard";
 import { PlayerHand } from "./components/PlayerHand";
@@ -15,6 +17,7 @@ import { ChipStack } from "./components/ChipStack";
 import { CardFlight } from "./components/CardFlight";
 import { DealingScene } from "./components/DealingScene";
 import { RuleBook } from "./components/RuleBook";
+import { AboutPifPaf } from "./components/AboutPifPaf";
 import { BackButton } from "./components/BackButton";
 import { useT, personaName, personaTitle, withGloss, Rich, Kicker, Gloss } from "./i18n";
 import { SettingsButton, SettingsPanel, SettingsControls } from "./components/Settings";
@@ -187,6 +190,8 @@ export default function App() {
         <Betting
           bankroll={bankroll}
           onBet={startMatch}
+          playerCount={game.playerCount}
+          onPlayerCount={game.setPlayerCount}
           onLoan={takeLoan}
           onRules={openRules}
           onBack={leaveTable}
@@ -264,8 +269,9 @@ export default function App() {
           </div>
         </header>
 
-        <section className="opponents">
-          {PERSONAS.filter((p) => !p.isHuman).map((persona) => (
+        <div className="tableRing" data-count={state.hands.length}>
+        <section className="opponents" data-count={state.hands.length}>
+          {PERSONAS.filter((p) => !p.isHuman && p.index < state.hands.length).map((persona) => (
             <OpponentSeat
               key={persona.index}
               seat={persona.index}
@@ -279,7 +285,7 @@ export default function App() {
               folded={foldedSeats[persona.index] === true}
               isActive={
                 screen === "PLAYING" &&
-                state.currentPlayer === persona.index &&
+                currentActor(state) === persona.index &&
                 state.phase !== "ROUND_OVER"
               }
               receiving={pickup?.seat === persona.index}
@@ -338,6 +344,8 @@ export default function App() {
             </div>
           </div>
         </section>
+
+        </div>
 
         <section
           data-seat={HUMAN}
@@ -426,7 +434,7 @@ export default function App() {
             </button>
           </div>
 
-          {humanOut && <div className="me__stamp">APAGADO</div>}
+          {humanOut && <div className="me__stamp">FALIDO</div>}
         </section>
       </div>
 
@@ -695,6 +703,8 @@ function MatchOver({
 
 /** 掛け金を決める画面。 */
 function Betting({
+  playerCount,
+  onPlayerCount,
   bankroll,
   onBet,
   onLoan,
@@ -704,6 +714,8 @@ function Betting({
   onSpeed,
 }: {
   bankroll: number;
+  playerCount: import("@pifpaf/engine").PlayerCount;
+  onPlayerCount: (n: import("@pifpaf/engine").PlayerCount) => void;
   onBet: (n: number) => void;
   onLoan: () => void;
   onRules: () => void;
@@ -725,6 +737,7 @@ function Betting({
         <p className="intro__sub">{t.betting.bankroll}</p>
         <div className="intro__rule" />
 
+        <PlayerCountSelector value={playerCount} onChange={onPlayerCount} />
         {broke ? (
           <>
             <p className="intro__body">
@@ -733,7 +746,7 @@ function Betting({
               {t.betting.brokeBody2}
             </p>
             <button className="btn btn--start" onClick={onLoan}>
-              NOVA LUZ<Gloss flavor="NOVA LUZ" text={t.betting.borrow(LOAN_AMOUNT)} />
+              PEGAR EMPRESTADO<Gloss flavor="PEGAR EMPRESTADO" text={t.betting.borrow(LOAN_AMOUNT)} />
             </button>
           </>
         ) : (
@@ -753,10 +766,7 @@ function Betting({
                     onBet(w);
                   }}
                 >
-                  {t.meta.htmlLang === "ja"
-                    ? ["ちかい星まで", "とおい星まで", "もっととおい星まで"][WAGERS.indexOf(w)]
-                    : ["ESTRELA PRÓXIMA", "ESTRELA DISTANTE", "MAIS ALÉM"][WAGERS.indexOf(w)]}
-                  <small>{w}</small>
+                  {w}
                 </button>
               ))}
               <button
@@ -766,7 +776,7 @@ function Betting({
                   onBet(bankroll);
                 }}
               >
-                ATÉ O FIM DO CÉU<Gloss flavor="ATÉ O FIM DO CÉU" text={t.meta.htmlLang === "ja" ? `空のはてまで · ${bankroll}` : String(bankroll)} />
+                ALL IN<small>{bankroll}</small>
               </button>
             </div>
             <button className="btn btn--rules btn--strip betting__rules" onClick={onRules}>
@@ -798,13 +808,14 @@ function Intro({
   onOnline: () => void;
 }) {
   const t = useT();
+  const [aboutOpen, setAboutOpen] = useState(false);
   return (
     <div className="intro">
       <div className="grain" aria-hidden="true" />
       <div className="intro__panel">
         <p className="intro__kicker">BEM-VINDO À MESA</p>
         <h1 className="intro__title">PIF PAF</h1>
-        <p className="intro__sub">A TRAVESSIA</p>
+        <p className="intro__sub">THE CARD ROOM</p>
         <div className="intro__rule" />
         <p className="intro__body">
           {t.intro.body1}
@@ -827,6 +838,10 @@ function Intro({
         <button className="btn btn--rules btn--strip" onClick={onRules}>
           AS REGRAS<Gloss flavor="AS REGRAS" text={t.intro.rules} />
         </button>
+        <button type="button" className="btn btn--rules btn--strip" onClick={() => setAboutOpen(true)}>
+          {t.about.open}
+        </button>
+        {aboutOpen && <AboutPifPaf onClose={() => setAboutOpen(false)} />}
         {/* 卓に着く前に決めてもらう。対局中は隅の歯車から変えられる */}
         <SettingsControls speed={speed} onSpeed={onSpeed} />
       </div>
