@@ -2621,6 +2621,7 @@ button {
   .tableRing:is([data-count="5"], [data-count="6"]) .pile__label { font-size: 7px; letter-spacing: 0; }
   .tableRing:is([data-count="5"], [data-count="6"]) .card--md,
   .tableRing:is([data-count="5"], [data-count="6"]) .pile__empty { width: 48px; height: 68px; }
+  .app:has(.tableRing[data-count="3"]) .topbar__vira .card--sm { width: 48px; height: 68px; }
   .app:has(.tableRing:is([data-count="5"], [data-count="6"])) .topbar__vira .card--sm { width: 48px; height: 68px; }
 }
 @media (max-height: 560px) and (orientation: landscape) {
@@ -2636,4 +2637,5 @@ button {
   .tableRing:is([data-count="5"], [data-count="6"]) .card--md,
   .tableRing:is([data-count="5"], [data-count="6"]) .pile__empty,
   .app:has(.tableRing:is([data-count="5"], [data-count="6"])) .topbar__vira .card--sm { width: 42px; height: 60px; }
+  .app:has(.tableRing[data-count="3"]) .topbar__vira .card--sm { width: 42px; height: 60px; }
 }
