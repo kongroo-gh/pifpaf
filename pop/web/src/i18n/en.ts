@@ -6,6 +6,7 @@
 import type { Strings } from "./types";
 
 export const en: Strings = {
+  players: { label: "Players", count: (n) => `${n} players`, unsupported: "This table size is not supported. Update the client and server." },
   meta: { htmlLang: "en", label: "English" },
 
   nav: {
@@ -79,7 +80,7 @@ export const en: Strings = {
   },
 
   intro: {
-    body1: "Four chairs in the back room. The ashtray is full and nobody opens a window.",
+    body1: "Chairs around a table in the back room. The ashtray is full and nobody opens a window.",
     body2:
       "Everyone stacks seven chips. They go down each time you lose, " +
       "and whoever runs out doesn't walk back out the door.",
@@ -88,14 +89,48 @@ export const en: Strings = {
     rules: "Read the rules",
   },
 
+  about: {
+    open: "About Pif Paf",
+    title: "About Pif Paf",
+    back: "Back to the main menu",
+    sections: [
+      {
+        title: "A Brazilian card-table tradition",
+        paragraphs: [
+          "Pif Paf is a rummy-style card game long enjoyed across Brazil. Its early history is not well documented, but it is widely regarded there as a game of Brazilian tradition.",
+          "Depending on the region, related versions are known as Pife, Cacheta, Pontinho or Pé Duro. Names and house rules vary from place to place.",
+        ],
+      },
+      {
+        title: "A game for family and friends",
+        paragraphs: [
+          "Its traditional setting is not the casino floor but the family table: Sunday afternoons, holidays and long games among friends. It is a social pastime built around conversation as much as cards.",
+        ],
+      },
+      {
+        title: "Where the name may come from",
+        paragraphs: [
+          "One popular explanation says “Pif Paf” imitates the sound of a winning hand being laid on the table. Another links it to a magician’s exclamation. No single origin has been established.",
+        ],
+      },
+      {
+        title: "How the game works",
+        paragraphs: [
+          "Two standard 52-card decks are used, and each player receives nine cards. Players combine trincas—sets of the same rank—and sequências—runs in the same suit—until the whole hand forms valid melds.",
+          "This app supports three to six players. See the rulebook for its exact wild-card and winning rules.",
+        ],
+      },
+    ],
+  },
+
   betting: {
     kicker: "The stake",
     bankroll: "Purse",
     brokeBody1: "You're cleaned out. The family will front you the money,",
     brokeBody2: "but don't ask what happens if you can't pay it back.",
     borrow: (amount) => `Borrow ${amount}`,
-    body1: "Four at the table, seven chips each. Last one standing gets paid.",
-    body2: "Roughly one chance in four. Payout runs 2.0–5.7× on chips left and streak.",
+    body1: "Choose 3–6 players, seven chips each. Last one standing gets paid.",
+    body2: "Payout runs 2.0–5.7× on chips left and streak.",
     rules: "Read the rules",
   },
 
@@ -225,6 +260,8 @@ export const en: Strings = {
     { name: "Don Vieira", title: "The Boss" },
     { name: "Zé Navalha", title: "The Razor" },
     { name: "Dona Rosa", title: "The Widow" },
+    { name: "Luís", title: "The Traveller" },
+    { name: "Luna", title: "The Star" },
   ],
 
   rules: {
@@ -242,7 +279,7 @@ export const en: Strings = {
     s2: {
       title: "Table and cards",
       deck: "Two 52-card decks, no jokers (*104 cards*). Every card exists twice",
-      players: "Four players. Nine cards each; the rest is the stock",
+      players: "Choose 3–6 players. Nine cards each; the rest is the stock",
       ranks: "Ranks run 2 3 4 … K. *The ace works at either end*",
     },
 

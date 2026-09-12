@@ -41,7 +41,7 @@ export interface OnlineGame {
   view: PlayerView | null;
   settlement: { losses: number[]; eliminated: number[] } | null;
 
-  create: (name: string, avatarId: AvatarId) => void;
+  create: (name: string, avatarId: AvatarId, playerCount?: import("@pifpaf/engine").PlayerCount) => void;
   connect: (roomId: string, name: string, avatarId: AvatarId) => void;
   disconnect: () => void;
   /**
@@ -56,6 +56,8 @@ export interface OnlineGame {
   setFold: (fold: boolean) => void;
   act: (action: GameAction) => void;
   next: () => void;
+  /** NEXT送信済み。readyを返さない旧サーバーでも待機を見せる */
+  nextRequested: boolean;
 
   /** 自分の番か。サーバーの判断をそのまま使う */
   isMyTurn: boolean;
@@ -148,9 +150,12 @@ export function serverUrl(): string {
  * 受け取った側で埋めておけば、その時間帯は**その機能だけが無い**状態に落ちる。
  * 卓が止まったように見えるより、待ちの表示が出ないほうがはるかにましなので。
  */
+import { supportsRequestedCapacity } from "@pifpaf/protocol";
+
 function normalizeRoom(room: RoomInfo): RoomInfo {
   return {
     ...room,
+    playerCount: room.playerCount ?? 4,
     seats: (room.seats ?? []).map((s) => ({
       ...s,
       avatarId: s.avatarId ?? (s.seat % 8) as AvatarId,
@@ -168,30 +173,38 @@ export function useOnlineGame(): OnlineGame {
   const [room, setRoom] = useState<RoomInfo | null>(null);
   const [view, setView] = useState<PlayerView | null>(null);
   const [settlement, setSettlement] = useState<OnlineGame["settlement"]>(null);
+  const [nextRequested, setNextRequested] = useState(false);
 
   const socket = useRef<WebSocket | null>(null);
   const retryDelay = useRef(RECONNECT_MIN_MS);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** 繋ぎ直しに使う。ユーザーが「やめる」と言うまで保つ */
-  const target = useRef<{ mode: "CREATE" | "JOIN"; roomId: string; name: string; avatarId: AvatarId } | null>(null);
+  const target = useRef<{
+    mode: "CREATE" | "JOIN";
+    roomId: string;
+    name: string;
+    avatarId: AvatarId;
+    playerCount?: number;
+  } | null>(null);
   /** 意図して切ったか。再接続すべきかの判断に使う */
   const intentionalClose = useRef(false);
 
   const send = useCallback((msg: unknown) => {
     const s = socket.current;
-    if (s === null || s.readyState !== WebSocket.OPEN) return;
+    if (s === null || s.readyState !== WebSocket.OPEN) return false;
     s.send(JSON.stringify(msg));
+    return true;
   }, []);
 
   const open = useCallback(
-    (mode: "CREATE" | "JOIN", roomId: string, name: string, avatarId: AvatarId) => {
+    (mode: "CREATE" | "JOIN", roomId: string, name: string, avatarId: AvatarId, playerCount?: number) => {
       if (retryTimer.current !== null) {
         clearTimeout(retryTimer.current);
         retryTimer.current = null;
       }
 
       intentionalClose.current = false;
-      target.current = { mode, roomId, name, avatarId };
+      target.current = { mode, roomId, name, avatarId, playerCount };
       setConnection((prev) => (prev === "IDLE" ? "CONNECTING" : prev));
 
       let ws: WebSocket;
@@ -206,8 +219,8 @@ export function useOnlineGame(): OnlineGame {
 
       ws.addEventListener("open", () => {
         setError(null);
-        if (mode === "CREATE") send({ t: "CREATE", version: PROTOCOL_VERSION, name, avatarId });
-        else send({ t: "JOIN", version: PROTOCOL_VERSION, roomId, name, avatarId, token: loadToken(roomId) });
+        if (mode === "CREATE") send({ t: "CREATE", version: PROTOCOL_VERSION, name, avatarId, playerCount: playerCount ?? 4, maxPlayers: 6 });
+        else send({ t: "JOIN", version: PROTOCOL_VERSION, roomId, name, avatarId, token: loadToken(roomId), maxPlayers: 6 });
       });
 
       ws.addEventListener("message", (event) => {
@@ -221,13 +234,24 @@ export function useOnlineGame(): OnlineGame {
         switch (msg.t) {
           case "JOINED":
             saveToken(msg.roomId, msg.token);
-            target.current = { mode: "JOIN", roomId: msg.roomId, name, avatarId };
+            target.current = { mode: "JOIN", roomId: msg.roomId, name, avatarId, playerCount };
             setSeat(msg.seat);
             setConnection("JOINED");
             // 繋がったので、次に切れたときの待ち時間を戻す
             retryDelay.current = RECONNECT_MIN_MS;
             break;
           case "ROOM":
+            if (msg.room.phase !== "ROUND_RESULT") setNextRequested(false);
+            if (mode === "CREATE" && !supportsRequestedCapacity(playerCount ?? 4, msg.room.playerCount)) {
+              intentionalClose.current = true;
+              target.current = null;
+              send({ t: "LEAVE" });
+              setRoom(null);
+              setView(null);
+              setError("This server does not support the selected player count. / このサーバーは選択した人数に未対応です。");
+              setConnection("FAILED");
+              break;
+            }
             setRoom(normalizeRoom(msg.room));
             break;
           case "VIEW":
@@ -237,9 +261,11 @@ export function useOnlineGame(): OnlineGame {
             setSettlement({ losses: msg.losses, eliminated: msg.eliminated });
             break;
           case "REJECTED":
+            setNextRequested(false);
             setError(msg.reason);
             break;
           case "FATAL":
+            setNextRequested(false);
             setError(msg.reason);
             setConnection("FAILED");
             // 続けても仕方がないので、繋ぎ直しに行かない
@@ -252,6 +278,7 @@ export function useOnlineGame(): OnlineGame {
       });
 
       ws.addEventListener("close", () => {
+        setNextRequested(false);
         socket.current = null;
         if (intentionalClose.current) {
           setConnection("IDLE");
@@ -264,7 +291,7 @@ export function useOnlineGame(): OnlineGame {
         retryDelay.current = Math.min(wait * 2, RECONNECT_MAX_MS);
         retryTimer.current = setTimeout(() => {
           const t = target.current;
-          if (t !== null) open(t.mode, t.roomId, t.name, t.avatarId);
+          if (t !== null) open(t.mode, t.roomId, t.name, t.avatarId, t.playerCount);
         }, wait);
       });
 
@@ -286,12 +313,12 @@ export function useOnlineGame(): OnlineGame {
     [open]
   );
 
-  const create = useCallback((name: string, avatarId: AvatarId) => {
+  const create = useCallback((name: string, avatarId: AvatarId, playerCount: import("@pifpaf/engine").PlayerCount = 4) => {
     saveName(name);
     saveAvatar(avatarId);
     setConnection("CONNECTING");
     setError(null);
-    open("CREATE", "", name, avatarId);
+    open("CREATE", "", name, avatarId, playerCount);
   }, [open]);
 
   const disconnect = useCallback(() => {
@@ -306,6 +333,7 @@ export function useOnlineGame(): OnlineGame {
     setRoom(null);
     setView(null);
     setSettlement(null);
+    setNextRequested(false);
   }, []);
 
   const leave = useCallback(() => {
@@ -329,7 +357,9 @@ export function useOnlineGame(): OnlineGame {
   );
   const setFold = useCallback((fold: boolean) => send({ t: "FOLD", fold }), [send]);
   const act = useCallback((action: GameAction) => send({ t: "ACTION", action }), [send]);
-  const next = useCallback(() => send({ t: "NEXT" }), [send]);
+  const next = useCallback(() => {
+    if (send({ t: "NEXT" })) setNextRequested(true);
+  }, [send]);
 
   const isMyTurn = useMemo(
     () => view !== null && seat >= 0 && view.game.actor === seat,
@@ -351,6 +381,7 @@ export function useOnlineGame(): OnlineGame {
     setFold,
     act,
     next,
+    nextRequested,
     isMyTurn,
   };
 }

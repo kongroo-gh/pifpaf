@@ -18,6 +18,7 @@ export type Lang = "ja" | "en" | "pt";
 export const LANGS: Lang[] = ["ja", "en", "pt"];
 
 export interface Strings {
+  players: { label: string; count: (n: number) => string; unsupported: string };
   meta: {
     /** <html lang> に入れる値 */
     htmlLang: string;
@@ -134,6 +135,14 @@ export interface Strings {
     sit: (bankroll: number) => string;
     /** AS REGRAS の下 */
     rules: string;
+  };
+
+  /** Pif Paf の文化的背景。現在の表示言語に合わせる。 */
+  about: {
+    open: string;
+    title: string;
+    back: string;
+    sections: Array<{ title: string; paragraphs: string[] }>;
   };
 
   betting: {

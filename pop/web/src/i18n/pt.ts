@@ -13,6 +13,7 @@
 import type { Strings } from "./types";
 
 export const pt: Strings = {
+  players: { label: "Jogadores", count: (n) => `${n} jogadores`, unsupported: "Este tamanho de mesa não é compatível. Atualize o cliente e o servidor." },
   meta: { htmlLang: "pt-BR", label: "Português" },
 
   nav: {
@@ -86,7 +87,7 @@ export const pt: Strings = {
   },
 
   intro: {
-    body1: "Quatro cadeiras nos fundos. O cinzeiro está cheio e ninguém abre a janela.",
+    body1: "Cadeiras ao redor da mesa nos fundos. O cinzeiro está cheio e ninguém abre a janela.",
     body2:
       "Cada um põe sete fichas na mesa. Elas caem a cada derrota, " +
       "e quem fica sem elas não sai mais pela porta.",
@@ -95,14 +96,48 @@ export const pt: Strings = {
     rules: "Ler as regras",
   },
 
+  about: {
+    open: "Sobre o Pif Paf",
+    title: "Sobre o Pif Paf",
+    back: "Voltar ao menu principal",
+    sections: [
+      {
+        title: "Um clássico das mesas brasileiras",
+        paragraphs: [
+          "O Pif Paf é um jogo de cartas da família do rummy, apreciado há gerações no Brasil. Sua origem não é bem documentada, mas o jogo é amplamente reconhecido como parte da tradição brasileira.",
+          "Conforme a região, versões próximas recebem nomes como Pife, Cacheta, Pontinho ou Pé Duro. Os nomes e algumas regras da casa variam de um lugar para outro.",
+        ],
+      },
+      {
+        title: "Jogo de família e amigos",
+        paragraphs: [
+          "Seu lugar tradicional não é o cassino, mas a mesa de casa: tardes de domingo, férias e partidas demoradas entre amigos. É uma diversão social, feita tanto de conversa quanto de cartas.",
+        ],
+      },
+      {
+        title: "A origem do nome",
+        paragraphs: [
+          "Uma explicação popular diz que “Pif Paf” imita o som das cartas de uma mão vencedora batendo na mesa. Outra associa o nome à fala de um mágico. Não há uma origem única comprovada.",
+        ],
+      },
+      {
+        title: "Como se joga",
+        paragraphs: [
+          "Usam-se dois baralhos comuns de 52 cartas, e cada jogador recebe nove cartas. O objetivo é combinar trincas—cartas do mesmo valor—e sequências do mesmo naipe até formar jogos com toda a mão.",
+          "Este aplicativo permite partidas de três a seis jogadores. Consulte o livro de regras para ver os detalhes sobre curingas e condições de batida adotados aqui.",
+        ],
+      },
+    ],
+  },
+
   betting: {
     kicker: "a aposta",
     bankroll: "Caixa",
     brokeBody1: "Você está limpo. A família adianta o dinheiro,",
     brokeBody2: "mas não pergunte o que acontece se não puder pagar.",
     borrow: (amount) => `Pegar ${amount}`,
-    body1: "Quatro na mesa, sete fichas para cada. Quem sobrar leva o prêmio.",
-    body2: "Mais ou menos uma chance em quatro. Paga de 2,0 a 5,7× pelas fichas e pela sequência de vitórias.",
+    body1: "Escolha de 3 a 6 jogadores, sete fichas para cada. Quem sobrar leva o prêmio.",
+    body2: "Paga de 2,0 a 5,7× pelas fichas e pela sequência de vitórias.",
     rules: "Ler as regras",
   },
 
@@ -234,6 +269,8 @@ export const pt: Strings = {
     { name: "Dom Vieira", title: "" },
     { name: "Zé Navalha", title: "" },
     { name: "Dona Rosa", title: "" },
+    { name: "Luís", title: "" },
+    { name: "Luna", title: "" },
   ],
 
   rules: {
@@ -251,7 +288,7 @@ export const pt: Strings = {
     s2: {
       title: "A mesa e as cartas",
       deck: "Dois baralhos de 52 cartas, sem curingas (*104 cartas*). Cada carta existe duas vezes",
-      players: "Quatro jogadores. Nove cartas para cada; o resto é o monte",
+      players: "De 3 a 6 jogadores. Nove cartas para cada; o resto é o monte",
       ranks: "A ordem vai de 2 3 4 … K. *O ás serve nas duas pontas*",
     },
 
