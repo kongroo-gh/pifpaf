@@ -337,7 +337,7 @@ export function useOnlineGame(): OnlineGame {
   }, []);
 
   const leave = useCallback(() => {
-    // 先に「降りる」と伝えてから切る。切るだけだと、残った人が30秒待たされる
+    // 先に「降りる」と伝えてから切る。切るだけだと、残った人が1分待たされる
     send({ t: "LEAVE" });
     disconnect();
   }, [send, disconnect]);

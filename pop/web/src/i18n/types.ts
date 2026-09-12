@@ -117,6 +117,8 @@ export interface Strings {
     awayWho: (names: string[]) => string;
     /** あと何秒待つか。0 になったら卓は畳まれる */
     awayCountdown: (seconds: number) => string;
+    /** 切れた人がコード入力で同じ席へ戻れる案内 */
+    awayCodeHint: string;
     /** 人が抜けて卓を畳んだとき。MESA DESFEITA の続き */
     closed: string;
     /** 誰が抜けたか。**連ね方が言語ごとに違う**ので配列で渡す */

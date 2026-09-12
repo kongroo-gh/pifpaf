@@ -335,7 +335,7 @@ describe("繋いで往復する", () => {
   });
 
   it("対局中に1人消えたら卓は止まり、戻ってくれば続く", async () => {
-    // 畳むまでの猶予は30秒。ここでは「止まること」と「戻れること」を見る
+    // 畳むまでの猶予は1分。ここでは「止まること」と「戻れること」を見る
     // （待ちきれずに畳む側は room.test.ts が同期のまま見ている）
     const url = await startServer();
     const { clients, host } = await startedTable(url);
@@ -355,6 +355,8 @@ describe("繋いで往復する", () => {
     expect(stopped.seats[host.seat]!.disconnected).toBe(true);
     expect(stopped.seats[host.seat]!.name).not.toBeNull();
     expect(stopped.awaitingUntil).not.toBeNull();
+    expect(stopped.awaitingUntil! - Date.now()).toBeGreaterThan(55_000);
+    expect(stopped.awaitingUntil! - Date.now()).toBeLessThanOrEqual(60_000);
 
     // トークンを持って戻れば、同じ席で続きから
     const again = await TestClient.connect(url);

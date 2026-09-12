@@ -24,7 +24,7 @@
 // 先に「盤面の型を PlayerView に揃える」整理をしないと持ってこられない。
 
 import { useEffect, useState } from "react";
-import type { AvatarId, PlayerView, RoomInfo } from "@pifpaf/protocol";
+import type { AvatarId, PlayerView, RoomInfo, RoomSeat } from "@pifpaf/protocol";
 import { findBaterAction } from "@pifpaf/engine";
 import { useT, Gloss, Kicker, Rich, withGloss } from "../i18n";
 import { PlayingCard, CardBack, SUIT_GLYPH, describeCard } from "../components/PlayingCard";
@@ -38,6 +38,7 @@ import { SettingsButton, SettingsPanel, SettingsControls } from "../components/S
 import { LeaveButton, LeaveConfirm } from "../components/LeaveTable";
 import { BackButton } from "../components/BackButton";
 import { AvatarPortrait } from "../components/AvatarPortrait";
+import { DealingScene } from "../components/DealingScene";
 import { AVATARS } from "../game/avatars";
 import { useHandOrder } from "../game/useHandOrder";
 import { useBoardSounds } from "../game/useBoardSounds";
@@ -48,6 +49,30 @@ import type { OnlineGame } from "./useOnlineGame";
 export interface OnlineTableProps {
   onExit: () => void;
   onRules: () => void;
+}
+
+export function onlineSeatName(seat: RoomSeat | undefined, emptySeat: string): string {
+  if (seat === undefined) return emptySeat;
+  if (seat.isBot) {
+    const avatarId = seat.avatarId ?? (seat.seat % AVATARS.length) as AvatarId;
+    return AVATARS[avatarId]?.name ?? seat.name ?? emptySeat;
+  }
+  return seat.name ?? emptySeat;
+}
+
+export function onlineDealKey(
+  phase: RoomInfo["phase"],
+  gamePhase: PlayerView["game"]["phase"],
+  round: number,
+  viraKey: string
+): string | null {
+  return phase === "FOLD_DECISION" && gamePhase === "AWAITING_FIRST_DRAW"
+    ? `${round}-${viraKey}`
+    : null;
+}
+
+export function onlineDealPending(dealKey: string | null, shownDealKey: string | null): boolean {
+  return dealKey !== null && dealKey !== shownDealKey;
 }
 
 export function OnlineTable({ onExit, onRules }: OnlineTableProps) {
@@ -113,7 +138,7 @@ function Connecting({ game }: { game: OnlineGame }) {
  * 別の画面へ飛ばすと「終わった」と誤解される。押せるものはひとつも無い
  * （サーバーもこのあいだの手を受け付けない）。
  */
-function AwayOverlay({ room }: { room: RoomInfo }) {
+export function AwayOverlay({ room }: { room: RoomInfo }) {
   const t = useT();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -133,6 +158,11 @@ function AwayOverlay({ room }: { room: RoomInfo }) {
         <Kicker flavor="ALGUÉM SUMIU" gloss={t.online.away} className="panel__kicker" />
         {names.length > 0 && <p className="panel__lead">{t.online.awayWho(names)}</p>}
         <p className="panel__note">{t.online.awayCountdown(left)}</p>
+        <p className="online__invite">
+          <span>{t.online.roomLabel}</span>
+          <strong>{room.roomId}</strong>
+          <small>{t.online.awayCodeHint}</small>
+        </p>
       </div>
     </div>
   );
@@ -336,6 +366,24 @@ function Table({
   // 卓を降りるかの確認。単機版と同じく、隅の印は一度受け止めてから効かせる
   const [leaveOpen, setLeaveOpen] = useState(false);
 
+  // 各ラウンドが FOLD_DECISION に入った一度だけ配札演出を見せる。
+  // 結果画面では room.round が次を指すため、phase も条件に含める。
+  const dealKey = onlineDealKey(
+    room.phase,
+    board.phase,
+    view.match.round,
+    `${board.wild.rank}-${board.wild.suit}`
+  );
+  const [shownDealKey, setShownDealKey] = useState<string | null>(null);
+  const [dealing, setDealing] = useState(false);
+  const dealPending = onlineDealPending(dealKey, shownDealKey);
+  useEffect(() => {
+    if (dealPending && dealKey !== null) {
+      setShownDealKey(dealKey);
+      setDealing(true);
+    }
+  }, [dealKey, dealPending]);
+
   // 人を待っているあいだは卓に着く前と同じ。始まったら止める
   useAmbience(room.phase === "WAITING");
 
@@ -358,7 +406,7 @@ function Table({
       ? findBaterAction(board.hand, board.wild)
       : null;
 
-  const showFold = room.phase === "FOLD_DECISION" && iAmSeated &&
+  const showFold = !dealing && !dealPending && room.phase === "FOLD_DECISION" && iAmSeated &&
     room.seats[mySeat]?.decided === false;
   const showResult = room.phase === "ROUND_RESULT" || room.phase === "MATCH_OVER";
 
@@ -446,7 +494,7 @@ function Table({
                 <OpponentSeat
                   key={s.seat}
                   seat={s.seat}
-                  name={s.name ?? t.online.emptySeat}
+                  name={onlineSeatName(s, t.online.emptySeat)}
                   avatarId={s.avatarId}
                   status={s.disconnected ? t.online.offline : s.isBot ? t.online.botSeat : ""}
                   handCount={info?.handCount ?? 0}
@@ -594,6 +642,18 @@ function Table({
         </section>
       </div>
 
+      {dealing && board.vira !== null && (
+        <DealingScene
+          key={shownDealKey ?? gameKey}
+          vira={board.vira}
+          wild={board.wild}
+          dealtSeats={board.seats.flatMap((seat, index) => seat.out ? [] : [index])}
+          speedFactor={1.5}
+          onRevealVira={() => {}}
+          onDone={() => setDealing(false)}
+        />
+      )}
+
       {showFold && (
         <FoldPrompt
           hand={board.hand}
@@ -616,7 +676,7 @@ function Table({
           warning={t.leave.warnOnline}
           onLeave={() => {
             setLeaveOpen(false);
-            // **「降りる」と伝えてから**切る。ただ切ると、残った人が30秒待たされる
+            // **「降りる」と伝えてから**切る。ただ切ると、残った人が1分待たされる
             game.leave();
             onExit();
           }}
@@ -651,7 +711,7 @@ function StatusBanner({ game }: { game: OnlineGame }) {
     return <span className="turnBanner turnBanner--over">{t.turn.over}</span>;
   }
   if (!game.isMyTurn) {
-    const who = room.seats[view.game.actor]?.name ?? "?";
+    const who = onlineSeatName(room.seats[view.game.actor], "?");
     return <span className="turnBanner">{t.online.theirTurn(who)}</span>;
   }
 
@@ -698,7 +758,7 @@ function WaitingPanel({ game }: { game: OnlineGame }) {
               <span className="online__avatar" aria-hidden="true">
                 {s.name === null ? "◇" : <AvatarPortrait avatarId={s.avatarId} seat={s.seat} />}
               </span>
-              <span className="online__seatName">{s.name ?? t.online.emptySeat}</span>
+              <span className="online__seatName">{onlineSeatName(s, t.online.emptySeat)}</span>
               <span className="online__seatTags">
                 {s.seat === room.hostSeat && <em>{t.online.host}</em>}
                 {s.seat === game.seat && <em>{t.online.you}</em>}
@@ -769,7 +829,7 @@ function ResultPanel({ game, view }: { game: OnlineGame; view: PlayerView }) {
             ? t.result.noWinner
             : winner === view.you
               ? t.result.youWon
-              : t.result.theyWon(room.seats[winner]?.name ?? "?")}
+              : t.result.theyWon(onlineSeatName(room.seats[winner], "?"))}
         </h2>
 
         {revealed !== null && <MeldReveal hand={revealed.cards} wild={view.game.wild} />}
@@ -784,7 +844,7 @@ function ResultPanel({ game, view }: { game: OnlineGame; view: PlayerView }) {
                 key={s.seat}
                 className={`result__row ${s.seat === winner ? "result__row--win" : ""} ${out ? "result__row--out" : ""}`}
               >
-                <span className="result__name">{s.name ?? t.online.emptySeat}</span>
+                <span className="result__name">{onlineSeatName(s, t.online.emptySeat)}</span>
                 <span className="result__delta">
                   {s.seat === winner ? t.result.took : loss > 0 ? `−${loss}` : t.result.noChange}
                 </span>
@@ -800,7 +860,7 @@ function ResultPanel({ game, view }: { game: OnlineGame; view: PlayerView }) {
 
         {view.match.streak >= 2 && winner !== null && (
           <p className="result__streak">
-            <Rich text={t.result.streak(room.seats[winner]?.name ?? "?", view.match.streak)} />
+            <Rich text={t.result.streak(onlineSeatName(room.seats[winner], "?"), view.match.streak)} />
           </p>
         )}
 

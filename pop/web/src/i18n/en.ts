@@ -73,6 +73,7 @@ export const en: Strings = {
     away: "Connection lost",
     awayWho: (names) => `${names.join(", ")} dropped out.`,
     awayCountdown: (seconds) => `Holding the table for ${seconds}s. After that it breaks up.`,
+    awayCodeHint: "Enter this code to return to the same seat.",
     closed: "Table broken up",
     closedBy: (names) => `${names.join(", ")} walked out.`,
     closedNote: "Nobody takes over an empty seat. This one ends here.",

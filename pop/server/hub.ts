@@ -24,9 +24,9 @@ const EMPTY_ROOM_TTL_MS = 5 * 60_000;
  * このあいだ卓は止まる。戻らなければ卓を畳む。
  *
  * 短すぎると電車に入っただけで卓が消え、長すぎると残った人が待たされる。
- * 自動再接続は 0.5 秒から倍々で最大10秒間隔なので、30秒あれば数回は試せる。
+ * 自動再接続は 0.5 秒から倍々で最大10秒間隔。移動中でも戻れるよう1分待つ。
  */
-const ABSENCE_GRACE_MS = 30_000;
+const ABSENCE_GRACE_MS = 60_000;
 
 interface Member {
   conn: WsConnection;

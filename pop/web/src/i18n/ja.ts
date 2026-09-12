@@ -71,6 +71,7 @@ export const ja: Strings = {
     away: "接続が切れた",
     awayWho: (names) => `${names.join("、")} の接続が切れた。`,
     awayCountdown: (seconds) => `あと ${seconds} 秒待つ。戻らなければ卓は畳まれる。`,
+    awayCodeHint: "戻る人はこのコードを入力すると同じ席に復帰できる。",
     closed: "卓が畳まれた",
     closedBy: (names) => `${names.join("、")} が卓を抜けた。`,
     closedNote: "抜けた席をCPUが引き継ぐことはしない。この一戦はここで終わり。",

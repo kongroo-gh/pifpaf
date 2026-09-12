@@ -80,6 +80,7 @@ export const pt: Strings = {
     away: "Conexão caiu",
     awayWho: (names) => `${names.join(", ")} caiu.`,
     awayCountdown: (seconds) => `Segurando a mesa por ${seconds}s. Depois disso, ela se desfaz.`,
+    awayCodeHint: "Digite este código para voltar ao mesmo lugar.",
     closed: "Mesa desfeita",
     closedBy: (names) => `${names.join(", ")} saiu da mesa.`,
     closedNote: "Ninguém assume o lugar vazio. Esta acaba aqui.",
