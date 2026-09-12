@@ -7,7 +7,9 @@ describe("音響方針", () => {
     expect(INTRO_TUNE_NAME).toBe("bossa");
   });
 
-  it("対局中の効果音はすべて無効にする", () => {
-    expect(new Set(Object.values(sfx)).size).toBe(1);
+  it("対局中のトランプ効果音を有効にする", () => {
+    expect(sfx.card).not.toBe(sfx.chip);
+    expect(sfx.card).not.toBe(sfx.turn);
+    expect(sfx.bater).not.toBe(sfx.baterMine);
   });
 });

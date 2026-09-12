@@ -14,24 +14,7 @@ import {
 } from "./context";
 import { ambienceWanted, startAmbience, stopAmbience } from "./ambience";
 
-const silence = (..._args: number[]): void => {};
-
-/** 対局中は音を鳴らさず、イントロ音楽だけを残す。 */
-export const sfx = {
-  card: silence,
-  cut: silence,
-  whoosh: silence,
-  vira: silence,
-  chip: silence,
-  spark: silence,
-  bater: silence,
-  baterMine: silence,
-  starfall: silence,
-  blackout: silence,
-  click: silence,
-  turn: silence,
-  deny: silence,
-} as const;
+export * as sfx from "./sfx";
 export { startAmbience, stopAmbience };
 
 /**
