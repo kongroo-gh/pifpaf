@@ -1,11 +1,11 @@
-// イントロで流す、ジャズの和声を持つボサノヴァ。
+// イントロで流す、完全新規の明るいジャズ・ボサノヴァ。
 
 import { audio, holdVoice } from "./context";
-import { bossa } from "./tunes/bossa";
+import { sunlitBossa } from "./tunes/sunlitBossa";
 import type { Tune } from "./tunes/types";
 
-export const INTRO_TUNE_NAME = "bossa";
-const TUNE: Tune = bossa;
+export const INTRO_TUNE_NAME = "sunlit-bossa-original";
+const TUNE: Tune = sunlitBossa;
 
 /** 何秒先まで予約しておくか。描画が詰まっても音が途切れない余裕 */
 const LOOKAHEAD_SEC = 1.6;
