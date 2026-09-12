@@ -26,7 +26,7 @@ export const ja: Strings = {
     close: "閉じる",
     language: "言語",
     speed: "CPUの速さ",
-    sound: "効果音",
+    sound: "音楽",
     soundOn: "鳴らす",
     soundOff: "消す",
   },
@@ -253,11 +253,11 @@ export const ja: Strings = {
 
   personas: [
     { name: "あなた", title: "よそ者" },
-    { name: "ドン・ヴィエイラ", title: "頭目" },
-    { name: "ゼ・ナヴァーリャ", title: "剃刀" },
-    { name: "ドナ・ローザ", title: "未亡人" },
-    { name: "ルイス", title: "旅人" },
-    { name: "ルナ", title: "星" },
+    { name: "Dom Vieira", title: "頭目" },
+    { name: "Zé Navalha", title: "剃刀" },
+    { name: "Dona Rosa", title: "未亡人" },
+    { name: "Luís", title: "旅人" },
+    { name: "Luna", title: "星" },
   ],
 
   rules: {

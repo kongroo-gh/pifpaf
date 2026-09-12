@@ -13,12 +13,6 @@ describe("オフライン卓の人物", () => {
     expect(characterNames).toEqual(["Dom Vieira", "Zé Navalha", "Dona Rosa", "Luís", "Luna"]);
     expect(en.personas.slice(1).map(({ name }) => name)).toEqual(characterNames);
     expect(pt.personas.slice(1).map(({ name }) => name)).toEqual(characterNames);
-    expect(ja.personas.slice(1).map(({ name }) => name)).toEqual([
-      "ドン・ヴィエイラ",
-      "ゼ・ナヴァーリャ",
-      "ドナ・ローザ",
-      "ルイス",
-      "ルナ",
-    ]);
+    expect(ja.personas.slice(1).map(({ name }) => name)).toEqual(characterNames);
   });
 });
