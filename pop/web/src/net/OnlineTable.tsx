@@ -23,7 +23,7 @@
 // どれも単機版では `GameState`（全員の手札）を前提に組んであるため、
 // 先に「盤面の型を PlayerView に揃える」整理をしないと持ってこられない。
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AvatarId, PlayerView, RoomInfo, RoomSeat } from "@pifpaf/protocol";
 import { findBaterAction } from "@pifpaf/engine";
 import { useT, Gloss, Kicker, Rich, withGloss } from "../i18n";
@@ -206,96 +206,135 @@ function TableClosed({ game, onExit }: { game: OnlineGame; onExit: () => void })
   );
 }
 
-function Lobby({
+type LobbyStep = "PROFILE" | "ROOMS";
+
+export function canUseOnlineProfile(name: string): boolean {
+  return name.trim().length > 0;
+}
+
+export function canJoinOnlineRoom(roomId: string, name: string): boolean {
+  return roomId.trim().length === 4 && canUseOnlineProfile(name);
+}
+
+export function Lobby({
   game,
   onExit,
   onRules,
+  initialStep = "PROFILE",
 }: {
   game: OnlineGame;
   onExit: () => void;
   onRules: () => void;
+  initialStep?: LobbyStep;
 }) {
   const t = useT();
+  const [step, setStep] = useState<LobbyStep>(initialStep);
   const [name, setName] = useState(() => loadName());
   const [avatarId, setAvatarId] = useState<AvatarId>(() => loadAvatar());
   const [roomId, setRoomId] = useState("");
   const [playerCount, setPlayerCount] = useState<import("@pifpaf/engine").PlayerCount>(4);
+  const stepRef = useRef<HTMLDivElement>(null);
+  const previousStep = useRef(step);
+
+  useEffect(() => {
+    if (previousStep.current !== step) stepRef.current?.focus();
+    previousStep.current = step;
+  }, [step]);
 
   // 卓に着く前。単機版のイントロ・掛け金画面と同じ扱い
   useAmbience(true);
 
-  const ready = roomId.trim().length === 4;
-  const hasName = name.trim().length > 0;
+  const hasName = canUseOnlineProfile(name);
+  const ready = canJoinOnlineRoom(roomId, name);
 
   return (
     <div className="intro">
       <div className="grain" aria-hidden="true" />
       <div className="intro__panel">
-        {/* まだ卓に着いていないので、メインメニューへ戻れる */}
-        <BackButton onClick={onExit} />
+        {/* 卓選択からは人物設定へ、人物設定からはメインメニューへ戻る */}
+        <BackButton onClick={step === "PROFILE" ? onExit : () => setStep("PROFILE")} />
         <Kicker flavor="A PRAÇA" gloss={t.online.title} className="intro__kicker" />
         <h1 className="intro__title">PIF PAF</h1>
         <div className="intro__rule" />
 
-        <div className="lobby">
-          <label className="lobby__field">
-            <span className="lobby__label">{t.online.nameLabel}</span>
-            <input
-              className="lobby__input"
-              value={name}
-              maxLength={16}
-              placeholder={t.online.namePlaceholder}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </label>
+        <div
+          className="lobby"
+          data-lobby-step={step}
+          tabIndex={-1}
+          aria-live="polite"
+          ref={stepRef}
+        >
+          {step === "PROFILE" ? (
+            <>
+              <label className="lobby__field">
+                <span className="lobby__label">{t.online.nameLabel}</span>
+                <input
+                  className="lobby__input"
+                  value={name}
+                  maxLength={16}
+                  placeholder={t.online.namePlaceholder}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </label>
 
-          <PlayerCountSelector value={playerCount} onChange={setPlayerCount} />
-          <AvatarPicker value={avatarId} onChange={setAvatarId} label={t.online.avatarLabel} />
-          <section className="lobby__choice lobby__choice--host">
-            <div>
-              <strong>{t.online.createTitle}</strong>
-              <p className="lobby__hint">{t.online.createHint}</p>
-            </div>
-            <button className="btn btn--start" type="button" disabled={!hasName} onClick={() => game.create(name.trim(), avatarId, playerCount)}>
-              CRIAR<Gloss flavor="CRIAR" text={t.online.create} />
-            </button>
-          </section>
+              <AvatarPicker value={avatarId} onChange={setAvatarId} label={t.online.avatarLabel} />
+              <button
+                className="btn btn--start"
+                type="button"
+                disabled={!hasName}
+                onClick={() => setStep("ROOMS")}
+              >
+                CONTINUAR<Gloss flavor="CONTINUAR" text={t.result.next} />
+              </button>
+            </>
+          ) : (
+            <>
+              <PlayerCountSelector value={playerCount} onChange={setPlayerCount} />
+              <section className="lobby__choice lobby__choice--host">
+                <div>
+                  <strong>{t.online.createTitle}</strong>
+                  <p className="lobby__hint">{t.online.createHint}</p>
+                </div>
+                <button className="btn btn--start" type="button" disabled={!hasName} onClick={() => game.create(name.trim(), avatarId, playerCount)}>
+                  CRIAR<Gloss flavor="CRIAR" text={t.online.create} />
+                </button>
+              </section>
 
-          <div className="lobby__or" aria-hidden="true"><span>OU</span></div>
+              <div className="lobby__or" aria-hidden="true"><span>OU</span></div>
 
-          <form className="lobby__choice" onSubmit={(e) => {
-            e.preventDefault();
-            if (ready && hasName) game.connect(roomId, name.trim(), avatarId);
-          }}>
-            <strong>{t.online.joinTitle}</strong>
-            <label className="lobby__field">
-              <span className="lobby__label">{t.online.roomLabel}</span>
-              <input
-                className="lobby__input lobby__codeInput"
-                value={roomId}
-                maxLength={4}
-                autoCapitalize="characters"
-                autoComplete="off"
-                placeholder={t.online.roomPlaceholder}
-                onChange={(e) => setRoomId(e.target.value.toUpperCase().replace(/[^A-Z2-9]/g, ""))}
-              />
-            </label>
-            <p className="lobby__hint">{t.online.roomHint}</p>
-            <button className="btn btn--keep" type="submit" disabled={!ready || !hasName}>
-              ENTRAR<Gloss flavor="ENTRAR" text={t.online.join} />
-            </button>
-          </form>
+              <form className="lobby__choice" onSubmit={(e) => {
+                e.preventDefault();
+                if (ready) game.connect(roomId, name.trim(), avatarId);
+              }}>
+                <strong>{t.online.joinTitle}</strong>
+                <label className="lobby__field">
+                  <span className="lobby__label">{t.online.roomLabel}</span>
+                  <input
+                    className="lobby__input lobby__codeInput"
+                    value={roomId}
+                    maxLength={4}
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    placeholder={t.online.roomPlaceholder}
+                    onChange={(e) => setRoomId(e.target.value.toUpperCase().replace(/[^A-Z2-9]/g, ""))}
+                  />
+                </label>
+                <p className="lobby__hint">{t.online.roomHint}</p>
+                <button className="btn btn--keep" type="submit" disabled={!ready}>
+                  ENTRAR<Gloss flavor="ENTRAR" text={t.online.join} />
+                </button>
+              </form>
 
-          {game.error !== null && <p className="intro__warn">{game.error}</p>}
+              {game.error !== null && <p className="intro__warn">{game.error}</p>}
 
-          {/* 規則は単機版のイントロと同じく、細く長く敷く。戻る道は隅のボタン */}
-          <button className="btn btn--rules btn--strip" type="button" onClick={onRules}>
-            AS REGRAS<Gloss flavor="AS REGRAS" text={t.intro.rules} />
-          </button>
+              <button className="btn btn--rules btn--strip" type="button" onClick={onRules}>
+                AS REGRAS<Gloss flavor="AS REGRAS" text={t.intro.rules} />
+              </button>
+            </>
+          )}
         </div>
 
-        {/* 卓に着く前に決めてもらう。単機版のイントロ・掛け金画面と同じ位置。
-            CPUの速さはサーバーが持つので、ここでは言語だけ */}
+        {/* 卓に着く前に決めてもらう。CPUの速さはサーバーが持つので、ここでは言語だけ */}
         <SettingsControls />
       </div>
     </div>

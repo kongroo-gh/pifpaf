@@ -2,7 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { RoomInfo, RoomSeat } from "@pifpaf/protocol";
 import { LanguageProvider } from "../i18n";
-import { AwayOverlay, onlineDealKey, onlineDealPending, onlineSeatName } from "./OnlineTable";
+import { AwayOverlay, Lobby, canJoinOnlineRoom, canUseOnlineProfile, onlineDealKey, onlineDealPending, onlineSeatName } from "./OnlineTable";
+import type { OnlineGame } from "./useOnlineGame";
 
 describe("オンライン卓の表示", () => {
   it("旧サーバーのCPU番号表記を人物名へ置き換える", () => {
@@ -19,6 +20,37 @@ describe("オンライン卓の表示", () => {
     expect(onlineDealKey("ROUND_RESULT", "ROUND_OVER", 3, "KH")).toBeNull();
     expect(onlineDealPending("2-7S", "1-KH")).toBe(true);
     expect(onlineDealPending("2-7S", "2-7S")).toBe(false);
+  });
+
+  it("アバター選択と卓の作成・参加を別画面に分ける", () => {
+    const game = { error: null } as OnlineGame;
+    const profile = renderToStaticMarkup(
+      <LanguageProvider>
+        <Lobby game={game} onExit={() => undefined} onRules={() => undefined} initialStep="PROFILE" />
+      </LanguageProvider>
+    );
+    expect(profile).toContain("avatarPicker");
+    expect(profile).not.toContain("lobby__choice--host");
+    expect(profile).not.toContain("lobby__codeInput");
+
+    const rooms = renderToStaticMarkup(
+      <LanguageProvider>
+        <Lobby game={game} onExit={() => undefined} onRules={() => undefined} initialStep="ROOMS" />
+      </LanguageProvider>
+    );
+    expect(rooms).not.toContain("avatarPicker");
+    expect(rooms).toContain("lobby__choice--host");
+    expect(rooms).toContain("lobby__codeInput");
+    expect(rooms).toContain('data-lobby-step="ROOMS"');
+    expect(rooms).toContain('tabindex="-1"');
+    expect(rooms).toContain('<button class="btn btn--start" type="button" disabled=""');
+  });
+
+  it("空の名前では卓を作成・参加できない", () => {
+    expect(canUseOnlineProfile("   ")).toBe(false);
+    expect(canUseOnlineProfile("Luna")).toBe(true);
+    expect(canJoinOnlineRoom("ABCD", "   ")).toBe(false);
+    expect(canJoinOnlineRoom("ABCD", "Luna")).toBe(true);
   });
 
   it("切断待機画面に復帰用ルームコードを表示する", () => {
