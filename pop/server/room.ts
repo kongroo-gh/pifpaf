@@ -260,11 +260,14 @@ export class Room {
     if (humans === 0) return { ok: false, reason: "人がいません" };
 
     if (fillWithBots) {
-      let botIndex = 0;
+      const usedAvatarIds = new Set(
+        this.seats.flatMap((occupant) => occupant === null ? [] : [occupant.avatarId])
+      );
       for (let i = 0; i < this.playerCount; i++) {
         if (this.seats[i] === null) {
-          const profile = BOT_PROFILES[botIndex++]!;
+          const profile = BOT_PROFILES.find(({ avatarId }) => !usedAvatarIds.has(avatarId))!;
           this.seats[i] = { kind: "BOT", ...profile };
+          usedAvatarIds.add(profile.avatarId);
         }
       }
     } else if (humans < this.playerCount) {

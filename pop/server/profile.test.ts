@@ -19,15 +19,15 @@ describe("オンラインプロフィール", () => {
 
   it("CPUには人物名と一致する固有アバターを割り当てる", () => {
     const room = new Room({ roomId: "AVTR", playerCount: 6, makeToken: () => "token" });
-    room.join("旅人", undefined, 7);
+    room.join("旅人", undefined, 0);
     room.start(true);
     expect(room.roomInfo().seats.map((seat) => ({ name: seat.name, avatarId: seat.avatarId }))).toEqual([
-      { name: "旅人", avatarId: 7 },
-      { name: "Dom Vieira", avatarId: 0 },
+      { name: "旅人", avatarId: 0 },
       { name: "Zé Navalha", avatarId: 1 },
       { name: "Luís", avatarId: 2 },
       { name: "O Fantasma", avatarId: 3 },
       { name: "Dona Rosa", avatarId: 4 },
+      { name: "Luna", avatarId: 5 },
     ]);
   });
 });

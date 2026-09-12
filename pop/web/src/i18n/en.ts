@@ -257,7 +257,7 @@ export const en: Strings = {
 
   personas: [
     { name: "You", title: "The Outsider" },
-    { name: "Don Vieira", title: "The Boss" },
+    { name: "Dom Vieira", title: "The Boss" },
     { name: "Zé Navalha", title: "The Razor" },
     { name: "Dona Rosa", title: "The Widow" },
     { name: "Luís", title: "The Traveller" },
