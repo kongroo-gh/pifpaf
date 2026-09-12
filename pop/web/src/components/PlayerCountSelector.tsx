@@ -4,6 +4,6 @@ export function PlayerCountSelector({ value, onChange }: { value: PlayerCount; o
   const t = useT();
   return <fieldset className="playerCount" data-player-count>
     <legend>{t.players.label}</legend>
-    <div>{PLAYER_COUNTS.map(n => <button key={n} type="button" aria-pressed={value === n} onClick={() => onChange(n)}>{t.players.count(n)}</button>)}</div>
+    <div>{PLAYER_COUNTS.map(n => <button key={n} type="button" aria-label={t.players.count(n)} aria-pressed={value === n} onClick={() => onChange(n)}>{n}</button>)}</div>
   </fieldset>;
 }

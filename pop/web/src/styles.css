@@ -2601,7 +2601,7 @@ button {
   .tableRing .seat__avatar { width: 48px; height: 48px; }
   .tableRing .seat__name { font-size: 10px; }
   .tableRing .seat__title { font-size: 8px; }
-  .tableRing .seat__chips .chipStack { display: none; }
+  .tableRing .seat__chips .chipStack { display: inline-flex; }
   .tableRing .seat__chipCount { font-size: 12px; }
   .tableRing .table { top: 121px; left: 5px; right: 5px; }
   .tableRing .table__felt { padding: 12px; }
@@ -2619,7 +2619,8 @@ button {
   .tableRing:is([data-count="5"], [data-count="6"]) .pile__stack { gap: 3px; }
   .tableRing:is([data-count="5"], [data-count="6"]) .pile__label { font-size: 7px; letter-spacing: 0; }
   .tableRing:is([data-count="5"], [data-count="6"]) .card--md,
-  .tableRing:is([data-count="5"], [data-count="6"]) .pile__empty { width: 32px; height: 46px; }
+  .tableRing:is([data-count="5"], [data-count="6"]) .pile__empty { width: 48px; height: 68px; }
+  .app:has(.tableRing:is([data-count="5"], [data-count="6"])) .topbar__vira .card--sm { width: 48px; height: 68px; }
 }
 @media (max-height: 560px) and (orientation: landscape) {
   .tableRing { height: 143px; --seat-width: 125px; --side-y: 63px; }
@@ -2627,8 +2628,11 @@ button {
   .tableRing .seat__avatar { width: 42px; height: 48px; }
   .tableRing .seat__name { font-size: 10px; }
   .tableRing .seat__title { font-size: 8px; }
-  .tableRing .seat__chips .chipStack { display: none; }
+  .tableRing .seat__chips .chipStack { display: inline-flex; }
   .tableRing .seat__chipCount { font-size: 11px; }
   .tableRing .table { top: 71px; left: 23%; right: 23%; }
   .tableRing .table__felt { padding: 3px 15px; }
+  .tableRing:is([data-count="5"], [data-count="6"]) .card--md,
+  .tableRing:is([data-count="5"], [data-count="6"]) .pile__empty,
+  .app:has(.tableRing:is([data-count="5"], [data-count="6"])) .topbar__vira .card--sm { width: 42px; height: 60px; }
 }
